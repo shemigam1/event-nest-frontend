@@ -14,13 +14,25 @@ export const authApi = baseApi.injectEndpoints({
                 url: '/auth/register',
                 method: 'POST',
                 body: userData,
-            }), 
-        }), 
+            }),
+        }),
         getAuthenticatedUser: builder.query({
-        query: () => '/auth/me',
-        providesTags: ['User'],
+            query: () => '/auth/me',
+            providesTags: ['User'],
+        }),
+        socialAuth: builder.mutation({
+            query: (payload) => ({
+                url: '/social-auth/',
+                method: 'POST',
+                body: payload,
+            }),
+        }),
     }),
-    })
 });
 
-export const { useLoginMutation, useRegisterMutation, useGetAuthenticatedUserQuery } = authApi;
+export const {
+    useLoginMutation,
+    useRegisterMutation,
+    useGetAuthenticatedUserQuery,
+    useSocialAuthMutation,
+} = authApi;

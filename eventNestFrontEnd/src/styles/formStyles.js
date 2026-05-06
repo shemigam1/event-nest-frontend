@@ -118,4 +118,21 @@ export const formStyles = {
         fontWeight: "700",
         color: "#16a34a",
     },
+    divider: {
+        display: "flex",
+        alignItems: "center",
+        textAlign: "center",
+        margin: "20px 0",
+        color: "#999",
+        fontSize: "13px",
+        gap: "12px",
+    },
+    dividerLine: {
+        flex: 1,
+        borderTop: "1px solid #e5e7eb",
+    },
+    socialWrapper: {
+        display: "flex",
+        justifyContent: "center",
+    },
 };

@@ -1,49 +1,49 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router";
-import { useRegisterMutation } from "../authApi";
+import { useDispatch } from "react-redux";
+import { GoogleLogin } from "@react-oauth/google";
+import { useRegisterMutation, useSocialAuthMutation } from "../authApi";
+import { setCredentials } from "../authSlice";
 import { formStyles as s } from "../../../styles/formStyles";
 
-const Register = () => {
+export default function RegisterPage() {
     const navigate = useNavigate();
+    const dispatch = useDispatch();
 
-    const [formData, setFormData] = useState({
-        name: "",
-        email: "",
-        password: "",
-    });
-
+    const [formData, setFormData] = useState({ name: "", email: "", password: "" });
     const [errorMessage, setErrorMessage] = useState("");
 
     const [register, { isLoading }] = useRegisterMutation();
-
-    const handleChange = (e) => {
-        setFormData((prev) => ({
-            ...prev,
-            [e.target.name]: e.target.value,
-        }));
-    };
+    const [socialAuth, { isLoading: isSocialLoading }] = useSocialAuthMutation();
 
     const isFormValid =
         formData.name.trim() &&
         formData.email.trim() &&
         formData.password.trim();
 
+    const handleChange = (e) => {
+        setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
-
         if (!isFormValid) return;
-
         try {
             await register(formData).unwrap();
-
-            setErrorMessage("");
-
             navigate("/login");
         } catch (err) {
-            setErrorMessage(
-                err?.data?.message ||
-                    "Registration failed. Please try again."
-            );
+            setErrorMessage(err?.data?.message || "Registration failed. Please try again.");
+        }
+    };
+
+    const handleGoogleSuccess = async ({ credential }) => {
+        try {
+            const data = await socialAuth({ token: credential }).unwrap();
+            dispatch(setCredentials(data));
+            navigate("/dashboard");
+        } catch (err) {
+            console.error("Google sign-up failed", err);
+            setErrorMessage("Google sign-up failed. Please try again.");
         }
     };
 
@@ -51,9 +51,7 @@ const Register = () => {
         <div style={s.page}>
             <div style={s.card}>
                 <h1 style={s.title}>Create Account</h1>
-                <p style={s.sub}>
-                    Register to start booking and managing events
-                </p>
+                <p style={s.sub}>Register to start booking and managing events</p>
 
                 <form onSubmit={handleSubmit} style={s.form}>
                     <div style={s.field}>
@@ -91,9 +89,7 @@ const Register = () => {
                         />
                     </div>
 
-                    {errorMessage && (
-                        <p style={s.error}>{errorMessage}</p>
-                    )}
+                    {errorMessage && <p style={s.error}>{errorMessage}</p>}
 
                     <button
                         type="submit"
@@ -104,13 +100,25 @@ const Register = () => {
                     </button>
                 </form>
 
-                <p style={{ marginTop: "1rem", textAlign: "center" }}>
-                    Already have an account?{" "}
-                    <Link to="/login">Login</Link>
-                </p>
+                <div style={s.divider}>
+                    <div style={s.dividerLine} />
+                    <span>or</span>
+                    <div style={s.dividerLine} />
+                </div>
+
+                <div style={s.socialWrapper}>
+                    <GoogleLogin
+                        onSuccess={handleGoogleSuccess}
+                        onError={() => setErrorMessage("Google sign-up failed. Please try again.")}
+                        disabled={isSocialLoading}
+                        text="signup_with"
+                    />
+                </div>
+
+                <div style={s.footer}>
+                    <p>Already have an account? <Link to="/login" style={s.link}>Login</Link></p>
+                </div>
             </div>
         </div>
     );
-};
-
-export default Register;
+}

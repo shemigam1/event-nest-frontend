@@ -1,11 +1,16 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router";
-import { useLoginMutation } from "../authApi";
+import { useDispatch } from "react-redux";
+import { GoogleLogin } from "@react-oauth/google";
+import { useLoginMutation, useSocialAuthMutation } from "../authApi";
+import { setCredentials } from "../authSlice";
 import { formStyles as s } from "../../../styles/formStyles";
 
 export default function LoginPage() {
     const [formData, setFormData] = useState({ email: "", password: "" });
     const [login, { isLoading }] = useLoginMutation();
+    const [socialAuth, { isLoading: isSocialLoading }] = useSocialAuthMutation();
+    const dispatch = useDispatch();
     const navigate = useNavigate();
     const [errorMessage, setErrorMessage] = useState("");
 
@@ -22,11 +27,23 @@ export default function LoginPage() {
             return;
         }
         try {
-            await login(formData).unwrap();
+            const data = await login(formData).unwrap();
+            dispatch(setCredentials(data));
             navigate("/dashboard");
         } catch (err) {
             console.error("Failed to login", err);
             setErrorMessage("Invalid email or password.");
+        }
+    };
+
+    const handleGoogleSuccess = async ({ credential }) => {
+        try {
+            const data = await socialAuth({ token: credential }).unwrap();
+            dispatch(setCredentials(data));
+            navigate("/dashboard");
+        } catch (err) {
+            console.error("Google login failed", err);
+            setErrorMessage("Google login failed. Please try again.");
         }
     };
 
@@ -66,6 +83,21 @@ export default function LoginPage() {
                         {isLoading ? "Logging in..." : "Login"}
                     </button>
                 </form>
+
+                <div style={s.divider}>
+                    <div style={s.dividerLine} />
+                    <span>or</span>
+                    <div style={s.dividerLine} />
+                </div>
+
+                <div style={s.socialWrapper}>
+                    <GoogleLogin
+                        onSuccess={handleGoogleSuccess}
+                        onError={() => setErrorMessage("Google login failed. Please try again.")}
+                        useOneTap
+                        disabled={isSocialLoading}
+                    />
+                </div>
 
                 <div style={s.footer}>
                     <p>Not registered? <Link to="/register" style={s.link}>Register</Link></p>
