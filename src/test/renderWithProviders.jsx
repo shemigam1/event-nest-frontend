@@ -2,7 +2,6 @@ import { render } from '@testing-library/react';
 import { Provider } from 'react-redux';
 import { MemoryRouter, useLocation } from 'react-router';
 import { configureStore } from '@reduxjs/toolkit';
-import { GoogleOAuthProvider } from '@react-oauth/google';
 import { baseApi } from '@/services/baseApi';
 import authReducer from '@/features/auth/authSlice';
 
@@ -25,13 +24,11 @@ function LocationDisplay() {
 export function renderWithProviders(ui, { initialEntries = ['/'] } = {}) {
     const store = makeStore();
     return render(
-        <GoogleOAuthProvider clientId="test-client-id">
-            <Provider store={store}>
-                <MemoryRouter initialEntries={initialEntries}>
-                    {ui}
-                    <LocationDisplay />
-                </MemoryRouter>
-            </Provider>
-        </GoogleOAuthProvider>
+        <Provider store={store}>
+            <MemoryRouter initialEntries={initialEntries}>
+                {ui}
+                <LocationDisplay />
+            </MemoryRouter>
+        </Provider>
     );
 }

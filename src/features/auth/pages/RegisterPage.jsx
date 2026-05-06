@@ -1,23 +1,17 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router";
-import { useDispatch } from "react-redux";
-import { GoogleLogin } from "@react-oauth/google";
-import { useRegisterMutation, useSocialAuthMutation } from "../authApi";
-import { setCredentials } from "../authSlice";
+import { useRegisterMutation } from "../authApi";
 import { formStyles as s } from "../../../styles/formStyles";
 
 export default function RegisterPage() {
     const navigate = useNavigate();
-    const dispatch = useDispatch();
-
-    const [formData, setFormData] = useState({ name: "", email: "", password: "" });
+    const [formData, setFormData] = useState({ firstName: "", lastName: "", email: "", password: "" });
     const [errorMessage, setErrorMessage] = useState("");
-
     const [register, { isLoading }] = useRegisterMutation();
-    const [socialAuth, { isLoading: isSocialLoading }] = useSocialAuthMutation();
 
     const isFormValid =
-        formData.name.trim() &&
+        formData.firstName.trim() &&
+        formData.lastName.trim() &&
         formData.email.trim() &&
         formData.password.trim();
 
@@ -36,17 +30,6 @@ export default function RegisterPage() {
         }
     };
 
-    const handleGoogleSuccess = async ({ credential }) => {
-        try {
-            const data = await socialAuth({ token: credential }).unwrap();
-            dispatch(setCredentials(data));
-            navigate("/dashboard");
-        } catch (err) {
-            console.error("Google sign-up failed", err);
-            setErrorMessage("Google sign-up failed. Please try again.");
-        }
-    };
-
     return (
         <div style={s.page}>
             <div style={s.card}>
@@ -54,15 +37,28 @@ export default function RegisterPage() {
                 <p style={s.sub}>Register to start booking and managing events</p>
 
                 <form onSubmit={handleSubmit} style={s.form}>
-                    <div style={s.field}>
-                        <label style={s.label}>Full Name</label>
-                        <input
-                            name="name"
-                            value={formData.name}
-                            onChange={handleChange}
-                            placeholder="John Doe"
-                            style={s.input}
-                        />
+                    <div style={s.row}>
+                        <div style={s.field}>
+                            <label style={s.label}>First Name</label>
+                            <input
+                                name="firstName"
+                                value={formData.firstName}
+                                onChange={handleChange}
+                                placeholder="John"
+                                style={s.input}
+                            />
+                        </div>
+
+                        <div style={s.field}>
+                            <label style={s.label}>Last Name</label>
+                            <input
+                                name="lastName"
+                                value={formData.lastName}
+                                onChange={handleChange}
+                                placeholder="Doe"
+                                style={s.input}
+                            />
+                        </div>
                     </div>
 
                     <div style={s.field}>
@@ -91,29 +87,10 @@ export default function RegisterPage() {
 
                     {errorMessage && <p style={s.error}>{errorMessage}</p>}
 
-                    <button
-                        type="submit"
-                        disabled={isLoading || !isFormValid}
-                        style={s.btn}
-                    >
+                    <button type="submit" disabled={isLoading || !isFormValid} style={s.btn}>
                         {isLoading ? "Creating Account..." : "Register"}
                     </button>
                 </form>
-
-                <div style={s.divider}>
-                    <div style={s.dividerLine} />
-                    <span>or</span>
-                    <div style={s.dividerLine} />
-                </div>
-
-                <div style={s.socialWrapper}>
-                    <GoogleLogin
-                        onSuccess={handleGoogleSuccess}
-                        onError={() => setErrorMessage("Google sign-up failed. Please try again.")}
-                        disabled={isSocialLoading}
-                        text="signup_with"
-                    />
-                </div>
 
                 <div style={s.footer}>
                     <p>Already have an account? <Link to="/login" style={s.link}>Login</Link></p>

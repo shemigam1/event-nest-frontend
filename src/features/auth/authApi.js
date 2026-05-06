@@ -8,6 +8,7 @@ export const authApi = baseApi.injectEndpoints({
                 method: 'POST',
                 body: credentials,
             }),
+            transformResponse: (response) => response.data,
         }),
         register: builder.mutation({
             query: (userData) => ({
@@ -15,17 +16,15 @@ export const authApi = baseApi.injectEndpoints({
                 method: 'POST',
                 body: userData,
             }),
+            transformResponse: (response) => response.data,
         }),
-        getAuthenticatedUser: builder.query({
-            query: () => '/auth/me',
-            providesTags: ['User'],
-        }),
-        socialAuth: builder.mutation({
-            query: (payload) => ({
-                url: '/social-auth/',
+        refresh: builder.mutation({
+            query: (refreshToken) => ({
+                url: '/auth/refresh',
                 method: 'POST',
-                body: payload,
+                headers: { 'Refresh-Token': refreshToken },
             }),
+            transformResponse: (response) => response.data,
         }),
     }),
 });
@@ -33,6 +32,5 @@ export const authApi = baseApi.injectEndpoints({
 export const {
     useLoginMutation,
     useRegisterMutation,
-    useGetAuthenticatedUserQuery,
-    useSocialAuthMutation,
+    useRefreshMutation,
 } = authApi;
