@@ -4,6 +4,9 @@ import DiscoveryPage from '../features/events/pages/DiscoveryPage';
 import EventDetailPage from '../features/events/pages/EventDetailPage';
 import LoginPage from '../features/auth/pages/LoginPage';
 import RegisterPage from '../features/auth/pages/RegisterPage';
+import BookingPage from '../features/bookings/pages/BookingPage';
+import DashboardPage from '../features/bookings/pages/DashboardPage';
+import TicketsPage from '../features/tickets/pages/TicketsPage';
 import PrivateRoute from './PrivateRoute';
 
 const router = createBrowserRouter([
@@ -29,7 +32,20 @@ const router = createBrowserRouter([
     },
     {
         element: <PrivateRoute />,
-        children: [],
+        children: [
+            {
+                path: '/events/:id/book',
+                element: <BookingPage />,
+            },
+            {
+                path: '/tickets',
+                element: <TicketsPage />,
+            },
+            {
+                path: '/dashboard',
+                element: <DashboardPage />,
+            },
+        ],
     },
     {
         path: '*',
