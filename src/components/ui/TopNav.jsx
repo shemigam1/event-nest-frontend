@@ -4,6 +4,7 @@ import { selectIsAuthenticated } from '@/features/auth/authSlice';
 import Brand from './Brand';
 import Button from './Button';
 import UserMenu from './UserMenu';
+import { Icons } from './Icon';
 
 /**
  * Shared top navigation bar.
@@ -67,6 +68,16 @@ export default function TopNav({ variant = 'light', showBrowse = true }) {
                 >
                     Browse events
                 </button>
+            )}
+            {isAuthenticated && (
+                <Button
+                    size="sm"
+                    variant={onDark ? 'onDark' : 'secondary'}
+                    onClick={() => navigate('/events/new')}
+                    icon={<Icons.plus size={14} />}
+                >
+                    Create event
+                </Button>
             )}
             {isAuthenticated ? (
                 <UserMenu onDark={onDark} />

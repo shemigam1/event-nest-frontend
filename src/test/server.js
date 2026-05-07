@@ -166,11 +166,76 @@ export const server = setupServer(
         HttpResponse.json({ success: true, data: MOCK_EVENTS })
     ),
 
+    // Create event
+    http.post(`${BASE_URL}/events`, async ({ request }) => {
+        const body = await request.json();
+        return HttpResponse.json({
+            success: true,
+            message: 'Event created successfully',
+            data: {
+                id: 'evt_new_001',
+                title: body.title,
+                description: null,
+                venue: body.venue,
+                startTime: body.startTime,
+                endTime: body.endTime,
+                status: 'DRAFT',
+                createdBy: 'user_001',
+                rejectionReason: null,
+                createdAt: '2026-05-07T00:00:00',
+                updatedAt: '2026-05-07T00:00:00',
+            },
+        }, { status: 201 });
+    }),
+
+    // Submit event for approval (must come before generic PATCH /:id)
+    http.patch(`${BASE_URL}/events/:id/submit`, ({ params }) =>
+        HttpResponse.json({
+            success: true,
+            message: 'Event submitted for approval',
+            data: {
+                id: params.id,
+                status: 'PENDING_APPROVAL',
+            },
+        })
+    ),
+
+    // Update event
+    http.patch(`${BASE_URL}/events/:id`, async ({ params, request }) => {
+        const body = await request.json();
+        const existing = MOCK_EVENTS.find(e => e.id === params.id) ?? {};
+        return HttpResponse.json({
+            success: true,
+            message: 'Event updated successfully',
+            data: { ...existing, id: params.id, status: 'DRAFT', ...body },
+        });
+    }),
+
     // Single event
     http.get(`${BASE_URL}/events/:id`, ({ params }) => {
         const event = MOCK_EVENTS.find(e => e.id === params.id);
         if (!event) return HttpResponse.json({ success: false, message: 'Not found' }, { status: 404 });
         return HttpResponse.json({ success: true, data: event });
+    }),
+
+    // Create tier (must come before GET tiers)
+    http.post(`${BASE_URL}/events/:eventId/tiers`, async ({ params, request }) => {
+        const body = await request.json();
+        return HttpResponse.json({
+            success: true,
+            data: {
+                id: 'tier_new_001',
+                eventId: params.eventId,
+                name: body.name,
+                price: body.price,
+                rowPrefix: body.rowPrefix,
+                rowCount: body.rowCount,
+                seatsPerRow: body.seatsPerRow,
+                totalCapacity: body.rowCount * body.seatsPerRow,
+                availableCapacity: body.rowCount * body.seatsPerRow,
+                createdAt: '2026-05-07T00:00:00',
+            },
+        }, { status: 201 });
     }),
 
     // Tiers for an event
