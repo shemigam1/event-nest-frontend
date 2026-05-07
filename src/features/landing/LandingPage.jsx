@@ -156,7 +156,7 @@ function Pillar({ icon, title, body }) {
 /* ── Top navigation ── */
 function TopNav({ onLogin, onRegister, onBrowse }) {
   return (
-    <nav style={{
+    <nav data-testid="topnav" style={{
       position: 'sticky',
       top: 0,
       zIndex: 50,
