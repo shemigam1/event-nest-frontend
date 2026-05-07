@@ -8,7 +8,9 @@ import BookingPage from '../features/bookings/pages/BookingPage';
 import DashboardPage from '../features/bookings/pages/DashboardPage';
 import TicketsPage from '../features/tickets/pages/TicketsPage';
 import CreateEventPage from '../features/events/pages/CreateEventPage';
+import AdminPage from '../features/admin/pages/AdminPage';
 import PrivateRoute from './PrivateRoute';
+import AdminRoute from './AdminRoute';
 
 const router = createBrowserRouter([
     {
@@ -49,6 +51,15 @@ const router = createBrowserRouter([
             {
                 path: '/dashboard',
                 element: <DashboardPage />,
+            },
+        ],
+    },
+    {
+        element: <AdminRoute />,
+        children: [
+            {
+                path: '/admin',
+                element: <AdminPage />,
             },
         ],
     },
