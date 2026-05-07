@@ -119,6 +119,48 @@ export const MOCK_MY_BOOKINGS = [
     },
 ];
 
+export const MOCK_PENDING_EVENTS = [
+    {
+        id: 'evt_pending_001',
+        title: 'Lagos Fintech Summit',
+        description: 'Annual fintech summit.',
+        venue: 'Federal Palace Hotel, Lagos',
+        startTime: '2026-07-10T09:00:00',
+        endTime: '2026-07-10T18:00:00',
+        status: 'PENDING_APPROVAL',
+        createdBy: 'user_010',
+        rejectionReason: null,
+        createdAt: '2026-05-01T00:00:00',
+        updatedAt: '2026-05-01T00:00:00',
+    },
+    {
+        id: 'evt_pending_002',
+        title: 'Abuja Developer Conference',
+        description: 'Tech conference.',
+        venue: 'Transcorp Hilton, Abuja',
+        startTime: '2026-08-05T10:00:00',
+        endTime: '2026-08-05T19:00:00',
+        status: 'PENDING_APPROVAL',
+        createdBy: 'user_011',
+        rejectionReason: null,
+        createdAt: '2026-05-02T00:00:00',
+        updatedAt: '2026-05-02T00:00:00',
+    },
+];
+
+export const MOCK_ANALYTICS = {
+    eventsByStatus: { DRAFT: 3, PENDING_APPROVAL: 2, PUBLISHED: 5, CANCELLED: 1 },
+    totalBookings: 42,
+    totalRevenue: 1850000,
+    checkInRate: 0.68,
+};
+
+export const MOCK_ADMIN_USERS = [
+    { id: 'user_001', firstName: 'John', lastName: 'Doe', email: 'john@example.com', role: 'ATTENDEE', enabled: true, createdAt: '2026-01-01T00:00:00' },
+    { id: 'user_002', firstName: 'Jane', lastName: 'Smith', email: 'jane@example.com', role: 'ORGANISER', enabled: true, createdAt: '2026-01-02T00:00:00' },
+    { id: 'user_admin', firstName: 'Admin', lastName: 'User', email: 'admin@example.com', role: 'ADMIN', enabled: true, createdAt: '2026-01-01T00:00:00' },
+];
+
 export const MOCK_TIERS = {
     evt_001: [
         { id: 't1', eventId: 'evt_001', name: 'VIP Front Row', price: 75000, rowPrefix: 'VIP', rowCount: 5, seatsPerRow: 10, totalCapacity: 50, availableCapacity: 12, createdAt: '2026-01-01T00:00:00' },
@@ -308,4 +350,49 @@ export const server = setupServer(
             },
         }, { status: 201 });
     }),
+
+    // Admin: events by status
+    http.get(`${BASE_URL}/admin/events`, ({ request }) => {
+        const url = new URL(request.url);
+        const status = url.searchParams.get('status') ?? 'PENDING_APPROVAL';
+        const events = status === 'PENDING_APPROVAL'
+            ? MOCK_PENDING_EVENTS
+            : MOCK_EVENTS.filter(e => e.status === status);
+        return HttpResponse.json({
+            success: true,
+            data: { content: events, page: 0, size: 20, totalElements: events.length, totalPages: 1 },
+        });
+    }),
+
+    // Admin: approve event
+    http.patch(`${BASE_URL}/admin/events/:id/approve`, ({ params }) =>
+        HttpResponse.json({
+            success: true,
+            message: 'Event approved and published',
+            data: { id: params.id, status: 'PUBLISHED' },
+        })
+    ),
+
+    // Admin: reject event
+    http.patch(`${BASE_URL}/admin/events/:id/reject`, async ({ params, request }) => {
+        const body = await request.json();
+        return HttpResponse.json({
+            success: true,
+            message: 'Event rejected',
+            data: { id: params.id, status: 'DRAFT', rejectionReason: body.reason },
+        });
+    }),
+
+    // Admin: users
+    http.get(`${BASE_URL}/admin/users`, () =>
+        HttpResponse.json({
+            success: true,
+            data: { content: MOCK_ADMIN_USERS, page: 0, size: 20, totalElements: MOCK_ADMIN_USERS.length, totalPages: 1 },
+        })
+    ),
+
+    // Admin: analytics
+    http.get(`${BASE_URL}/admin/analytics`, () =>
+        HttpResponse.json({ success: true, data: MOCK_ANALYTICS })
+    ),
 );
