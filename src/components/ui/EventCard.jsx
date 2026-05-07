@@ -53,7 +53,7 @@ export default function EventCard({ event, onClick }) {
             </span>
           )}
         </div>
-        <h3 className="h-4" style={{ margin: 0, color: 'var(--text-1)' }}>
+        <h3 className="mp-h4" style={{ margin: 0, color: 'var(--text-1)' }}>
           {event.title}
         </h3>
         <div style={{
