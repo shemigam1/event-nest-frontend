@@ -8,25 +8,25 @@ import RegisterPage from '@/features/auth/pages/RegisterPage';
 describe('RegisterPage', () => {
     test('disables submit button when fields are empty', () => {
         renderWithProviders(<RegisterPage />);
-        expect(screen.getByRole('button', { name: /^register$/i })).toBeDisabled();
+        expect(screen.getByRole('button', { name: /create account/i })).toBeDisabled();
     });
 
     test('enables submit button when all fields are filled', async () => {
         renderWithProviders(<RegisterPage />);
-        await userEvent.type(screen.getByPlaceholderText(/^john$/i), 'Jane');
-        await userEvent.type(screen.getByPlaceholderText(/^doe$/i), 'Doe');
-        await userEvent.type(screen.getByPlaceholderText(/john@example\.com/i), 'jane@example.com');
-        await userEvent.type(screen.getByPlaceholderText(/enter password/i), 'password123');
-        expect(screen.getByRole('button', { name: /^register$/i })).not.toBeDisabled();
+        await userEvent.type(screen.getByLabelText(/first name/i), 'Jane');
+        await userEvent.type(screen.getByLabelText(/last name/i), 'Doe');
+        await userEvent.type(screen.getByLabelText(/email/i), 'jane@example.com');
+        await userEvent.type(screen.getByLabelText(/password/i), 'password123');
+        expect(screen.getByRole('button', { name: /create account/i })).not.toBeDisabled();
     });
 
     test('navigates to /login after successful registration', async () => {
         renderWithProviders(<RegisterPage />);
-        await userEvent.type(screen.getByPlaceholderText(/^john$/i), 'Jane');
-        await userEvent.type(screen.getByPlaceholderText(/^doe$/i), 'Doe');
-        await userEvent.type(screen.getByPlaceholderText(/john@example\.com/i), 'jane@example.com');
-        await userEvent.type(screen.getByPlaceholderText(/enter password/i), 'password123');
-        await userEvent.click(screen.getByRole('button', { name: /^register$/i }));
+        await userEvent.type(screen.getByLabelText(/first name/i), 'Jane');
+        await userEvent.type(screen.getByLabelText(/last name/i), 'Doe');
+        await userEvent.type(screen.getByLabelText(/email/i), 'jane@example.com');
+        await userEvent.type(screen.getByLabelText(/password/i), 'password123');
+        await userEvent.click(screen.getByRole('button', { name: /create account/i }));
         await waitFor(() =>
             expect(screen.getByTestId('location')).toHaveTextContent('/login')
         );
@@ -39,11 +39,11 @@ describe('RegisterPage', () => {
             )
         );
         renderWithProviders(<RegisterPage />);
-        await userEvent.type(screen.getByPlaceholderText(/^john$/i), 'Jane');
-        await userEvent.type(screen.getByPlaceholderText(/^doe$/i), 'Existing');
-        await userEvent.type(screen.getByPlaceholderText(/john@example\.com/i), 'existing@example.com');
-        await userEvent.type(screen.getByPlaceholderText(/enter password/i), 'password123');
-        await userEvent.click(screen.getByRole('button', { name: /^register$/i }));
+        await userEvent.type(screen.getByLabelText(/first name/i), 'Jane');
+        await userEvent.type(screen.getByLabelText(/last name/i), 'Existing');
+        await userEvent.type(screen.getByLabelText(/email/i), 'existing@example.com');
+        await userEvent.type(screen.getByLabelText(/password/i), 'password123');
+        await userEvent.click(screen.getByRole('button', { name: /create account/i }));
         await waitFor(() =>
             expect(screen.getByText(/email already in use/i)).toBeInTheDocument()
         );

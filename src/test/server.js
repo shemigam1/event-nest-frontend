@@ -46,6 +46,79 @@ export const MOCK_EVENTS = [
     },
 ];
 
+export const MOCK_TICKETS = [
+    {
+        id: 'tk_001',
+        bookingId: 'bk_001',
+        tierId: 't1',
+        tierName: 'VIP Front Row',
+        eventId: 'evt_001',
+        eventTitle: 'Moniepoint Merchant Summit 2026',
+        seatNumber: 'VIP2-5',
+        qrCode: 'qr_a8f3-72ce-bb1d',
+        status: 'VALID',
+        checkedInAt: null,
+        issuedAt: '2026-05-01T10:00:00',
+    },
+    {
+        id: 'tk_002',
+        bookingId: 'bk_001',
+        tierId: 't1',
+        tierName: 'VIP Front Row',
+        eventId: 'evt_001',
+        eventTitle: 'Moniepoint Merchant Summit 2026',
+        seatNumber: 'VIP2-6',
+        qrCode: 'qr_a8f3-72ce-bb1e',
+        status: 'VALID',
+        checkedInAt: null,
+        issuedAt: '2026-05-01T10:00:00',
+    },
+    {
+        id: 'tk_003',
+        bookingId: 'bk_002',
+        tierId: 't3',
+        tierName: 'Standard',
+        eventId: 'evt_002',
+        eventTitle: 'Agent Onboarding Workshop · Q2',
+        seatNumber: 'A07-3',
+        qrCode: 'qr_4dd1-9221-aa07',
+        status: 'USED',
+        checkedInAt: '2026-04-28T18:14:00',
+        issuedAt: '2026-04-25T09:00:00',
+    },
+];
+
+export const MOCK_MY_BOOKINGS = [
+    {
+        id: 'bk_001',
+        eventId: 'evt_001',
+        eventTitle: 'Moniepoint Merchant Summit 2026',
+        tierId: 't1',
+        tierName: 'VIP Front Row',
+        quantity: 2,
+        totalAmount: 150000,
+        status: 'CONFIRMED',
+        paymentStatus: 'PAID',
+        paymentReference: 'sim_ref_001',
+        createdAt: '2026-05-01T10:00:00',
+        tickets: [],
+    },
+    {
+        id: 'bk_002',
+        eventId: 'evt_002',
+        eventTitle: 'Agent Onboarding Workshop · Q2',
+        tierId: 't3',
+        tierName: 'Standard',
+        quantity: 1,
+        totalAmount: 0,
+        status: 'CONFIRMED',
+        paymentStatus: 'PAID',
+        paymentReference: 'sim_ref_002',
+        createdAt: '2026-04-25T09:00:00',
+        tickets: [],
+    },
+];
+
 export const MOCK_TIERS = {
     evt_001: [
         { id: 't1', eventId: 'evt_001', name: 'VIP Front Row', price: 75000, rowPrefix: 'VIP', rowCount: 5, seatsPerRow: 10, totalCapacity: 50, availableCapacity: 12, createdAt: '2026-01-01T00:00:00' },
@@ -104,5 +177,70 @@ export const server = setupServer(
     http.get(`${BASE_URL}/events/:eventId/tiers`, ({ params }) => {
         const tiers = MOCK_TIERS[params.eventId] ?? [];
         return HttpResponse.json({ success: true, data: tiers });
+    }),
+
+    // My tickets
+    http.get(`${BASE_URL}/me/tickets`, () =>
+        HttpResponse.json({ success: true, data: MOCK_TICKETS })
+    ),
+
+    // My bookings
+    http.get(`${BASE_URL}/me/bookings`, () =>
+        HttpResponse.json({ success: true, data: MOCK_MY_BOOKINGS })
+    ),
+
+    // Cancel a booking
+    http.post(`${BASE_URL}/events/:eventId/bookings/:bookingId/cancel`, ({ params }) => {
+        const booking = MOCK_MY_BOOKINGS.find((b) => b.id === params.bookingId);
+        if (!booking) return HttpResponse.json({ success: false, message: 'Not found' }, { status: 404 });
+        return HttpResponse.json({
+            success: true,
+            data: { ...booking, status: 'CANCELLED' },
+        });
+    }),
+
+    // Create a booking
+    http.post(`${BASE_URL}/events/:eventId/bookings`, async ({ params, request }) => {
+        const body = await request.json();
+        const tier = (MOCK_TIERS[params.eventId] ?? []).find((t) => t.id === body.tierId);
+        const event = MOCK_EVENTS.find((e) => e.id === params.eventId);
+        if (!tier || !event) {
+            return HttpResponse.json({ success: false, message: 'Not found' }, { status: 404 });
+        }
+        const tickets = Array.from({ length: body.quantity }, (_, i) => {
+            const offset = (tier.totalCapacity - tier.availableCapacity) + i;
+            const row = Math.floor(offset / tier.seatsPerRow) + 1;
+            const seat = (offset % tier.seatsPerRow) + 1;
+            return {
+                id: `tk_${tier.id}_${i}`,
+                bookingId: 'bk_001',
+                tierId: tier.id,
+                tierName: tier.name,
+                eventId: event.id,
+                eventTitle: event.title,
+                seatNumber: `${tier.rowPrefix}${row}-${seat}`,
+                qrCode: `QR-${tier.id}-${i}`,
+                status: 'VALID',
+                checkedInAt: null,
+                issuedAt: '2026-05-01T00:00:00',
+            };
+        });
+        return HttpResponse.json({
+            success: true,
+            data: {
+                id: 'bk_001',
+                eventId: event.id,
+                eventTitle: event.title,
+                tierId: tier.id,
+                tierName: tier.name,
+                quantity: body.quantity,
+                totalAmount: Number(tier.price) * body.quantity,
+                status: 'CONFIRMED',
+                paymentStatus: 'PAID',
+                paymentReference: 'sim_ref_001',
+                createdAt: '2026-05-01T00:00:00',
+                tickets,
+            },
+        }, { status: 201 });
     }),
 );

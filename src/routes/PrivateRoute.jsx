@@ -1,10 +1,20 @@
-import { Navigate, Outlet } from 'react-router';
+import { Navigate, Outlet, useLocation } from 'react-router';
 import { useSelector } from 'react-redux';
+import { selectIsAuthenticated } from '@/features/auth/authSlice';
 
 export default function PrivateRoute() {
-  const isAuthenticated = useSelector(
-    (state) => state.auth.isAuthenticated
-  );
+    const isAuthenticated = useSelector(selectIsAuthenticated);
+    const location = useLocation();
 
-  return isAuthenticated ? <Outlet /> : <Navigate to="/login" replace />;
+    if (!isAuthenticated) {
+        return (
+            <Navigate
+                to="/login"
+                replace
+                state={{ from: `${location.pathname}${location.search}` }}
+            />
+        );
+    }
+
+    return <Outlet />;
 }

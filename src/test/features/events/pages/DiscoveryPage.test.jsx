@@ -171,21 +171,21 @@ describe('DiscoveryPage', () => {
 
         test('brand logo navigates to /', async () => {
             renderWithProviders(<DiscoveryPage />, { initialEntries: ['/events'] });
-            const nav = screen.getByTestId('discovery-nav');
+            const nav = screen.getByTestId('topnav');
             await userEvent.click(within(nav).getByRole('button', { name: /eventnest/i }));
             expect(screen.getByTestId('location')).toHaveTextContent('/');
         });
 
         test('"Sign in" navigates to /login', async () => {
             renderWithProviders(<DiscoveryPage />, { initialEntries: ['/events'] });
-            const nav = screen.getByTestId('discovery-nav');
+            const nav = screen.getByTestId('topnav');
             await userEvent.click(within(nav).getByRole('button', { name: /sign in/i }));
             expect(screen.getByTestId('location')).toHaveTextContent('/login');
         });
 
         test('"Get started" navigates to /register', async () => {
             renderWithProviders(<DiscoveryPage />, { initialEntries: ['/events'] });
-            const nav = screen.getByTestId('discovery-nav');
+            const nav = screen.getByTestId('topnav');
             await userEvent.click(within(nav).getByRole('button', { name: /get started/i }));
             expect(screen.getByTestId('location')).toHaveTextContent('/register');
         });

@@ -4,37 +4,9 @@ import { useGetPublishedEventsQuery } from '../eventsApi';
 import { formatEventDate, isThisMonth } from '@/utils/dateFormat';
 import EventCard from '@/components/ui/EventCard';
 import Input from '@/components/ui/Input';
-import Brand from '@/components/ui/Brand';
 import Button from '@/components/ui/Button';
+import TopNav from '@/components/ui/TopNav';
 import { Icons } from '@/components/ui/Icon';
-
-/* ── Nav bar (shared across authenticated + public pages) ── */
-function TopNav() {
-    const navigate = useNavigate();
-    return (
-        <nav data-testid="discovery-nav" style={{
-            position: 'sticky', top: 0, zIndex: 50,
-            background: 'white',
-            borderBottom: '1px solid var(--border)',
-            padding: '0 24px', height: 64,
-            display: 'flex', alignItems: 'center', gap: 24,
-        }}>
-            <button
-                onClick={() => navigate('/')}
-                style={{ background: 'none', border: 0, padding: 0, cursor: 'pointer' }}
-            >
-                <Brand size={18} />
-            </button>
-            <div style={{ flex: 1 }} />
-            <Button size="sm" variant="secondary" onClick={() => navigate('/login')}>
-                Sign in
-            </Button>
-            <Button size="sm" variant="primary" onClick={() => navigate('/register')}>
-                Get started
-            </Button>
-        </nav>
-    );
-}
 
 /* ── Filter tab strip ── */
 const FILTERS = [
@@ -180,7 +152,7 @@ export default function DiscoveryPage() {
 
     return (
         <div style={{ background: 'var(--surface-subtle)', minHeight: '100vh' }}>
-            <TopNav />
+            <TopNav showBrowse={false} />
 
             {/* ── Header strip ── */}
             <div style={{ background: 'white', borderBottom: '1px solid var(--border)' }}>

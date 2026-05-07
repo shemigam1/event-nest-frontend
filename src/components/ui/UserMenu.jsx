@@ -1,0 +1,131 @@
+import { useEffect, useRef, useState } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { useNavigate } from 'react-router';
+import { logout, selectAuthEmail, selectCurrentUser } from '@/features/auth/authSlice';
+import { Icons } from './Icon';
+
+export default function UserMenu({ onDark = false }) {
+    const dispatch = useDispatch();
+    const navigate = useNavigate();
+    const user = useSelector(selectCurrentUser);
+    const email = useSelector(selectAuthEmail);
+    const [open, setOpen] = useState(false);
+    const ref = useRef(null);
+
+    useEffect(() => {
+        if (!open) return;
+        const onClick = (e) => {
+            if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+        };
+        document.addEventListener('mousedown', onClick);
+        return () => document.removeEventListener('mousedown', onClick);
+    }, [open]);
+
+    const initial = (user?.firstName?.[0] ?? email?.[0] ?? 'U').toUpperCase();
+    const displayName = user
+        ? `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim() || user.email
+        : email ?? 'Account';
+
+    const handleLogout = () => {
+        dispatch(logout());
+        setOpen(false);
+        navigate('/');
+    };
+
+    return (
+        <div ref={ref} style={{ position: 'relative' }}>
+            <button
+                onClick={() => setOpen((o) => !o)}
+                aria-haspopup="menu"
+                aria-expanded={open}
+                style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 10,
+                    padding: '6px 10px 6px 6px',
+                    borderRadius: 99,
+                    background: onDark ? 'rgba(255,255,255,0.10)' : 'var(--surface-subtle)',
+                    border: `1px solid ${onDark ? 'rgba(255,255,255,0.20)' : 'var(--border)'}`,
+                    color: onDark ? 'white' : 'var(--text-1)',
+                    fontSize: 14,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                }}
+            >
+                <span style={{
+                    width: 28, height: 28, borderRadius: 99,
+                    background: 'var(--mp-blue)', color: 'white',
+                    display: 'grid', placeItems: 'center',
+                    fontSize: 13, fontWeight: 700,
+                }}>{initial}</span>
+                <span style={{ maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {displayName}
+                </span>
+            </button>
+
+            {open && (
+                <div role="menu" style={{
+                    position: 'absolute',
+                    top: 'calc(100% + 8px)',
+                    right: 0,
+                    minWidth: 220,
+                    background: 'white',
+                    border: '1px solid var(--border)',
+                    borderRadius: 12,
+                    boxShadow: 'var(--shadow-elevated)',
+                    padding: 6,
+                    zIndex: 100,
+                }}>
+                    <div style={{ padding: '10px 12px', borderBottom: '1px solid var(--border)', marginBottom: 6 }}>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-1)' }}>{displayName}</div>
+                        {email && email !== displayName && (
+                            <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>{email}</div>
+                        )}
+                    </div>
+                    <MenuItem icon={<Icons.calendar size={16} />} onClick={() => { setOpen(false); navigate('/dashboard'); }}>
+                        My events
+                    </MenuItem>
+                    <MenuItem icon={<Icons.ticket size={16} />} onClick={() => { setOpen(false); navigate('/tickets'); }}>
+                        My tickets
+                    </MenuItem>
+                    <MenuItem icon={<Icons.spark size={16} />} onClick={() => { setOpen(false); navigate('/organiser'); }}>
+                        Organiser console
+                    </MenuItem>
+                    <div style={{ height: 1, background: 'var(--border)', margin: '6px 4px' }} />
+                    <MenuItem icon={<Icons.x size={16} />} onClick={handleLogout} danger>
+                        Sign out
+                    </MenuItem>
+                </div>
+            )}
+        </div>
+    );
+}
+
+function MenuItem({ icon, children, onClick, danger }) {
+    return (
+        <button
+            role="menuitem"
+            onClick={onClick}
+            style={{
+                width: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                padding: '8px 12px',
+                borderRadius: 8,
+                border: 0,
+                background: 'transparent',
+                color: danger ? 'var(--error)' : 'var(--text-1)',
+                fontSize: 14,
+                fontWeight: 500,
+                textAlign: 'left',
+                cursor: 'pointer',
+            }}
+            onMouseOver={(e) => e.currentTarget.style.background = 'var(--surface-subtle)'}
+            onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
+        >
+            {icon}
+            {children}
+        </button>
+    );
+}
