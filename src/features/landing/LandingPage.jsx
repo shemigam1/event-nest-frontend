@@ -44,7 +44,7 @@ function AttendeePreview() {
           <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--mp-blue)', letterSpacing: '0.05em' }}>
             YOUR TICKET
           </div>
-          <div className="h-3" style={{ marginTop: 4, color: 'var(--text-1)' }}>
+          <div className="mp-h3" style={{ marginTop: 4, color: 'var(--text-1)' }}>
             Merchant Summit &apos;26
           </div>
         </div>
@@ -92,7 +92,7 @@ function OrganiserPreview() {
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
         <div>
           <div style={{ fontSize: 13, color: 'var(--text-2)' }}>Merchant Summit · Live</div>
-          <div className="h-3" style={{ marginTop: 2, color: 'var(--text-1)' }}>Capacity overview</div>
+          <div className="mp-h3" style={{ marginTop: 2, color: 'var(--text-1)' }}>Capacity overview</div>
         </div>
         <span style={{
           display: 'inline-flex',
@@ -147,7 +147,7 @@ function Pillar({ icon, title, body }) {
       }}>
         {icon}
       </div>
-      <h3 className="h-3" style={{ margin: 0, color: 'var(--text-1)' }}>{title}</h3>
+      <h3 className="mp-h3" style={{ margin: 0, color: 'var(--text-1)' }}>{title}</h3>
       <p className="body" style={{ marginTop: 8, color: 'var(--text-2)' }}>{body}</p>
     </div>
   );
@@ -363,7 +363,7 @@ export default function LandingPage() {
                 {config.eyebrow}
               </span>
 
-              <h1 className="h-display mp-display" style={{
+              <h1 className="mp-h-display mp-display" style={{
                 margin: 0,
                 color: 'white',
               }}>
@@ -446,7 +446,7 @@ export default function LandingPage() {
           }}>
             {config.pillarsEyebrow}
           </span>
-          <h2 className="h-1 mp-display" style={{ margin: '8px 0 0', color: 'var(--text-1)' }}>
+          <h2 className="mp-h1 mp-display" style={{ margin: '8px 0 0', color: 'var(--text-1)' }}>
             {config.pillarsHeadline}
           </h2>
         </div>
@@ -475,7 +475,7 @@ export default function LandingPage() {
             justifyContent: 'space-between',
             marginBottom: 24,
           }}>
-            <h2 className="h-2" style={{ margin: 0, color: 'var(--text-1)' }}>
+            <h2 className="mp-h2" style={{ margin: 0, color: 'var(--text-1)' }}>
               {config.eventsHeadline}
             </h2>
             <button
