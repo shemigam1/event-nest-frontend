@@ -7,6 +7,7 @@ import RegisterPage from '../features/auth/pages/RegisterPage';
 import BookingPage from '../features/bookings/pages/BookingPage';
 import DashboardPage from '../features/bookings/pages/DashboardPage';
 import TicketsPage from '../features/tickets/pages/TicketsPage';
+import CreateEventPage from '../features/events/pages/CreateEventPage';
 import PrivateRoute from './PrivateRoute';
 
 const router = createBrowserRouter([
@@ -33,6 +34,10 @@ const router = createBrowserRouter([
     {
         element: <PrivateRoute />,
         children: [
+            {
+                path: '/events/new',
+                element: <CreateEventPage />,
+            },
             {
                 path: '/events/:id/book',
                 element: <BookingPage />,
