@@ -5,6 +5,7 @@ import Button from '../../components/ui/Button';
 import CapacityBar from '../../components/ui/CapacityBar';
 import EventCard from '../../components/ui/EventCard';
 import QrPattern from '../../components/ui/QrPattern';
+import TopNav from '../../components/ui/TopNav';
 import { StatusBadge } from '../../components/ui/Badge';
 import { Icons } from '../../components/ui/Icon';
 import { SAMPLE_EVENTS } from '../../data/sampleEvents';
@@ -153,51 +154,6 @@ function Pillar({ icon, title, body }) {
   );
 }
 
-/* ── Top navigation ── */
-function TopNav({ onLogin, onRegister, onBrowse }) {
-  return (
-    <nav data-testid="topnav" style={{
-      position: 'sticky',
-      top: 0,
-      zIndex: 50,
-      background: 'rgba(2,16,45,0.92)',
-      backdropFilter: 'blur(12px)',
-      borderBottom: '1px solid rgba(255,255,255,0.08)',
-      padding: '0 24px',
-      height: 64,
-      display: 'flex',
-      alignItems: 'center',
-      gap: 24,
-    }}>
-      <Brand size={18} color="white" />
-      <div style={{ flex: 1 }} />
-      <button
-        onClick={onBrowse}
-        style={{
-          background: 'none',
-          border: 0,
-          color: 'rgba(255,255,255,0.75)',
-          fontSize: 14,
-          fontWeight: 500,
-          cursor: 'pointer',
-          padding: '8px 0',
-          transition: 'color var(--motion-fast)',
-        }}
-        onMouseOver={e => e.currentTarget.style.color = 'white'}
-        onMouseOut={e => e.currentTarget.style.color = 'rgba(255,255,255,0.75)'}
-      >
-        Browse events
-      </button>
-      <Button size="sm" variant="onDark" onClick={onLogin}>
-        Sign in
-      </Button>
-      <Button size="sm" variant="primary" onClick={onRegister}>
-        Get started
-      </Button>
-    </nav>
-  );
-}
-
 /* ══════════════════════════════════════════
    LANDING PAGE
 ══════════════════════════════════════════ */
@@ -275,11 +231,7 @@ export default function LandingPage() {
 
   return (
     <div style={{ background: 'var(--surface-page)' }}>
-      <TopNav
-        onLogin={() => navigate('/login')}
-        onRegister={() => navigate('/register')}
-        onBrowse={() => navigate('/events')}
-      />
+      <TopNav variant="transparent" />
 
       {/* ── Hero ── */}
       <section style={{

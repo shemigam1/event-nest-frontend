@@ -8,21 +8,21 @@ import LoginPage from '@/features/auth/pages/LoginPage';
 describe('LoginPage', () => {
     test('disables submit button when fields are empty', () => {
         renderWithProviders(<LoginPage />);
-        expect(screen.getByRole('button', { name: /^login$/i })).toBeDisabled();
+        expect(screen.getByRole('button', { name: /sign in/i })).toBeDisabled();
     });
 
     test('enables submit button when both fields are filled', async () => {
         renderWithProviders(<LoginPage />);
-        await userEvent.type(screen.getByPlaceholderText(/enter your email/i), 'a@b.com');
-        await userEvent.type(screen.getByPlaceholderText(/enter your password/i), 'password123');
-        expect(screen.getByRole('button', { name: /^login$/i })).not.toBeDisabled();
+        await userEvent.type(screen.getByPlaceholderText(/you@company\.com/i), 'a@b.com');
+        await userEvent.type(screen.getByLabelText(/password/i), 'password123');
+        expect(screen.getByRole('button', { name: /sign in/i })).not.toBeDisabled();
     });
 
     test('navigates to dashboard on successful login', async () => {
         renderWithProviders(<LoginPage />);
-        await userEvent.type(screen.getByPlaceholderText(/enter your email/i), 'a@b.com');
-        await userEvent.type(screen.getByPlaceholderText(/enter your password/i), 'password123');
-        await userEvent.click(screen.getByRole('button', { name: /^login$/i }));
+        await userEvent.type(screen.getByPlaceholderText(/you@company\.com/i), 'a@b.com');
+        await userEvent.type(screen.getByLabelText(/password/i), 'password123');
+        await userEvent.click(screen.getByRole('button', { name: /sign in/i }));
         await waitFor(() =>
             expect(screen.getByTestId('location')).toHaveTextContent('/dashboard')
         );
@@ -35,9 +35,9 @@ describe('LoginPage', () => {
             )
         );
         renderWithProviders(<LoginPage />);
-        await userEvent.type(screen.getByPlaceholderText(/enter your email/i), 'a@b.com');
-        await userEvent.type(screen.getByPlaceholderText(/enter your password/i), 'wrongpass');
-        await userEvent.click(screen.getByRole('button', { name: /^login$/i }));
+        await userEvent.type(screen.getByPlaceholderText(/you@company\.com/i), 'a@b.com');
+        await userEvent.type(screen.getByLabelText(/password/i), 'wrongpass');
+        await userEvent.click(screen.getByRole('button', { name: /sign in/i }));
         await waitFor(() =>
             expect(screen.getByText(/invalid email or password/i)).toBeInTheDocument()
         );
