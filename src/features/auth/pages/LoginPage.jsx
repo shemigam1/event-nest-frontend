@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from "react-router";
 import { useDispatch } from "react-redux";
 import { useLoginMutation } from "../authApi";
 import { setCredentials } from "../authSlice";
+import { userFromToken } from "@/utils/decodeJwt";
 import AuthLayout from "@/components/ui/AuthLayout";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
@@ -15,7 +16,6 @@ export default function LoginPage() {
     const dispatch = useDispatch();
     const navigate = useNavigate();
     const location = useLocation();
-    const redirectTo = location.state?.from ?? "/dashboard";
 
     const isFormValid = formData.email && formData.password;
 
@@ -30,7 +30,10 @@ export default function LoginPage() {
         try {
             const data = await login(formData).unwrap();
             dispatch(setCredentials(data));
-            navigate(redirectTo, { replace: true });
+            const tokenUser = userFromToken(data.accessToken);
+            const isAdmin = tokenUser?.roles?.includes('ROLE_ADMIN') ?? false;
+            const destination = location.state?.from ?? (isAdmin ? '/admin' : '/dashboard');
+            navigate(destination, { replace: true });
         } catch {
             setErrorMessage("Invalid email or password.");
         }

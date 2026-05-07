@@ -547,6 +547,16 @@ function ReviewStep({ basics, tiers, onBack, onSaveDraft, onSubmitForApproval, s
           })
         : '—';
 
+    const totalSeats = tiers.reduce((sum, t) => {
+        return sum + (parseInt(t.rowCount, 10) || 0) * (parseInt(t.seatsPerRow, 10) || 0);
+    }, 0);
+    const expectedRevenue = tiers.reduce((sum, t) => {
+        if (t.isFree) return sum;
+        const cap = (parseInt(t.rowCount, 10) || 0) * (parseInt(t.seatsPerRow, 10) || 0);
+        return sum + cap * (parseFloat(t.price) || 0);
+    }, 0);
+    const allFree = tiers.length > 0 && tiers.every(t => t.isFree);
+
     return (
         <div data-testid="step-review">
             <h2 className="mp-h1" style={{ margin: '0 0 6px', color: 'var(--text-1)' }}>
@@ -628,6 +638,51 @@ function ReviewStep({ basics, tiers, onBack, onSaveDraft, onSubmitForApproval, s
                 <p className="body-sm" style={{ color: 'var(--text-3)', marginBottom: 16 }}>
                     No ticket tiers added — you can add them after saving.
                 </p>
+            )}
+
+            {totalSeats > 0 && (
+                <div style={{
+                    background: 'white',
+                    border: '1px solid var(--border)',
+                    borderRadius: 12,
+                    padding: 20,
+                    marginBottom: 16,
+                    boxShadow: 'var(--shadow-card)',
+                    display: 'grid',
+                    gridTemplateColumns: '1fr 1fr',
+                    gap: 16,
+                }}>
+                    <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                        <span style={{
+                            width: 40, height: 40, borderRadius: 10,
+                            background: 'var(--mp-blue-50)', color: 'var(--mp-blue)',
+                            display: 'grid', placeItems: 'center', flexShrink: 0,
+                        }}>
+                            <Icons.users size={18} />
+                        </span>
+                        <div>
+                            <div style={{ fontSize: 12, color: 'var(--text-3)', fontWeight: 500 }}>Total tickets</div>
+                            <div className="mp-num" style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-1)' }}>
+                                {totalSeats.toLocaleString()}
+                            </div>
+                        </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                        <span style={{
+                            width: 40, height: 40, borderRadius: 10,
+                            background: 'var(--mp-blue-50)', color: 'var(--mp-blue)',
+                            display: 'grid', placeItems: 'center', flexShrink: 0,
+                        }}>
+                            <Icons.wallet size={18} />
+                        </span>
+                        <div>
+                            <div style={{ fontSize: 12, color: 'var(--text-3)', fontWeight: 500 }}>Expected revenue</div>
+                            <div className="mp-num" style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-1)' }}>
+                                {allFree ? 'Free event' : `₦${expectedRevenue.toLocaleString()}`}
+                            </div>
+                        </div>
+                    </div>
+                </div>
             )}
 
             {error && (

@@ -8,7 +8,11 @@ import BookingPage from '../features/bookings/pages/BookingPage';
 import DashboardPage from '../features/bookings/pages/DashboardPage';
 import TicketsPage from '../features/tickets/pages/TicketsPage';
 import CreateEventPage from '../features/events/pages/CreateEventPage';
-import AdminPage from '../features/admin/pages/AdminPage';
+import EventModerationPage from '../features/admin/pages/EventModerationPage';
+import ManageUsersPage from '../features/admin/pages/ManageUsersPage';
+import InviteAdminPage from '../features/admin/pages/InviteAdminPage';
+import OrganizerConsolePage from '../features/organiser/pages/OrganizerConsolePage';
+import OrganizerEventPage from '../features/organiser/pages/OrganizerEventPage';
 import PrivateRoute from './PrivateRoute';
 import AdminRoute from './AdminRoute';
 
@@ -52,6 +56,14 @@ const router = createBrowserRouter([
                 path: '/dashboard',
                 element: <DashboardPage />,
             },
+            {
+                path: '/organiser',
+                element: <OrganizerConsolePage />,
+            },
+            {
+                path: '/organiser/events/:id',
+                element: <OrganizerEventPage />,
+            },
         ],
     },
     {
@@ -59,7 +71,19 @@ const router = createBrowserRouter([
         children: [
             {
                 path: '/admin',
-                element: <AdminPage />,
+                element: <Navigate to="/admin/moderation" replace />,
+            },
+            {
+                path: '/admin/moderation',
+                element: <EventModerationPage />,
+            },
+            {
+                path: '/admin/users',
+                element: <ManageUsersPage />,
+            },
+            {
+                path: '/admin/invite',
+                element: <InviteAdminPage />,
             },
         ],
     },

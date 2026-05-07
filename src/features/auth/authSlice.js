@@ -59,6 +59,7 @@ const authSlice = createSlice({
 export const { setCredentials, logout, setUser } = authSlice.actions;
 
 export const selectCurrentUser = (state) => state.auth.user;
+export const selectCurrentUserId = (state) => state.auth.tokenUser?.sub ?? state.auth.user?.id ?? null;
 export const selectIsAuthenticated = (state) => state.auth.isAuthenticated;
 export const selectAuthEmail = (state) =>
     state.auth.user?.email ?? state.auth.tokenUser?.email ?? null;

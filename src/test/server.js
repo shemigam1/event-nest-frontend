@@ -148,6 +148,83 @@ export const MOCK_PENDING_EVENTS = [
     },
 ];
 
+export const MOCK_ORGANIZER_EVENTS = [
+    {
+        id: 'evt_001',
+        title: 'Moniepoint Merchant Summit 2026',
+        venue: 'Eko Convention Centre, Lagos',
+        startTime: '2026-05-16T10:00:00',
+        endTime: '2026-05-16T18:00:00',
+        status: 'PUBLISHED',
+        createdBy: 'user_001',
+        rejectionReason: null,
+        totalCapacity: 450,
+        soldCount: 325,
+        totalRevenue: 5375000,
+        totalBookings: 124,
+        createdAt: '2026-01-01T00:00:00',
+        updatedAt: '2026-01-01T00:00:00',
+    },
+    {
+        id: 'evt_org_pending',
+        title: 'Lagos Fintech Summit',
+        venue: 'Federal Palace Hotel, Lagos',
+        startTime: '2026-07-10T09:00:00',
+        endTime: '2026-07-10T18:00:00',
+        status: 'PENDING_APPROVAL',
+        createdBy: 'user_001',
+        rejectionReason: null,
+        totalCapacity: 300,
+        soldCount: 0,
+        totalRevenue: 0,
+        totalBookings: 0,
+        createdAt: '2026-05-01T00:00:00',
+        updatedAt: '2026-05-01T00:00:00',
+    },
+    {
+        id: 'evt_org_draft',
+        title: 'EventNest Product Launch 2026',
+        venue: 'Four Points by Sheraton, Lagos',
+        startTime: '2026-09-15T10:00:00',
+        endTime: '2026-09-15T18:00:00',
+        status: 'DRAFT',
+        createdBy: 'user_001',
+        rejectionReason: null,
+        totalCapacity: 200,
+        soldCount: 0,
+        totalRevenue: 0,
+        totalBookings: 0,
+        createdAt: '2026-05-03T00:00:00',
+        updatedAt: '2026-05-03T00:00:00',
+    },
+    {
+        id: 'evt_org_rejected',
+        title: 'Abuja Developer Conference',
+        venue: 'Transcorp Hilton, Abuja',
+        startTime: '2026-08-05T10:00:00',
+        endTime: '2026-08-05T19:00:00',
+        status: 'DRAFT',
+        createdBy: 'user_001',
+        rejectionReason: 'Event details are incomplete. Please provide a full description and confirm venue availability before resubmitting.',
+        totalCapacity: 0,
+        soldCount: 0,
+        totalRevenue: 0,
+        totalBookings: 0,
+        createdAt: '2026-05-02T00:00:00',
+        updatedAt: '2026-05-06T00:00:00',
+    },
+];
+
+export const MOCK_EVENT_BOOKINGS = {
+    evt_001: [
+        { id: 'bk_101', attendeeName: 'Adaeze Okonkwo', attendeeEmail: 'adaeze@example.com', tierName: 'VIP Front Row', quantity: 2, totalAmount: 150000, status: 'CONFIRMED', createdAt: '2026-05-01T10:00:00' },
+        { id: 'bk_102', attendeeName: 'Emeka Chukwu', attendeeEmail: 'emeka@example.com', tierName: 'General Admission', quantity: 3, totalAmount: 75000, status: 'CONFIRMED', createdAt: '2026-05-02T09:00:00' },
+        { id: 'bk_103', attendeeName: 'Fatima Bello', attendeeEmail: 'fatima@example.com', tierName: 'General Admission', quantity: 1, totalAmount: 25000, status: 'CANCELLED', createdAt: '2026-05-03T11:00:00' },
+        { id: 'bk_104', attendeeName: 'Chidi Okeke', attendeeEmail: 'chidi@example.com', tierName: 'VIP Front Row', quantity: 1, totalAmount: 75000, status: 'CONFIRMED', createdAt: '2026-05-04T14:00:00' },
+        { id: 'bk_105', attendeeName: 'Ngozi Eze', attendeeEmail: 'ngozi@example.com', tierName: 'General Admission', quantity: 5, totalAmount: 125000, status: 'CONFIRMED', createdAt: '2026-05-05T08:00:00' },
+    ],
+};
+
 export const MOCK_ANALYTICS = {
     eventsByStatus: { DRAFT: 3, PENDING_APPROVAL: 2, PUBLISHED: 5, CANCELLED: 1 },
     totalBookings: 42,
@@ -394,5 +471,26 @@ export const server = setupServer(
     // Admin: analytics
     http.get(`${BASE_URL}/admin/analytics`, () =>
         HttpResponse.json({ success: true, data: MOCK_ANALYTICS })
+    ),
+
+    // Organizer: my events
+    http.get(`${BASE_URL}/organizer/events`, () =>
+        HttpResponse.json({ success: true, data: MOCK_ORGANIZER_EVENTS })
+    ),
+
+    // Organizer: bookings for an event
+    http.get(`${BASE_URL}/organizer/events/:eventId/bookings`, ({ params }) =>
+        HttpResponse.json({
+            success: true,
+            data: {
+                content: MOCK_EVENT_BOOKINGS[params.eventId] ?? [],
+                totalElements: (MOCK_EVENT_BOOKINGS[params.eventId] ?? []).length,
+            },
+        })
+    ),
+
+    // Delete event
+    http.delete(`${BASE_URL}/events/:id`, () =>
+        HttpResponse.json({ success: true, message: 'Event deleted' })
     ),
 );

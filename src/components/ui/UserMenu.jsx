@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router';
-import { logout, selectAuthEmail, selectCurrentUser } from '@/features/auth/authSlice';
+import { logout, selectAuthEmail, selectCurrentUser, selectIsAdmin } from '@/features/auth/authSlice';
 import { Icons } from './Icon';
 
 export default function UserMenu({ onDark = false }) {
@@ -9,6 +9,7 @@ export default function UserMenu({ onDark = false }) {
     const navigate = useNavigate();
     const user = useSelector(selectCurrentUser);
     const email = useSelector(selectAuthEmail);
+    const isAdmin = useSelector(selectIsAdmin);
     const [open, setOpen] = useState(false);
     const ref = useRef(null);
 
@@ -25,6 +26,8 @@ export default function UserMenu({ onDark = false }) {
     const displayName = user
         ? `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim() || user.email
         : email ?? 'Account';
+
+    const go = (path) => { setOpen(false); navigate(path); };
 
     const handleLogout = () => {
         dispatch(logout());
@@ -54,7 +57,7 @@ export default function UserMenu({ onDark = false }) {
             >
                 <span style={{
                     width: 28, height: 28, borderRadius: 99,
-                    background: 'var(--mp-blue)', color: 'white',
+                    background: isAdmin ? 'var(--text-1)' : 'var(--mp-blue)', color: 'white',
                     display: 'grid', placeItems: 'center',
                     fontSize: 13, fontWeight: 700,
                 }}>{initial}</span>
@@ -68,7 +71,7 @@ export default function UserMenu({ onDark = false }) {
                     position: 'absolute',
                     top: 'calc(100% + 8px)',
                     right: 0,
-                    minWidth: 220,
+                    minWidth: 240,
                     background: 'white',
                     border: '1px solid var(--border)',
                     borderRadius: 12,
@@ -76,21 +79,51 @@ export default function UserMenu({ onDark = false }) {
                     padding: 6,
                     zIndex: 100,
                 }}>
+                    {/* Header */}
                     <div style={{ padding: '10px 12px', borderBottom: '1px solid var(--border)', marginBottom: 6 }}>
-                        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-1)' }}>{displayName}</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-1)' }}>{displayName}</div>
+                            {isAdmin && (
+                                <span style={{
+                                    fontSize: 10, fontWeight: 700, letterSpacing: '0.04em',
+                                    padding: '2px 6px', borderRadius: 4,
+                                    background: 'var(--text-1)', color: 'white',
+                                }}>
+                                    ADMIN
+                                </span>
+                            )}
+                        </div>
                         {email && email !== displayName && (
                             <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>{email}</div>
                         )}
                     </div>
-                    <MenuItem icon={<Icons.calendar size={16} />} onClick={() => { setOpen(false); navigate('/dashboard'); }}>
-                        My events
-                    </MenuItem>
-                    <MenuItem icon={<Icons.ticket size={16} />} onClick={() => { setOpen(false); navigate('/tickets'); }}>
-                        My tickets
-                    </MenuItem>
-                    <MenuItem icon={<Icons.spark size={16} />} onClick={() => { setOpen(false); navigate('/organiser'); }}>
-                        Organiser console
-                    </MenuItem>
+
+                    {isAdmin ? (
+                        <>
+                            <MenuItem icon={<Icons.signal size={16} />} onClick={() => go('/admin/moderation')}>
+                                Event moderation
+                            </MenuItem>
+                            <MenuItem icon={<Icons.users size={16} />} onClick={() => go('/admin/users')}>
+                                Manage users
+                            </MenuItem>
+                            <MenuItem icon={<Icons.mail size={16} />} onClick={() => go('/admin/invite')}>
+                                Invite admin
+                            </MenuItem>
+                        </>
+                    ) : (
+                        <>
+                            <MenuItem icon={<Icons.calendar size={16} />} onClick={() => go('/dashboard')}>
+                                My events
+                            </MenuItem>
+                            <MenuItem icon={<Icons.ticket size={16} />} onClick={() => go('/tickets')}>
+                                My tickets
+                            </MenuItem>
+                            <MenuItem icon={<Icons.spark size={16} />} onClick={() => go('/organiser')}>
+                                Organiser console
+                            </MenuItem>
+                        </>
+                    )}
+
                     <div style={{ height: 1, background: 'var(--border)', margin: '6px 4px' }} />
                     <MenuItem icon={<Icons.x size={16} />} onClick={handleLogout} danger>
                         Sign out
