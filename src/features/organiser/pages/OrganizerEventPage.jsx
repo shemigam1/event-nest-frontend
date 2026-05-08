@@ -3,6 +3,7 @@ import { useNavigate, useParams, Link } from 'react-router';
 import { useGetEventByIdQuery, useGetEventTiersQuery, useSubmitEventMutation, useDeleteEventMutation } from '@/features/events/eventsApi';
 import { useGetEventBookingsQuery } from '../organizerApi';
 import ActivityFeed from '@/features/activity/ActivityFeed';
+import { useGetCheckInInvitesQuery, useCreateCheckInInviteMutation, useRevokeCheckInInviteMutation } from '@/features/checkin/checkInApi';
 import TopNav from '@/components/ui/TopNav';
 import Button from '@/components/ui/Button';
 import { StatusBadge } from '@/components/ui/Badge';
@@ -345,6 +346,9 @@ export default function OrganizerEventPage() {
                 })}
             </div>
 
+            {/* Check-in staff */}
+            <CheckInStaffSection eventId={eventId} />
+
             {showDeleteDialog && (
                 <DeleteDialog
                     title={event.title}
@@ -354,6 +358,190 @@ export default function OrganizerEventPage() {
                 />
             )}
         </Shell>
+    );
+}
+
+/* ── Check-in staff section ──────────────────────── */
+function CheckInStaffSection({ eventId }) {
+    const { data: invites = [], isLoading } = useGetCheckInInvitesQuery(eventId);
+    const [createInvite, createState] = useCreateCheckInInviteMutation();
+    const [revokeInvite, revokeState] = useRevokeCheckInInviteMutation();
+
+    const [name, setName] = useState('');
+    const [email, setEmail] = useState('');
+    const [newToken, setNewToken] = useState(null);
+    const [copied, setCopied] = useState(false);
+    const [formError, setFormError] = useState('');
+
+    async function handleCreate(e) {
+        e.preventDefault();
+        if (!name.trim() || !email.trim()) return;
+        setFormError('');
+        try {
+            const result = await createInvite({ eventId, name: name.trim(), email: email.trim() }).unwrap();
+            setNewToken(result.rawToken);
+            setName('');
+            setEmail('');
+        } catch (err) {
+            setFormError(err?.data?.message || 'Could not create invite. Please try again.');
+        }
+    }
+
+    async function handleRevoke(inviteId) {
+        try { await revokeInvite({ eventId, inviteId }).unwrap(); }
+        catch { /* silently fail — list will not update */ }
+    }
+
+    function copyToken() {
+        if (!newToken) return;
+        navigator.clipboard.writeText(newToken).then(() => {
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        });
+    }
+
+    const statusColor = { ACTIVE: 'var(--success)', REVOKED: 'var(--error)', EXPIRED: 'var(--text-3)' };
+
+    return (
+        <div style={{
+            background: 'white', border: '1px solid var(--border)',
+            borderRadius: 12, overflow: 'hidden', marginTop: 20, boxShadow: 'var(--shadow-card)',
+        }}>
+            <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                    <span style={{ fontWeight: 600, color: 'var(--text-1)', fontSize: 14 }}>Check-in Staff</span>
+                    <p style={{ margin: '2px 0 0', fontSize: 12, color: 'var(--text-3)' }}>
+                        Staff tokens allow scanning tickets without a full account login.
+                    </p>
+                </div>
+            </div>
+
+            {/* Create form */}
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', background: 'var(--surface-subtle)' }}>
+                <form onSubmit={handleCreate} style={{ display: 'flex', gap: 10, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+                    <div style={{ flex: '1 1 160px' }}>
+                        <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--text-2)', marginBottom: 4 }}>Staff name</label>
+                        <input
+                            type="text"
+                            placeholder="e.g. David Okafor"
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            required
+                            style={{
+                                width: '100%', height: 38, padding: '0 12px',
+                                background: 'white', border: '1px solid var(--border)',
+                                borderRadius: 8, fontSize: 14, color: 'var(--text-1)', boxSizing: 'border-box',
+                            }}
+                        />
+                    </div>
+                    <div style={{ flex: '1 1 200px' }}>
+                        <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--text-2)', marginBottom: 4 }}>Email</label>
+                        <input
+                            type="email"
+                            placeholder="staff@example.com"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            required
+                            style={{
+                                width: '100%', height: 38, padding: '0 12px',
+                                background: 'white', border: '1px solid var(--border)',
+                                borderRadius: 8, fontSize: 14, color: 'var(--text-1)', boxSizing: 'border-box',
+                            }}
+                        />
+                    </div>
+                    <Button type="submit" variant="primary" size="sm" disabled={createState.isLoading} icon={<Icons.plus size={14} />}>
+                        {createState.isLoading ? 'Creating…' : 'Create invite'}
+                    </Button>
+                </form>
+                {formError && (
+                    <p style={{ margin: '8px 0 0', fontSize: 13, color: 'var(--error)' }}>{formError}</p>
+                )}
+            </div>
+
+            {/* Newly created token — show once */}
+            {newToken && (
+                <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', background: '#FFFBEB', display: 'flex', gap: 14, alignItems: 'flex-start' }}>
+                    <Icons.alert size={16} style={{ color: '#D97706', flexShrink: 0, marginTop: 2 }} />
+                    <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 600, fontSize: 13, color: '#92400E', marginBottom: 6 }}>
+                            Token created — copy it now. It will not be shown again.
+                        </div>
+                        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                            <code style={{
+                                flex: 1, background: 'white', border: '1px solid #FCD34D',
+                                borderRadius: 6, padding: '6px 10px', fontSize: 13,
+                                fontFamily: 'monospace', color: 'var(--text-1)', wordBreak: 'break-all',
+                            }}>
+                                {newToken}
+                            </code>
+                            <Button variant="secondary" size="sm" onClick={copyToken}>
+                                {copied ? 'Copied!' : 'Copy'}
+                            </Button>
+                            <Button variant="ghost" size="sm" onClick={() => setNewToken(null)}>
+                                Dismiss
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Invite list */}
+            {isLoading && (
+                <div style={{ padding: '20px', fontSize: 13, color: 'var(--text-3)', textAlign: 'center' }}>Loading staff…</div>
+            )}
+
+            {!isLoading && invites.length === 0 && !newToken && (
+                <div style={{ padding: '28px 20px', textAlign: 'center' }}>
+                    <Icons.users size={24} style={{ color: 'var(--text-3)' }} />
+                    <p style={{ margin: '8px 0 0', fontSize: 13, color: 'var(--text-2)' }}>No check-in staff invited yet.</p>
+                </div>
+            )}
+
+            {invites.map((invite, i) => {
+                const created = new Date(invite.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+                const isLast = i === invites.length - 1;
+                return (
+                    <div
+                        key={invite.id}
+                        style={{
+                            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                            padding: '12px 20px',
+                            borderBottom: isLast ? 0 : '1px solid var(--border)',
+                        }}
+                    >
+                        <div>
+                            <div style={{ fontWeight: 500, color: 'var(--text-1)', fontSize: 14 }}>{invite.name}</div>
+                            <div style={{ fontSize: 13, color: 'var(--text-2)', marginTop: 2 }}>
+                                {invite.email} · Added {created}
+                            </div>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                            <span style={{
+                                fontSize: 11, fontWeight: 700, padding: '3px 8px', borderRadius: 6,
+                                background: invite.status === 'ACTIVE' ? 'var(--success-bg)' : 'var(--surface-subtle)',
+                                color: statusColor[invite.status] ?? 'var(--text-3)',
+                            }}>
+                                {invite.status}
+                            </span>
+                            {invite.status === 'ACTIVE' && (
+                                <button
+                                    onClick={() => handleRevoke(invite.id)}
+                                    disabled={revokeState.isLoading}
+                                    aria-label={`Revoke ${invite.name}`}
+                                    style={{
+                                        background: 'none', border: '1px solid var(--border)',
+                                        borderRadius: 6, padding: '4px 8px', cursor: 'pointer',
+                                        fontSize: 12, color: 'var(--error)', fontWeight: 500,
+                                    }}
+                                >
+                                    Revoke
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                );
+            })}
+        </div>
     );
 }
 

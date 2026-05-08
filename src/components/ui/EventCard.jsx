@@ -97,10 +97,10 @@ export default function EventCard({ event, onClick }) {
           alignItems: 'center',
         }}>
           <span className="mp-num" style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-1)' }}>
-            {lowest === 0 ? 'Free' : `₦${lowest.toLocaleString()}`}
             {lowest > 0 && (
-              <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--text-3)' }}> from</span>
+              <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--text-3)' }}>from </span>
             )}
+            {lowest === 0 ? 'Free' : `₦${lowest.toLocaleString()}`}
           </span>
           <span className="mp-num" style={{ fontSize: 12, color: 'var(--text-3)' }}>
             {totalSold}/{totalCap} sold

@@ -10,9 +10,11 @@ import TicketsPage from '../features/tickets/pages/TicketsPage';
 import CreateEventPage from '../features/events/pages/CreateEventPage';
 import EventModerationPage from '../features/admin/pages/EventModerationPage';
 import ManageUsersPage from '../features/admin/pages/ManageUsersPage';
+import AdminUserEventsPage from '../features/admin/pages/AdminUserEventsPage';
 import InviteAdminPage from '../features/admin/pages/InviteAdminPage';
 import OrganizerConsolePage from '../features/organiser/pages/OrganizerConsolePage';
 import OrganizerEventPage from '../features/organiser/pages/OrganizerEventPage';
+import CheckInPage from '../features/checkin/pages/CheckInPage';
 import PrivateRoute from './PrivateRoute';
 import AdminRoute from './AdminRoute';
 
@@ -82,10 +84,18 @@ const router = createBrowserRouter([
                 element: <ManageUsersPage />,
             },
             {
+                path: '/admin/users/:id/events',
+                element: <AdminUserEventsPage />,
+            },
+            {
                 path: '/admin/invite',
                 element: <InviteAdminPage />,
             },
         ],
+    },
+    {
+        path: '/checkin',
+        element: <CheckInPage />,
     },
     {
         path: '*',

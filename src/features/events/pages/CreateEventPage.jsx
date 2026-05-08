@@ -31,10 +31,15 @@ function validateBasics(b) {
     if (!b.startTime) errs.startTime = 'Required';
     if (!b.endDate) errs.endDate = 'Required';
     if (!b.endTime) errs.endTime = 'Required';
+    if (b.startDate) {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        if (new Date(b.startDate) < today) errs.startDate = 'Start date cannot be in the past';
+    }
     if (b.startDate && b.startTime && b.endDate && b.endTime) {
         const start = new Date(`${b.startDate}T${b.startTime}`);
         const end = new Date(`${b.endDate}T${b.endTime}`);
-        if (start <= new Date()) errs.startDate = 'Start time must be in the future';
+        if (!errs.startDate && start <= new Date()) errs.startDate = 'Start time must be in the future';
         if (end <= start) errs.endDate = 'End must be after start';
     }
     return errs;
@@ -114,6 +119,7 @@ function StepIndicator({ currentStep }) {
 /* ── Step 1: Event basics ────────────────────────── */
 function BasicsStep({ data, onChange, onNext }) {
     const [errors, setErrors] = useState({});
+    const today = new Date().toISOString().split('T')[0];
 
     function handle(field) {
         return (e) => onChange({ ...data, [field]: e.target.value });
@@ -189,6 +195,7 @@ function BasicsStep({ data, onChange, onNext }) {
                             type="date"
                             value={data.startDate}
                             onChange={handle('startDate')}
+                            min={today}
                             aria-label="Start date"
                             style={{
                                 width: '100%',
@@ -239,6 +246,7 @@ function BasicsStep({ data, onChange, onNext }) {
                             type="date"
                             value={data.endDate}
                             onChange={handle('endDate')}
+                            min={data.startDate || today}
                             aria-label="End date"
                             style={{
                                 width: '100%',

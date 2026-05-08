@@ -148,6 +148,13 @@ export const MOCK_PENDING_EVENTS = [
     },
 ];
 
+export const MOCK_CHECKIN_INVITES = {
+    evt_001: [
+        { id: 'inv_001', name: 'David Okafor', email: 'david@staff.com', status: 'ACTIVE', expiresAt: '2026-05-17T18:00:00', lastUsedAt: '2026-05-16T10:30:00', createdAt: '2026-05-01T00:00:00', rawToken: null },
+        { id: 'inv_002', name: 'Sarah Musa', email: 'sarah@staff.com', status: 'REVOKED', expiresAt: '2026-05-17T18:00:00', lastUsedAt: null, createdAt: '2026-05-02T00:00:00', rawToken: null },
+    ],
+};
+
 export const MOCK_ORGANIZER_EVENTS = [
     {
         id: 'evt_001',
@@ -428,13 +435,15 @@ export const server = setupServer(
         }, { status: 201 });
     }),
 
-    // Admin: events by status
+    // Admin: events by status or organiserId
     http.get(`${BASE_URL}/admin/events`, ({ request }) => {
         const url = new URL(request.url);
-        const status = url.searchParams.get('status') ?? 'PENDING_APPROVAL';
-        const events = status === 'PENDING_APPROVAL'
-            ? MOCK_PENDING_EVENTS
-            : MOCK_EVENTS.filter(e => e.status === status);
+        const status = url.searchParams.get('status');
+        const organiserId = url.searchParams.get('organiserId');
+        let events = [...MOCK_EVENTS, ...MOCK_PENDING_EVENTS];
+        if (organiserId) events = events.filter(e => e.createdBy === organiserId);
+        else if (status === 'PENDING_APPROVAL') events = MOCK_PENDING_EVENTS;
+        else if (status) events = MOCK_EVENTS.filter(e => e.status === status);
         return HttpResponse.json({
             success: true,
             data: { content: events, page: 0, size: 20, totalElements: events.length, totalPages: 1 },
@@ -468,6 +477,30 @@ export const server = setupServer(
         })
     ),
 
+    // Admin: single user
+    http.get(`${BASE_URL}/admin/users/:id`, ({ params }) => {
+        const user = MOCK_ADMIN_USERS.find((u) => u.id === params.id);
+        if (!user) return HttpResponse.json({ success: false, message: 'Not found' }, { status: 404 });
+        return HttpResponse.json({ success: true, data: user });
+    }),
+
+    // Admin: enable user
+    http.patch(`${BASE_URL}/admin/users/:id/enable`, ({ params }) => {
+        const user = MOCK_ADMIN_USERS.find((u) => u.id === params.id) ?? { id: params.id };
+        return HttpResponse.json({ success: true, data: { ...user, enabled: true } });
+    }),
+
+    // Admin: disable user
+    http.patch(`${BASE_URL}/admin/users/:id/disable`, ({ params }) => {
+        const user = MOCK_ADMIN_USERS.find((u) => u.id === params.id) ?? { id: params.id };
+        return HttpResponse.json({ success: true, data: { ...user, enabled: false } });
+    }),
+
+    // Admin: force cancel / unpublish event
+    http.patch(`${BASE_URL}/admin/events/:id/cancel`, ({ params }) =>
+        HttpResponse.json({ success: true, message: 'Event cancelled', data: { id: params.id, status: 'CANCELLED' } })
+    ),
+
     // Admin: analytics
     http.get(`${BASE_URL}/admin/analytics`, () =>
         HttpResponse.json({ success: true, data: MOCK_ANALYTICS })
@@ -492,5 +525,68 @@ export const server = setupServer(
     // Delete event
     http.delete(`${BASE_URL}/events/:id`, () =>
         HttpResponse.json({ success: true, message: 'Event deleted' })
+    ),
+
+    // Check-in: scan a ticket
+    http.post(`${BASE_URL}/events/:eventId/checkin`, async ({ params, request }) => {
+        const body = await request.json();
+        if (!body.staffToken || body.staffToken !== 'ckin_demo_token') {
+            return HttpResponse.json({ success: false, message: 'Invalid or expired staff token' }, { status: 401 });
+        }
+        const ticket = MOCK_TICKETS.find((t) => t.qrCode === body.qrCode && t.eventId === params.eventId);
+        if (!ticket) {
+            return HttpResponse.json({ success: false, message: 'Ticket not found or does not belong to this event' }, { status: 404 });
+        }
+        if (ticket.status === 'USED') {
+            return HttpResponse.json({ success: false, message: 'Ticket has already been checked in' }, { status: 409 });
+        }
+        if (ticket.status === 'REFUNDED') {
+            return HttpResponse.json({ success: false, message: 'Ticket has been refunded and is no longer valid' }, { status: 409 });
+        }
+        return HttpResponse.json({
+            success: true,
+            message: 'Check-in successful',
+            data: {
+                ticketId: ticket.id,
+                seatNumber: ticket.seatNumber,
+                tierName: ticket.tierName,
+                eventId: ticket.eventId,
+                eventTitle: ticket.eventTitle,
+                attendeeFirstName: 'Adaeze',
+                attendeeLastName: 'Okonkwo',
+                checkedInAt: new Date().toISOString(),
+                checkedInByLabel: 'David Okafor',
+            },
+        });
+    }),
+
+    // Check-in: list invites
+    http.get(`${BASE_URL}/events/:eventId/checkin/invites`, ({ params }) =>
+        HttpResponse.json({
+            success: true,
+            data: MOCK_CHECKIN_INVITES[params.eventId] ?? [],
+        })
+    ),
+
+    // Check-in: create invite
+    http.post(`${BASE_URL}/events/:eventId/checkin/invites`, async ({ params, request }) => {
+        const body = await request.json();
+        const rawToken = 'ckin_demo_token';
+        const invite = {
+            id: `inv_${Date.now()}`,
+            name: body.name,
+            email: body.email,
+            status: 'ACTIVE',
+            expiresAt: '2026-05-17T18:00:00',
+            lastUsedAt: null,
+            createdAt: new Date().toISOString(),
+            rawToken,
+        };
+        return HttpResponse.json({ success: true, message: 'Check-in invite created. Save the token — it will not be shown again.', data: invite }, { status: 201 });
+    }),
+
+    // Check-in: revoke invite
+    http.delete(`${BASE_URL}/events/:eventId/checkin/invites/:inviteId`, () =>
+        HttpResponse.json({ success: true, message: 'Check-in invite revoked' })
     ),
 );
