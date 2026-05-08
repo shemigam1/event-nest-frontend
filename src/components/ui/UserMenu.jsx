@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router';
-import { logout, selectAuthEmail, selectCurrentUser, selectIsAdmin } from '@/features/auth/authSlice';
+import { logout, selectAuthEmail, selectCurrentUser, selectIsAdmin, selectIsCheckinStaff } from '@/features/auth/authSlice';
 import { Icons } from './Icon';
 
 export default function UserMenu({ onDark = false }) {
@@ -10,6 +10,7 @@ export default function UserMenu({ onDark = false }) {
     const user = useSelector(selectCurrentUser);
     const email = useSelector(selectAuthEmail);
     const isAdmin = useSelector(selectIsAdmin);
+    const isCheckinStaff = useSelector(selectIsCheckinStaff);
     const [open, setOpen] = useState(false);
     const ref = useRef(null);
 
@@ -98,7 +99,13 @@ export default function UserMenu({ onDark = false }) {
                         )}
                     </div>
 
-                    {isAdmin ? (
+                    {isCheckinStaff && !isAdmin ? (
+                        <>
+                            <MenuItem icon={<Icons.scan size={16} />} onClick={() => go('/checkin')}>
+                                Check-in station
+                            </MenuItem>
+                        </>
+                    ) : isAdmin ? (
                         <>
                             <MenuItem icon={<Icons.signal size={16} />} onClick={() => go('/admin/moderation')}>
                                 Event moderation
@@ -120,6 +127,9 @@ export default function UserMenu({ onDark = false }) {
                             </MenuItem>
                             <MenuItem icon={<Icons.spark size={16} />} onClick={() => go('/organiser')}>
                                 Organiser console
+                            </MenuItem>
+                            <MenuItem icon={<Icons.scan size={16} />} onClick={() => go('/checkin')}>
+                                Check-in station
                             </MenuItem>
                         </>
                     )}

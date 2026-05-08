@@ -65,5 +65,7 @@ export const selectAuthEmail = (state) =>
     state.auth.user?.email ?? state.auth.tokenUser?.email ?? null;
 export const selectIsAdmin = (state) =>
     state.auth.tokenUser?.roles?.includes('ROLE_ADMIN') ?? false;
+export const selectIsCheckinStaff = (state) =>
+    state.auth.tokenUser?.roles?.includes('ROLE_CHECKIN_STAFF') ?? false;
 
 export default authSlice.reducer;
