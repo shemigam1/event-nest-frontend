@@ -8,6 +8,7 @@ import {
     useGetAdminEventsQuery,
     useApproveEventMutation,
     useRejectEventMutation,
+    useCancelEventMutation,
     useGetAnalyticsQuery,
 } from '../adminApi';
 
@@ -136,9 +137,12 @@ function Skeleton() {
 export default function EventModerationPage() {
     const { data: analytics, isLoading: analyticsLoading } = useGetAnalyticsQuery();
     const { data, isLoading, isError, refetch } = useGetAdminEventsQuery('PENDING_APPROVAL');
+    const { data: publishedData } = useGetAdminEventsQuery('PUBLISHED');
     const [approveEvent, approveState] = useApproveEventMutation();
     const [rejectEvent, rejectState] = useRejectEventMutation();
+    const [cancelEvent, cancelState] = useCancelEventMutation();
     const [pendingReject, setPendingReject] = useState(null);
+    const [pendingCancel, setPendingCancel] = useState(null);
     const [actionError, setActionError] = useState('');
 
     const events = data?.content ?? [];
@@ -161,6 +165,16 @@ export default function EventModerationPage() {
             setPendingReject(null);
         } catch (err) {
             setActionError(err?.data?.message || 'Could not reject event. Please try again.');
+        }
+    }
+
+    async function handleCancelConfirm() {
+        setActionError('');
+        try {
+            await cancelEvent(pendingCancel.id).unwrap();
+            setPendingCancel(null);
+        } catch (err) {
+            setActionError(err?.data?.message || 'Could not cancel event. Please try again.');
         }
     }
 
@@ -225,12 +239,93 @@ export default function EventModerationPage() {
                     </div>
                 )}
 
+                {/* Published events — force cancel */}
+                {(publishedData?.content ?? []).length > 0 && (
+                    <div style={{ marginTop: 24, background: 'white', border: '1px solid var(--border)', borderRadius: 12, boxShadow: 'var(--shadow-card)', overflow: 'hidden' }}>
+                        <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div>
+                                <span style={{ fontWeight: 600, color: 'var(--text-1)', fontSize: 14 }}>Live events</span>
+                                <span style={{ marginLeft: 8, fontSize: 12, color: 'var(--text-3)' }}>Force cancel if an event violates platform policy</span>
+                            </div>
+                            <span style={{ fontSize: 13, color: 'var(--text-3)' }}>
+                                {publishedData?.totalElements ?? 0} published
+                            </span>
+                        </div>
+                        {(publishedData?.content ?? []).map((event, i) => {
+                            const submitted = new Date(event.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+                            const isLast = i === (publishedData?.content ?? []).length - 1;
+                            return (
+                                <div
+                                    key={event.id}
+                                    style={{
+                                        display: 'grid', gridTemplateColumns: '1fr auto auto',
+                                        gap: 16, alignItems: 'center',
+                                        padding: '16px 20px',
+                                        borderBottom: isLast ? 0 : '1px solid var(--border)',
+                                    }}
+                                >
+                                    <div>
+                                        <div style={{ fontWeight: 600, color: 'var(--text-1)' }}>{event.title}</div>
+                                        <div style={{ fontSize: 13, color: 'var(--text-2)', marginTop: 4, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                                            <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                                <Icons.pin size={13} style={{ color: 'var(--text-3)' }} />{event.venue}
+                                            </span>
+                                            <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                                <Icons.calendar size={13} style={{ color: 'var(--text-3)' }} />{formatEventDate(event.startTime)}
+                                            </span>
+                                            <span style={{ color: 'var(--text-3)' }}>Published {submitted}</span>
+                                        </div>
+                                    </div>
+                                    <StatusBadge status={event.status} />
+                                    <Button
+                                        size="sm"
+                                        variant="destructive"
+                                        onClick={() => setPendingCancel(event)}
+                                        disabled={cancelState.isLoading}
+                                    >
+                                        Force cancel
+                                    </Button>
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
+
                 <RejectDialog
                     event={pendingReject}
                     onConfirm={handleRejectConfirm}
                     onDismiss={() => setPendingReject(null)}
                     loading={rejectState.isLoading}
                 />
+
+                {pendingCancel && (
+                    <div
+                        role="dialog"
+                        onClick={() => setPendingCancel(null)}
+                        style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(2,16,45,0.55)', display: 'grid', placeItems: 'center', padding: 20 }}
+                    >
+                        <div
+                            onClick={(e) => e.stopPropagation()}
+                            style={{ width: '100%', maxWidth: 400, background: 'white', borderRadius: 16, boxShadow: 'var(--shadow-modal)', padding: 28 }}
+                        >
+                            <h2 className="mp-h3" style={{ margin: '0 0 8px', color: 'var(--text-1)' }}>Force cancel event?</h2>
+                            <p className="body-sm" style={{ margin: '0 0 6px', color: 'var(--text-2)' }}>
+                                <strong>{pendingCancel.title}</strong> will be immediately taken down and marked as cancelled.
+                            </p>
+                            <p className="body-sm" style={{ margin: '0 0 24px', color: 'var(--error)' }}>
+                                This cannot be undone. Existing ticket holders will be affected.
+                            </p>
+                            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+                                <Button variant="ghost" size="md" onClick={() => setPendingCancel(null)} disabled={cancelState.isLoading}>
+                                    Cancel
+                                </Button>
+                                <Button variant="destructive" size="md" onClick={handleCancelConfirm} disabled={cancelState.isLoading}>
+                                    {cancelState.isLoading ? 'Cancelling…' : 'Force cancel'}
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );

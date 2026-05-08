@@ -10,6 +10,7 @@ import TicketsPage from '../features/tickets/pages/TicketsPage';
 import CreateEventPage from '../features/events/pages/CreateEventPage';
 import EventModerationPage from '../features/admin/pages/EventModerationPage';
 import ManageUsersPage from '../features/admin/pages/ManageUsersPage';
+import AdminUserEventsPage from '../features/admin/pages/AdminUserEventsPage';
 import InviteAdminPage from '../features/admin/pages/InviteAdminPage';
 import OrganizerConsolePage from '../features/organiser/pages/OrganizerConsolePage';
 import OrganizerEventPage from '../features/organiser/pages/OrganizerEventPage';
@@ -81,6 +82,10 @@ const router = createBrowserRouter([
             {
                 path: '/admin/users',
                 element: <ManageUsersPage />,
+            },
+            {
+                path: '/admin/users/:id/events',
+                element: <AdminUserEventsPage />,
             },
             {
                 path: '/admin/invite',
