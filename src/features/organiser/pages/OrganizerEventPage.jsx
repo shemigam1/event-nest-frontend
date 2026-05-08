@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router';
 import { useGetEventByIdQuery, useGetEventTiersQuery, useSubmitEventMutation, useDeleteEventMutation } from '@/features/events/eventsApi';
 import { useGetEventBookingsQuery } from '../organizerApi';
+import ActivityFeed from '@/features/activity/ActivityFeed';
 import TopNav from '@/components/ui/TopNav';
 import Button from '@/components/ui/Button';
 import { StatusBadge } from '@/components/ui/Badge';
@@ -227,6 +228,11 @@ export default function OrganizerEventPage() {
                     icon={<Icons.scan size={16} />}
                     sub={totalCapacity > 0 ? `${Math.round(((totalCapacity - totalSold) / totalCapacity) * 100)}% available` : null}
                 />
+            </div>
+
+            {/* Live activity — fed by SSE; updates in real time as bookings and check-ins arrive */}
+            <div style={{ marginBottom: 20 }}>
+                <ActivityFeed eventId={eventId} max={10} />
             </div>
 
             {/* Ticket tiers */}

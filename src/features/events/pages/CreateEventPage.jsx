@@ -4,8 +4,7 @@ import TopNav from '@/components/ui/TopNav';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import { Icons } from '@/components/ui/Icon';
-import { useCreateEventMutation, useUpdateEventMutation, useSubmitEventMutation } from '../eventsApi';
-import { useCreateTierMutation } from '../tiersApi';
+import { useCreateEventMutation, useSubmitEventMutation } from '../eventsApi';
 
 /* ── Helpers ─────────────────────────────────────── */
 function newTier() {
@@ -787,41 +786,43 @@ export default function CreateEventPage() {
     const [submitted, setSubmitted] = useState(false);
 
     const [createEvent] = useCreateEventMutation();
-    const [updateEvent] = useUpdateEventMutation();
     const [submitEvent] = useSubmitEventMutation();
-    const [createTier] = useCreateTierMutation();
 
     async function createEventSequence(shouldSubmit) {
         setSubmitting(true);
         setError('');
         try {
-            const event = await createEvent({
+            // Backend now requires tiers inline on the create-event payload
+            // (CreateEventRequest.tiers is @NotEmpty). The standalone POST
+            // /events/{id}/tiers endpoint is still used for adding tiers to
+            // existing events later — see TicketTierController.
+            const validTiers = tiers
+                .filter(t => t.name.trim() && t.rowPrefix.trim()
+                    && parseInt(t.rowCount, 10) >= 1
+                    && parseInt(t.seatsPerRow, 10) >= 1)
+                .map(t => ({
+                    name: t.name.trim(),
+                    price: t.isFree ? 0 : parseFloat(t.price) || 0,
+                    rowPrefix: t.rowPrefix.trim(),
+                    rowCount: parseInt(t.rowCount, 10),
+                    seatsPerRow: parseInt(t.seatsPerRow, 10),
+                }));
+
+            const payload = {
                 title: basics.title.trim(),
                 venue: basics.venue.trim(),
                 startTime: toISO(basics.startDate, basics.startTime),
                 endTime: toISO(basics.endDate, basics.endTime),
-            }).unwrap();
-
-            const eventId = event.id;
-
+                tiers: validTiers,
+            };
             if (basics.description.trim()) {
-                await updateEvent({ id: eventId, description: basics.description.trim() }).unwrap();
+                payload.description = basics.description.trim();
             }
 
-            const validTiers = tiers.filter(t => t.name.trim() && t.rowPrefix.trim() && parseInt(t.rowCount) >= 1 && parseInt(t.seatsPerRow) >= 1);
-            for (const tier of validTiers) {
-                await createTier({
-                    eventId,
-                    name: tier.name.trim(),
-                    price: tier.isFree ? 0 : parseFloat(tier.price) || 0,
-                    rowPrefix: tier.rowPrefix.trim(),
-                    rowCount: parseInt(tier.rowCount, 10),
-                    seatsPerRow: parseInt(tier.seatsPerRow, 10),
-                }).unwrap();
-            }
+            const event = await createEvent(payload).unwrap();
 
             if (shouldSubmit) {
-                await submitEvent(eventId).unwrap();
+                await submitEvent(event.id).unwrap();
                 setSubmitted(true);
             }
 
