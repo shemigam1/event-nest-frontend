@@ -21,8 +21,10 @@ export function userFromToken(token) {
     const claims = decodeJwt(token);
     if (!claims) return null;
     if (claims.exp && Date.now() >= claims.exp * 1000) return null;
+    const sub = claims.sub ?? claims.userId ?? claims.id ?? claims.user_id ?? null;
     return {
-        email: claims.email ?? claims.sub ?? null,
+        sub,
+        email: claims.email ?? sub ?? null,
         roles: Array.isArray(claims.roles) ? claims.roles : [],
     };
 }

@@ -4,7 +4,7 @@ import {
     useGetEventByIdQuery,
     useGetEventTiersQuery,
 } from '../eventsApi';
-import { selectIsAuthenticated } from '@/features/auth/authSlice';
+import { selectIsAuthenticated, selectCurrentUserId } from '@/features/auth/authSlice';
 import { formatEventDate } from '@/utils/dateFormat';
 import Button from '@/components/ui/Button';
 import CapacityBar from '@/components/ui/CapacityBar';
@@ -16,6 +16,7 @@ export default function EventDetailPage() {
     const { id } = useParams();
     const navigate = useNavigate();
     const isAuthenticated = useSelector(selectIsAuthenticated);
+    const currentUserId = useSelector(selectCurrentUserId);
 
     const event = useGetEventByIdQuery(id);
     const tiersQuery = useGetEventTiersQuery(id);
@@ -37,7 +38,8 @@ export default function EventDetailPage() {
     const availableCap = tiers.reduce((s, t) => s + (t.availableCapacity ?? 0), 0);
     const totalSold = totalCap - availableCap;
     const allSoldOut = tiers.length > 0 && availableCap === 0;
-    const cantBook = e.status !== 'PUBLISHED' || allSoldOut;
+    const isOwnEvent = Boolean(currentUserId && e.createdBy && currentUserId === e.createdBy);
+    const cantBook = e.status !== 'PUBLISHED' || allSoldOut || isOwnEvent;
 
     return (
         <PageShell>
@@ -69,11 +71,13 @@ export default function EventDetailPage() {
                             {e.title}
                         </h1>
 
-                        {e.createdBy && (
+                        {(e.organizer || e.createdBy) && (
                             <p className="body" style={{ marginTop: 8, color: 'var(--text-2)' }}>
                                 Hosted by{' '}
                                 <strong style={{ color: 'var(--text-1)', fontWeight: 600 }}>
-                                    Organiser · {String(e.createdBy).slice(0, 8)}
+                                    {e.organizer
+                                        ? `${e.organizer.firstName} ${e.organizer.lastName}`
+                                        : `Organiser · ${String(e.createdBy).slice(0, 8)}`}
                                 </strong>
                             </p>
                         )}
@@ -158,24 +162,46 @@ export default function EventDetailPage() {
                                 size="lg"
                                 variant="primary"
                                 style={{ width: '100%', marginTop: 16 }}
-                                iconRight={<Icons.arrowR size={16} />}
+                                iconRight={!isOwnEvent && <Icons.arrowR size={16} />}
                                 onClick={handleBook}
                                 disabled={cantBook}
                             >
-                                {allSoldOut ? 'Sold out' : e.status !== 'PUBLISHED' ? 'Not on sale' : 'Book seats'}
+                                {isOwnEvent
+                                    ? 'Your event'
+                                    : allSoldOut
+                                        ? 'Sold out'
+                                        : e.status !== 'PUBLISHED'
+                                            ? 'Not on sale'
+                                            : 'Book seats'}
                             </Button>
 
-                            <div style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 6,
-                                justifyContent: 'center',
-                                fontSize: 12,
-                                color: 'var(--text-3)',
-                                marginTop: 12,
-                            }}>
-                                <Icons.shield size={14} /> Assigned seats · No overbooking
-                            </div>
+                            {isOwnEvent && (
+                                <div style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 6,
+                                    justifyContent: 'center',
+                                    fontSize: 12,
+                                    color: 'var(--text-3)',
+                                    marginTop: 12,
+                                }}>
+                                    <Icons.alert size={14} /> Organisers cannot book their own events
+                                </div>
+                            )}
+
+                            {!isOwnEvent && (
+                                <div style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 6,
+                                    justifyContent: 'center',
+                                    fontSize: 12,
+                                    color: 'var(--text-3)',
+                                    marginTop: 12,
+                                }}>
+                                    <Icons.shield size={14} /> Assigned seats · No overbooking
+                                </div>
+                            )}
                         </div>
                     </aside>
                 </div>

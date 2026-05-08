@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useLocation } from 'react-router';
 import TopNav from '@/components/ui/TopNav';
 import Button from '@/components/ui/Button';
 import { StatusBadge, RoleBadge } from '@/components/ui/Badge';
@@ -314,9 +315,65 @@ function QueueSkeleton() {
     );
 }
 
+/* ── Invite admin panel ──────────────────────────── */
+function InviteAdminPanel() {
+    const [email, setEmail] = useState('');
+    const [sent, setSent] = useState(false);
+
+    function submit(e) {
+        e.preventDefault();
+        if (!email.trim()) return;
+        setSent(true);
+        setEmail('');
+    }
+
+    return (
+        <div style={{ maxWidth: 480 }}>
+            <h2 className="mp-h3" style={{ margin: '0 0 6px', color: 'var(--text-1)' }}>Invite admin</h2>
+            <p className="body" style={{ margin: '0 0 24px', color: 'var(--text-2)' }}>
+                Send an invitation to grant someone admin access to the platform.
+            </p>
+            {sent && (
+                <div style={{
+                    display: 'flex', alignItems: 'center', gap: 10,
+                    padding: '12px 16px', borderRadius: 10,
+                    background: 'var(--success-bg)', color: 'var(--success)',
+                    fontSize: 14, fontWeight: 500, marginBottom: 20,
+                }}>
+                    <Icons.check size={16} /> Invitation sent successfully.
+                </div>
+            )}
+            <form onSubmit={submit} style={{ display: 'flex', gap: 10 }}>
+                <div style={{ flex: 1 }}>
+                    <input
+                        type="email"
+                        placeholder="admin@example.com"
+                        value={email}
+                        onChange={(e) => { setEmail(e.target.value); setSent(false); }}
+                        required
+                        style={{
+                            width: '100%', height: 44, padding: '0 14px',
+                            background: 'white', border: '1px solid var(--border)',
+                            borderRadius: 12, fontSize: 15, color: 'var(--text-1)',
+                            boxSizing: 'border-box',
+                        }}
+                    />
+                </div>
+                <Button type="submit" variant="primary" size="md" icon={<Icons.mail size={15} />}>
+                    Send invite
+                </Button>
+            </form>
+            <p style={{ marginTop: 12, fontSize: 12, color: 'var(--text-3)' }}>
+                The invitee will receive an email with a link to set up their admin account.
+            </p>
+        </div>
+    );
+}
+
 /* ── Page ────────────────────────────────────────── */
 export default function AdminPage() {
-    const [tab, setTab] = useState('queue');
+    const location = useLocation();
+    const [tab, setTab] = useState(location.state?.tab ?? 'queue');
     const { data: analytics, isLoading: analyticsLoading } = useGetAnalyticsQuery();
 
     const pending = analytics?.eventsByStatus?.PENDING_APPROVAL ?? 0;
@@ -331,6 +388,7 @@ export default function AdminPage() {
     const TABS = [
         { id: 'queue', label: 'Review queue', badge: pending > 0 ? pending : null },
         { id: 'users', label: 'Users' },
+        { id: 'invite', label: 'Invite admin' },
     ];
 
     return (
@@ -424,6 +482,7 @@ export default function AdminPage() {
 
                 {tab === 'queue' && <ReviewQueue />}
                 {tab === 'users' && <UsersPanel />}
+                {tab === 'invite' && <InviteAdminPanel />}
             </div>
         </div>
     );

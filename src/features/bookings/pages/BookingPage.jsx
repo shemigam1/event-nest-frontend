@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router';
+import { useSelector } from 'react-redux';
 import {
     useGetEventByIdQuery,
     useGetEventTiersQuery,
 } from '@/features/events/eventsApi';
 import { useCreateBookingMutation } from '../bookingsApi';
+import { selectCurrentUserId } from '@/features/auth/authSlice';
 import { formatEventDate } from '@/utils/dateFormat';
 import Button from '@/components/ui/Button';
 import TopNav from '@/components/ui/TopNav';
@@ -16,6 +18,7 @@ export default function BookingPage() {
     const { id: eventId } = useParams();
     const navigate = useNavigate();
 
+    const currentUserId = useSelector(selectCurrentUserId);
     const event = useGetEventByIdQuery(eventId);
     const tiersQuery = useGetEventTiersQuery(eventId);
     const [createBooking, createState] = useCreateBookingMutation();
@@ -68,6 +71,19 @@ export default function BookingPage() {
                     <Empty
                         title="Not on sale"
                         body="This event is not currently accepting bookings."
+                        cta={{ label: 'Back to event', onClick: () => navigate(`/events/${eventId}`) }}
+                    />
+                </Card>
+            </PageShell>
+        );
+    }
+    if (currentUserId && event.data.createdBy && currentUserId === event.data.createdBy) {
+        return (
+            <PageShell>
+                <Card>
+                    <Empty
+                        title="You can't book your own event"
+                        body="Organisers are not permitted to purchase tickets for events they created."
                         cta={{ label: 'Back to event', onClick: () => navigate(`/events/${eventId}`) }}
                     />
                 </Card>
