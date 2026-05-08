@@ -13,6 +13,7 @@ import ManageUsersPage from '../features/admin/pages/ManageUsersPage';
 import InviteAdminPage from '../features/admin/pages/InviteAdminPage';
 import OrganizerConsolePage from '../features/organiser/pages/OrganizerConsolePage';
 import OrganizerEventPage from '../features/organiser/pages/OrganizerEventPage';
+import CheckInPage from '../features/checkin/pages/CheckInPage';
 import PrivateRoute from './PrivateRoute';
 import AdminRoute from './AdminRoute';
 
@@ -86,6 +87,10 @@ const router = createBrowserRouter([
                 element: <InviteAdminPage />,
             },
         ],
+    },
+    {
+        path: '/checkin',
+        element: <CheckInPage />,
     },
     {
         path: '*',

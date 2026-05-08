@@ -26,6 +26,31 @@ export const adminApi = baseApi.injectEndpoints({
             providesTags: ['User'],
             transformResponse: (r) => r.data ?? r,
         }),
+        getAdminUserById: builder.query({
+            query: (id) => `/admin/users/${id}`,
+            providesTags: (result, error, id) => [{ type: 'User', id }],
+            transformResponse: (r) => r.data ?? r,
+        }),
+        enableUser: builder.mutation({
+            query: (id) => ({ url: `/admin/users/${id}/enable`, method: 'PATCH' }),
+            invalidatesTags: ['User'],
+            transformResponse: (r) => r.data ?? r,
+        }),
+        disableUser: builder.mutation({
+            query: (id) => ({ url: `/admin/users/${id}/disable`, method: 'PATCH' }),
+            invalidatesTags: ['User'],
+            transformResponse: (r) => r.data ?? r,
+        }),
+        cancelEvent: builder.mutation({
+            query: (id) => ({ url: `/admin/events/${id}/cancel`, method: 'PATCH' }),
+            invalidatesTags: ['Event'],
+            transformResponse: (r) => r.data ?? r,
+        }),
+        getEventsByOrganiser: builder.query({
+            query: (organiserId) => `/admin/events?organiserId=${organiserId}`,
+            providesTags: ['Event'],
+            transformResponse: (r) => r.data ?? r,
+        }),
         getAnalytics: builder.query({
             query: () => '/admin/analytics',
             providesTags: ['Analytics'],
@@ -39,5 +64,10 @@ export const {
     useApproveEventMutation,
     useRejectEventMutation,
     useGetAdminUsersQuery,
+    useGetAdminUserByIdQuery,
+    useEnableUserMutation,
+    useDisableUserMutation,
+    useCancelEventMutation,
+    useGetEventsByOrganiserQuery,
     useGetAnalyticsQuery,
 } = adminApi;
