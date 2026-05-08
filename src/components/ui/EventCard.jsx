@@ -45,8 +45,23 @@ export default function EventCard({ event, onClick }) {
         style={{ height: 160 }}
       />
       <div style={{ padding: 20, flex: 1, display: 'flex', flexDirection: 'column' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
           <StatusBadge status={event.status} size="sm" />
+          {event.status === 'PUBLISHED' && (
+            <span
+              aria-label="Tickets on sale"
+              style={{
+                display: 'inline-flex',
+                gap: 4,
+                alignItems: 'center',
+                fontSize: 11,
+                color: 'var(--success)',
+                fontWeight: 600,
+              }}
+            >
+              <span className="mp-live-dot" />Live
+            </span>
+          )}
           {pct >= 75 && (
             <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--warning)' }}>
               · Selling fast
