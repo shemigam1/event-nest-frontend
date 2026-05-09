@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router';
 import { useScanTicketMutation } from '../checkInApi';
 import { Icons } from '@/components/ui/Icon';
 import Button from '@/components/ui/Button';
 import Brand from '@/components/ui/Brand';
 
 /* ── Setup screen ────────────────────────────────── */
-function SetupScreen({ onStart }) {
-    const [eventId, setEventId] = useState('');
-    const [staffToken, setStaffToken] = useState('');
+function SetupScreen({ onStart, prefillEventId = '', prefillToken = '' }) {
+    const [eventId, setEventId] = useState(prefillEventId);
+    const [staffToken, setStaffToken] = useState(prefillToken);
     const [showToken, setShowToken] = useState(false);
 
     const canStart = eventId.trim() && staffToken.trim();
@@ -414,10 +415,37 @@ function Field({ label, placeholder, value, onChange, icon }) {
 
 /* ── Page ────────────────────────────────────────── */
 export default function CheckInPage() {
+    const [searchParams] = useSearchParams();
     const [session, setSession] = useState(null);
 
+    // Deep-link from the staff-invite email lands here with credentials in
+    // the query string. Capture them once on first render, then scrub the URL
+    // via history.replaceState so the token doesn't leak via Referer / browser
+    // history / shoulder-surfing.
+    const [prefill, setPrefill] = useState(() => ({
+        eventId: searchParams.get('eventId') ?? '',
+        token: searchParams.get('token') ?? '',
+    }));
+
+    useEffect(() => {
+        if (prefill.eventId || prefill.token) {
+            window.history.replaceState({}, '', '/checkin');
+        }
+        // first-render only — we don't want every URL change to re-scrub
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
     if (!session) {
-        return <SetupScreen onStart={setSession} />;
+        return (
+            <SetupScreen
+                onStart={(creds) => {
+                    setPrefill({ eventId: '', token: '' });
+                    setSession(creds);
+                }}
+                prefillEventId={prefill.eventId}
+                prefillToken={prefill.token}
+            />
+        );
     }
 
     return <ActiveSession credentials={session} onEnd={() => setSession(null)} />;
