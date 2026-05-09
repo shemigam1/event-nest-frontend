@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useCheckInTicketMutation } from '../checkInApi';
+import { useScanTicketMutation } from '../checkInApi';
 import { Icons } from '@/components/ui/Icon';
 import Button from '@/components/ui/Button';
 import Brand from '@/components/ui/Brand';
@@ -207,7 +207,7 @@ function HistoryRow({ entry, isLast }) {
 
 /* ── Active session ──────────────────────────────── */
 function ActiveSession({ credentials, onEnd }) {
-    const [checkIn, { isLoading }] = useCheckInTicketMutation();
+    const [checkIn, { isLoading }] = useScanTicketMutation();
     const [qrInput, setQrInput] = useState('');
     const [result, setResult] = useState(null);
     const [history, setHistory] = useState([]);

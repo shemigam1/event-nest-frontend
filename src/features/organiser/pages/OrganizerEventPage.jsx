@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router';
-import { useGetEventByIdQuery, useGetEventTiersQuery, useSubmitEventMutation, useDeleteEventMutation } from '@/features/events/eventsApi';
-import { useGetEventBookingsQuery } from '../organizerApi';
+import { useGetEventTiersQuery, useSubmitEventMutation, useDeleteEventMutation } from '@/features/events/eventsApi';
+import { useGetOrganizerEventByIdQuery, useGetEventBookingsQuery } from '../organizerApi';
 import ActivityFeed from '@/features/activity/ActivityFeed';
-import { useGetCheckInInvitesQuery, useCreateCheckInInviteMutation, useRevokeCheckInInviteMutation } from '@/features/checkin/checkInApi';
+import { useListCheckInInvitesQuery, useCreateCheckInInviteMutation, useRevokeCheckInInviteMutation } from '@/features/checkin/checkInApi';
 import TopNav from '@/components/ui/TopNav';
 import Button from '@/components/ui/Button';
 import { StatusBadge } from '@/components/ui/Badge';
@@ -73,7 +73,7 @@ export default function OrganizerEventPage() {
     const { id: eventId } = useParams();
     const navigate = useNavigate();
 
-    const eventQuery = useGetEventByIdQuery(eventId);
+    const eventQuery = useGetOrganizerEventByIdQuery(eventId);
     const tiersQuery = useGetEventTiersQuery(eventId);
     const bookingsQuery = useGetEventBookingsQuery(eventId);
 
@@ -138,6 +138,8 @@ export default function OrganizerEventPage() {
     }, 0);
     const confirmedBookings = bookings.filter((b) => b.status === 'CONFIRMED').length;
 
+    const pendingUpdate = event.pendingUpdate ?? null;
+
     return (
         <Shell>
             <BackLink />
@@ -145,6 +147,41 @@ export default function OrganizerEventPage() {
             {actionError && (
                 <div role="alert" style={{ marginBottom: 16, padding: '10px 16px', background: 'var(--error-bg)', color: 'var(--error)', borderRadius: 10, fontSize: 14 }}>
                     {actionError}
+                </div>
+            )}
+
+            {/* Pending update banner */}
+            {pendingUpdate?.status === 'PENDING' && (
+                <div style={{
+                    display: 'flex', gap: 12, padding: '14px 18px', marginBottom: 16,
+                    background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: 12, fontSize: 14, color: '#1E40AF',
+                }}>
+                    <Icons.clock size={17} style={{ color: '#3B82F6', flexShrink: 0, marginTop: 1 }} />
+                    <div>
+                        <strong>Update pending admin review</strong>
+                        <div style={{ marginTop: 3, fontSize: 13, color: '#1D4ED8' }}>
+                            Your proposed changes are under review. The live event is unchanged until they are approved.
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Rejected update banner */}
+            {pendingUpdate?.status === 'REJECTED' && (
+                <div style={{
+                    display: 'flex', gap: 12, padding: '14px 18px', marginBottom: 16,
+                    background: 'var(--error-bg)', border: '1px solid var(--error)', borderRadius: 12, fontSize: 14,
+                }}>
+                    <Icons.alert size={17} style={{ color: 'var(--error)', flexShrink: 0, marginTop: 1 }} />
+                    <div>
+                        <strong style={{ color: 'var(--error)' }}>Edit request rejected</strong>
+                        <div style={{ marginTop: 3, fontSize: 13, color: 'var(--text-1)' }}>
+                            {pendingUpdate.rejectionReason}
+                        </div>
+                        <div style={{ marginTop: 6, fontSize: 13, color: 'var(--text-2)' }}>
+                            Please revise and resubmit.
+                        </div>
+                    </div>
                 </div>
             )}
 
@@ -193,6 +230,14 @@ export default function OrganizerEventPage() {
                     </div>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flexShrink: 0 }}>
+                        <Button
+                            variant="secondary"
+                            size="md"
+                            icon={<Icons.list size={15} />}
+                            onClick={() => navigate(`/events/${eventId}/edit`)}
+                        >
+                            Edit event
+                        </Button>
                         {isDraft && (
                             <Button
                                 variant="primary"
@@ -363,7 +408,7 @@ export default function OrganizerEventPage() {
 
 /* ── Check-in staff section ──────────────────────── */
 function CheckInStaffSection({ eventId }) {
-    const { data: invites = [], isLoading } = useGetCheckInInvitesQuery(eventId);
+    const { data: invites = [], isLoading } = useListCheckInInvitesQuery(eventId);
     const [createInvite, createState] = useCreateCheckInInviteMutation();
     const [revokeInvite, revokeState] = useRevokeCheckInInviteMutation();
 
@@ -372,6 +417,7 @@ function CheckInStaffSection({ eventId }) {
     const [newToken, setNewToken] = useState(null);
     const [copied, setCopied] = useState(false);
     const [formError, setFormError] = useState('');
+    const [pendingRevoke, setPendingRevoke] = useState(null);
 
     async function handleCreate(e) {
         e.preventDefault();
@@ -387,9 +433,12 @@ function CheckInStaffSection({ eventId }) {
         }
     }
 
-    async function handleRevoke(inviteId) {
-        try { await revokeInvite({ eventId, inviteId }).unwrap(); }
-        catch { /* silently fail — list will not update */ }
+    async function handleRevokeConfirm() {
+        if (!pendingRevoke) return;
+        try {
+            await revokeInvite({ eventId, inviteId: pendingRevoke.id }).unwrap();
+        } catch { /* list will refetch */ }
+        setPendingRevoke(null);
     }
 
     function copyToken() {
@@ -525,7 +574,7 @@ function CheckInStaffSection({ eventId }) {
                             </span>
                             {invite.status === 'ACTIVE' && (
                                 <button
-                                    onClick={() => handleRevoke(invite.id)}
+                                    onClick={() => setPendingRevoke(invite)}
                                     disabled={revokeState.isLoading}
                                     aria-label={`Revoke ${invite.name}`}
                                     style={{
@@ -541,6 +590,35 @@ function CheckInStaffSection({ eventId }) {
                     </div>
                 );
             })}
+
+            {pendingRevoke && (
+                <div
+                    role="dialog"
+                    onClick={() => setPendingRevoke(null)}
+                    style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(2,16,45,0.55)', display: 'grid', placeItems: 'center', padding: 20 }}
+                >
+                    <div
+                        onClick={(e) => e.stopPropagation()}
+                        style={{ width: '100%', maxWidth: 400, background: 'white', borderRadius: 16, boxShadow: 'var(--shadow-modal)', padding: 28 }}
+                    >
+                        <h2 className="mp-h3" style={{ margin: '0 0 8px', color: 'var(--text-1)' }}>Revoke access?</h2>
+                        <p className="body-sm" style={{ margin: '0 0 6px', color: 'var(--text-2)' }}>
+                            <strong>{pendingRevoke.name}</strong> ({pendingRevoke.email}) will immediately lose the ability to scan tickets for this event.
+                        </p>
+                        <p className="body-sm" style={{ margin: '0 0 24px', color: 'var(--text-3)' }}>
+                            Their staff token will be invalidated. This cannot be undone — you can create a new invite if needed.
+                        </p>
+                        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+                            <Button variant="ghost" size="md" onClick={() => setPendingRevoke(null)} disabled={revokeState.isLoading}>
+                                Cancel
+                            </Button>
+                            <Button variant="destructive" size="md" onClick={handleRevokeConfirm} disabled={revokeState.isLoading}>
+                                {revokeState.isLoading ? 'Revoking…' : 'Yes, revoke access'}
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

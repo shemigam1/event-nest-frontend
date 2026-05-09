@@ -13,6 +13,17 @@ export const tiersApi = baseApi.injectEndpoints({
             ],
             transformResponse: (response) => response.data ?? response,
         }),
+        updateTier: builder.mutation({
+            query: ({ eventId, tierId, ...body }) => ({
+                url: `/events/${eventId}/tiers/${tierId}`,
+                method: 'PATCH',
+                body,
+            }),
+            invalidatesTags: (result, error, { eventId }) => [
+                { type: 'Event', id: `${eventId}-tiers` },
+            ],
+            transformResponse: (response) => response.data ?? response,
+        }),
         deleteTier: builder.mutation({
             query: ({ eventId, tierId }) => ({
                 url: `/events/${eventId}/tiers/${tierId}`,
@@ -25,4 +36,8 @@ export const tiersApi = baseApi.injectEndpoints({
     }),
 });
 
-export const { useCreateTierMutation, useDeleteTierMutation } = tiersApi;
+export const {
+    useCreateTierMutation,
+    useUpdateTierMutation,
+    useDeleteTierMutation,
+} = tiersApi;

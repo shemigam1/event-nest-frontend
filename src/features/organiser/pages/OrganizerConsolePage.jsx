@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { useSelector } from 'react-redux';
-import { selectCurrentUser, selectAuthEmail } from '@/features/auth/authSlice';
+import { useDispatch, useSelector } from 'react-redux';
+import { logout, selectCurrentUser, selectAuthEmail } from '@/features/auth/authSlice';
 import { useGetOrganizerEventsQuery } from '../organizerApi';
 import { useSubmitEventMutation, useDeleteEventMutation } from '@/features/events/eventsApi';
 import TopNav from '@/components/ui/TopNav';
@@ -176,11 +176,21 @@ function Skeleton() {
 /* ── Page ────────────────────────────────────────── */
 export default function OrganizerConsolePage() {
     const navigate = useNavigate();
-    const user = useSelector(selectCurrentUser);
+    const dispatch = useDispatch();
+    const user  = useSelector(selectCurrentUser);
     const email = useSelector(selectAuthEmail);
     const firstName = user?.firstName ?? email?.split('@')[0] ?? '';
 
-    const { data: events = [], isLoading, isError, refetch } = useGetOrganizerEventsQuery();
+    const { data: events = [], isLoading, isError, error, refetch } = useGetOrganizerEventsQuery();
+
+    const isAuthError = isError && (error?.status === 401 || error?.status === 403);
+
+    useEffect(() => {
+        if (isAuthError) {
+            dispatch(logout());
+            navigate('/login', { replace: true });
+        }
+    }, [isAuthError, dispatch, navigate]);
     const [submitEvent, submitState] = useSubmitEventMutation();
     const [deleteEvent, deleteState] = useDeleteEventMutation();
 
@@ -274,7 +284,7 @@ export default function OrganizerConsolePage() {
                 {/* Events list */}
                 {isLoading && <Skeleton />}
 
-                {isError && (
+                {isError && !isAuthError && (
                     <div style={{ padding: 40, textAlign: 'center' }}>
                         <Icons.alert size={28} style={{ color: 'var(--error)' }} />
                         <p className="body-sm" style={{ marginTop: 8, color: 'var(--text-2)' }}>Could not load your events.</p>

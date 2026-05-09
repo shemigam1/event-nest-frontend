@@ -7,6 +7,11 @@ export const organizerApi = baseApi.injectEndpoints({
             providesTags: ['Event'],
             transformResponse: (response) => response.data ?? response,
         }),
+        getOrganizerEventById: builder.query({
+            query: (id) => `/organizer/events/${id}`,
+            providesTags: (result, error, id) => [{ type: 'Event', id }],
+            transformResponse: (response) => response.data ?? response,
+        }),
         getEventBookings: builder.query({
             // Backend returns a raw List<BookingResponse> (same shape as
             // /me/bookings), not a paged Page wrapper — hence the simple
@@ -23,5 +28,6 @@ export const organizerApi = baseApi.injectEndpoints({
 
 export const {
     useGetOrganizerEventsQuery,
+    useGetOrganizerEventByIdQuery,
     useGetEventBookingsQuery,
 } = organizerApi;

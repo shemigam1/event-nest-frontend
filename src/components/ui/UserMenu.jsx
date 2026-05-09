@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router';
 import { logout, selectAuthEmail, selectCurrentUser, selectIsAdmin, selectIsCheckinStaff } from '@/features/auth/authSlice';
+import { baseApi } from '@/services/baseApi';
 import { Icons } from './Icon';
 
 export default function UserMenu({ onDark = false }) {
@@ -9,7 +10,7 @@ export default function UserMenu({ onDark = false }) {
     const navigate = useNavigate();
     const user = useSelector(selectCurrentUser);
     const email = useSelector(selectAuthEmail);
-    const isAdmin = useSelector(selectIsAdmin);
+    const isAdmin        = useSelector(selectIsAdmin);
     const isCheckinStaff = useSelector(selectIsCheckinStaff);
     const [open, setOpen] = useState(false);
     const ref = useRef(null);
@@ -32,6 +33,7 @@ export default function UserMenu({ onDark = false }) {
 
     const handleLogout = () => {
         dispatch(logout());
+        dispatch(baseApi.util.resetApiState());
         setOpen(false);
         navigate('/');
     };
@@ -112,6 +114,9 @@ export default function UserMenu({ onDark = false }) {
                             </MenuItem>
                             <MenuItem icon={<Icons.users size={16} />} onClick={() => go('/admin/users')}>
                                 Manage users
+                            </MenuItem>
+                            <MenuItem icon={<Icons.list size={16} />} onClick={() => go('/admin/event-edits')}>
+                                Event edit requests
                             </MenuItem>
                             <MenuItem icon={<Icons.mail size={16} />} onClick={() => go('/admin/invite')}>
                                 Invite admin

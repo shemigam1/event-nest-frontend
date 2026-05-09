@@ -1,7 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useGetMyTicketsQuery } from '../ticketsApi';
-import { useGetMyBookingsQuery } from '@/features/bookings/bookingsApi';
 import { formatEventDate } from '@/utils/dateFormat';
 import Button from '@/components/ui/Button';
 import TopNav from '@/components/ui/TopNav';
@@ -13,19 +12,7 @@ import { Icons } from '@/components/ui/Icon';
 export default function TicketsPage() {
     const navigate = useNavigate();
     const tickets = useGetMyTicketsQuery();
-    // Pull bookings too so we can show event start time / venue on the cards.
-    // Backend's TicketResponse doesn't carry those fields, but BookingResponse does
-    // implicitly via its eventId — we cross-reference by bookingId → eventId.
-    const bookings = useGetMyBookingsQuery();
     const [active, setActive] = useState(null);
-
-    const eventInfoByBooking = useMemo(() => {
-        const map = new Map();
-        (bookings.data ?? []).forEach((b) => {
-            map.set(b.id, { eventId: b.eventId, eventTitle: b.eventTitle });
-        });
-        return map;
-    }, [bookings.data]);
 
     return (
         <div style={{ background: 'var(--surface-subtle)', minHeight: '100vh' }}>
@@ -52,6 +39,8 @@ export default function TicketsPage() {
                             <TicketCard
                                 key={t.id}
                                 ticket={t}
+                                eventStartTime={t.eventStartTime}
+                                venue={t.eventVenue}
                                 onShowQr={setActive}
                             />
                         ))}
