@@ -1,18 +1,20 @@
 import { baseApi } from '@/services/baseApi';
 
-export const checkInApi = baseApi.injectEndpoints({
+/**
+ * Endpoints under /api/v1/events/{eventId}/checkin.
+ *
+ * `scanTicket` is the only call made by check-in staff at the gate; the rest
+ * are organiser-side CRUD over staff invitations.
+ */
+export const checkinApi = baseApi.injectEndpoints({
     endpoints: (builder) => ({
-        checkInTicket: builder.mutation({
+        scanTicket: builder.mutation({
             query: ({ eventId, staffToken, qrCode }) => ({
                 url: `/events/${eventId}/checkin`,
                 method: 'POST',
                 body: { staffToken, qrCode },
             }),
-            transformResponse: (response) => response.data ?? response,
-        }),
-        getCheckInInvites: builder.query({
-            query: (eventId) => `/events/${eventId}/checkin/invites`,
-            providesTags: (result, error, eventId) => [{ type: 'CheckInInvite', id: eventId }],
+            invalidatesTags: ['Ticket'],
             transformResponse: (response) => response.data ?? response,
         }),
         createCheckInInvite: builder.mutation({
@@ -21,7 +23,16 @@ export const checkInApi = baseApi.injectEndpoints({
                 method: 'POST',
                 body: { name, email },
             }),
-            invalidatesTags: (result, error, { eventId }) => [{ type: 'CheckInInvite', id: eventId }],
+            invalidatesTags: (result, error, { eventId }) => [
+                { type: 'Event', id: `${eventId}-checkin-invites` },
+            ],
+            transformResponse: (response) => response.data ?? response,
+        }),
+        listCheckInInvites: builder.query({
+            query: (eventId) => `/events/${eventId}/checkin/invites`,
+            providesTags: (result, error, eventId) => [
+                { type: 'Event', id: `${eventId}-checkin-invites` },
+            ],
             transformResponse: (response) => response.data ?? response,
         }),
         revokeCheckInInvite: builder.mutation({
@@ -29,14 +40,16 @@ export const checkInApi = baseApi.injectEndpoints({
                 url: `/events/${eventId}/checkin/invites/${inviteId}`,
                 method: 'DELETE',
             }),
-            invalidatesTags: (result, error, { eventId }) => [{ type: 'CheckInInvite', id: eventId }],
+            invalidatesTags: (result, error, { eventId }) => [
+                { type: 'Event', id: `${eventId}-checkin-invites` },
+            ],
         }),
     }),
 });
 
 export const {
-    useCheckInTicketMutation,
-    useGetCheckInInvitesQuery,
+    useScanTicketMutation,
     useCreateCheckInInviteMutation,
+    useListCheckInInvitesQuery,
     useRevokeCheckInInviteMutation,
-} = checkInApi;
+} = checkinApi;

@@ -148,6 +148,57 @@ export const MOCK_PENDING_EVENTS = [
     },
 ];
 
+export const MOCK_EVENT_EDITS = [
+    {
+        id: 'eedit_001',
+        eventId: 'evt_001',
+        eventTitle: 'Moniepoint Merchant Summit 2026',
+        organiserName: 'Jane Smith',
+        organiserEmail: 'jane@example.com',
+        status: 'PENDING',
+        rejectionReason: null,
+        submittedAt: '2026-05-09T09:15:00',
+        proposedChanges: {
+            description: 'An updated description with richer context about the 2026 summit — expanded networking sessions, new keynote speakers, and hands-on workshops for merchants.',
+        },
+        currentValues: {
+            description: 'Annual merchant summit.',
+        },
+    },
+    {
+        id: 'eedit_002',
+        eventId: 'evt_003',
+        eventTitle: 'Partner Certification Day — Lagos',
+        organiserName: 'Emeka Chukwu',
+        organiserEmail: 'emeka@example.com',
+        status: 'PENDING',
+        rejectionReason: null,
+        submittedAt: '2026-05-08T15:45:00',
+        proposedChanges: {
+            description: 'Certification programme updated with the new Q2 2026 curriculum. Attendees will leave with an industry-recognised certificate.',
+        },
+        currentValues: {
+            description: 'Certification programme.',
+        },
+    },
+    {
+        id: 'eedit_003',
+        eventId: 'evt_002',
+        eventTitle: 'Agent Onboarding Workshop · Q2',
+        organiserName: 'Locke Base',
+        organiserEmail: 'locke@test.com',
+        status: 'REJECTED',
+        rejectionReason: 'The proposed description contains unverified claims about partner guarantees. Please revise.',
+        submittedAt: '2026-05-07T11:00:00',
+        proposedChanges: {
+            description: 'Guaranteed certification for all attendees upon completion.',
+        },
+        currentValues: {
+            description: 'Hands-on certification.',
+        },
+    },
+];
+
 export const MOCK_CHECKIN_INVITES = {
     evt_001: [
         { id: 'inv_001', name: 'David Okafor', email: 'david@staff.com', status: 'ACTIVE', expiresAt: '2026-05-17T18:00:00', lastUsedAt: '2026-05-16T10:30:00', createdAt: '2026-05-01T00:00:00', rawToken: null },
@@ -337,11 +388,21 @@ export const server = setupServer(
         });
     }),
 
-    // Single event
+    // Single event (with pendingUpdate if applicable)
     http.get(`${BASE_URL}/events/:id`, ({ params }) => {
         const event = MOCK_EVENTS.find(e => e.id === params.id);
         if (!event) return HttpResponse.json({ success: false, message: 'Not found' }, { status: 404 });
-        return HttpResponse.json({ success: true, data: event });
+        const pendingEdit = MOCK_EVENT_EDITS.find((e) => e.eventId === params.id && e.status === 'PENDING');
+        const rejectedEdit = !pendingEdit && MOCK_EVENT_EDITS.find((e) => e.eventId === params.id && e.status === 'REJECTED');
+        const activeEdit = pendingEdit ?? rejectedEdit ?? null;
+        const pendingUpdate = activeEdit ? {
+            id: activeEdit.id,
+            proposedChanges: activeEdit.proposedChanges,
+            status: activeEdit.status,
+            rejectionReason: activeEdit.rejectionReason,
+            submittedAt: activeEdit.submittedAt,
+        } : null;
+        return HttpResponse.json({ success: true, data: { ...event, pendingUpdate } });
     }),
 
     // Create tier (must come before GET tiers)
@@ -362,6 +423,14 @@ export const server = setupServer(
                 createdAt: '2026-05-07T00:00:00',
             },
         }, { status: 201 });
+    }),
+
+    // Update a tier
+    http.patch(`${BASE_URL}/events/:eventId/tiers/:tierId`, async ({ params, request }) => {
+        const body = await request.json();
+        const tier = (MOCK_TIERS[params.eventId] ?? []).find((t) => t.id === params.tierId);
+        if (!tier) return HttpResponse.json({ success: false, message: 'Tier not found' }, { status: 404 });
+        return HttpResponse.json({ success: true, data: { ...tier, ...body } });
     }),
 
     // Tiers for an event
@@ -450,6 +519,23 @@ export const server = setupServer(
         });
     }),
 
+    // Admin: single event detail
+    http.get(`${BASE_URL}/admin/events/:id`, ({ params }) => {
+        const event = [...MOCK_EVENTS, ...MOCK_PENDING_EVENTS, ...MOCK_ORGANIZER_EVENTS]
+            .find((e) => e.id === params.id);
+        if (!event) return HttpResponse.json({ success: false, message: 'Not found' }, { status: 404 });
+        return HttpResponse.json({ success: true, data: event });
+    }),
+
+    // Admin: bookings for a specific event
+    http.get(`${BASE_URL}/admin/events/:id/bookings`, ({ params }) => {
+        const bookings = MOCK_EVENT_BOOKINGS[params.id] ?? [];
+        return HttpResponse.json({
+            success: true,
+            data: { content: bookings, totalElements: bookings.length },
+        });
+    }),
+
     // Admin: approve event
     http.patch(`${BASE_URL}/admin/events/:id/approve`, ({ params }) =>
         HttpResponse.json({
@@ -501,6 +587,28 @@ export const server = setupServer(
         HttpResponse.json({ success: true, message: 'Event cancelled', data: { id: params.id, status: 'CANCELLED' } })
     ),
 
+    // Admin: event edits list
+    http.get(`${BASE_URL}/admin/event-edits`, ({ request }) => {
+        const url = new URL(request.url);
+        const status = url.searchParams.get('status');
+        const edits = status ? MOCK_EVENT_EDITS.filter((e) => e.status === status) : MOCK_EVENT_EDITS;
+        return HttpResponse.json({ success: true, data: { content: edits, totalElements: edits.length } });
+    }),
+
+    // Admin: approve event edit
+    http.patch(`${BASE_URL}/admin/event-edits/:id/approve`, ({ params }) => {
+        const edit = MOCK_EVENT_EDITS.find((e) => e.id === params.id);
+        return HttpResponse.json({ success: true, message: 'Edit approved and applied to live event', data: { ...edit, status: 'APPROVED' } });
+    }),
+
+    // Admin: reject event edit
+    http.patch(`${BASE_URL}/admin/event-edits/:id/reject`, async ({ params, request }) => {
+        const body = await request.json();
+        const edit = MOCK_EVENT_EDITS.find((e) => e.id === params.id);
+        return HttpResponse.json({ success: true, message: 'Edit rejected', data: { ...edit, status: 'REJECTED', rejectionReason: body.reason } });
+    }),
+
+    // Events: single event (with pendingUpdate if applicable)
     // Admin: analytics
     http.get(`${BASE_URL}/admin/analytics`, () =>
         HttpResponse.json({ success: true, data: MOCK_ANALYTICS })
@@ -510,6 +618,25 @@ export const server = setupServer(
     http.get(`${BASE_URL}/organizer/events`, () =>
         HttpResponse.json({ success: true, data: MOCK_ORGANIZER_EVENTS })
     ),
+
+    // Organizer: single event (any status, 403 if not owner — mock always succeeds)
+    http.get(`${BASE_URL}/organizer/events/:id`, ({ params }) => {
+        const event =
+            MOCK_ORGANIZER_EVENTS.find((e) => e.id === params.id) ??
+            MOCK_EVENTS.find((e) => e.id === params.id);
+        if (!event) return HttpResponse.json({ success: false, message: 'Not found' }, { status: 404 });
+        const pendingEdit = MOCK_EVENT_EDITS.find((e) => e.eventId === params.id && e.status === 'PENDING');
+        const rejectedEdit = !pendingEdit && MOCK_EVENT_EDITS.find((e) => e.eventId === params.id && e.status === 'REJECTED');
+        const activeEdit = pendingEdit ?? rejectedEdit ?? null;
+        const pendingUpdate = activeEdit ? {
+            id: activeEdit.id,
+            proposedChanges: activeEdit.proposedChanges,
+            status: activeEdit.status,
+            rejectionReason: activeEdit.rejectionReason,
+            submittedAt: activeEdit.submittedAt,
+        } : null;
+        return HttpResponse.json({ success: true, data: { ...event, pendingUpdate } });
+    }),
 
     // Organizer: bookings for an event
     http.get(`${BASE_URL}/organizer/events/:eventId/bookings`, ({ params }) =>

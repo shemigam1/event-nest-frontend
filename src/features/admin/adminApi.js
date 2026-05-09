@@ -40,6 +40,16 @@ export const adminApi = baseApi.injectEndpoints({
             invalidatesTags: ['User'],
             transformResponse: (r) => r.data ?? r,
         }),
+        getAdminEventById: builder.query({
+            query: (id) => `/admin/events/${id}`,
+            providesTags: (result, error, id) => [{ type: 'Event', id }],
+            transformResponse: (r) => r.data ?? r,
+        }),
+        getAdminEventBookings: builder.query({
+            query: (eventId) => `/admin/events/${eventId}/bookings`,
+            providesTags: (result, error, eventId) => [{ type: 'Booking', id: `admin-${eventId}` }],
+            transformResponse: (r) => r.data?.content ?? r.data ?? [],
+        }),
         getAdminUserById: builder.query({
             query: (id) => `/admin/users/${id}`,
             providesTags: (result, error, id) => [{ type: 'User', id }],
@@ -68,6 +78,21 @@ export const adminApi = baseApi.injectEndpoints({
         getAnalytics: builder.query({
             query: () => '/admin/analytics',
             providesTags: ['Analytics'],
+            transformResponse: (r) => r.data ?? r,
+        }),
+        getEventEdits: builder.query({
+            query: (status) => status ? `/admin/event-edits?status=${status}` : '/admin/event-edits',
+            providesTags: ['EventEdit'],
+            transformResponse: (r) => r.data ?? r,
+        }),
+        approveEventEdit: builder.mutation({
+            query: (id) => ({ url: `/admin/event-edits/${id}/approve`, method: 'PATCH' }),
+            invalidatesTags: ['EventEdit', 'Event'],
+            transformResponse: (r) => r.data ?? r,
+        }),
+        rejectEventEdit: builder.mutation({
+            query: ({ id, reason }) => ({ url: `/admin/event-edits/${id}/reject`, method: 'PATCH', body: { reason } }),
+            invalidatesTags: ['EventEdit', 'Event'],
             transformResponse: (r) => r.data ?? r,
         }),
         inviteAdmin: builder.mutation({
@@ -100,9 +125,13 @@ export const {
     useGetAdminUserByIdQuery,
     useEnableUserMutation,
     useDisableUserMutation,
-    useCancelEventMutation,
     useGetEventsByOrganiserQuery,
     useGetAnalyticsQuery,
+    useGetAdminEventByIdQuery,
+    useGetAdminEventBookingsQuery,
+    useGetEventEditsQuery,
+    useApproveEventEditMutation,
+    useRejectEventEditMutation,
     useInviteAdminMutation,
     useCompleteAdminInvitationMutation,
 } = adminApi;

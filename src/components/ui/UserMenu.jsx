@@ -113,6 +113,9 @@ export default function UserMenu({ onDark = false }) {
                             <MenuItem icon={<Icons.users size={16} />} onClick={() => go('/admin/users')}>
                                 Manage users
                             </MenuItem>
+                            <MenuItem icon={<Icons.list size={16} />} onClick={() => go('/admin/event-edits')}>
+                                Event edit requests
+                            </MenuItem>
                             <MenuItem icon={<Icons.mail size={16} />} onClick={() => go('/admin/invite')}>
                                 Invite admin
                             </MenuItem>
