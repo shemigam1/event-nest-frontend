@@ -417,6 +417,7 @@ function CheckInStaffSection({ eventId }) {
     const [newToken, setNewToken] = useState(null);
     const [copied, setCopied] = useState(false);
     const [formError, setFormError] = useState('');
+    const [pendingRevoke, setPendingRevoke] = useState(null);
 
     async function handleCreate(e) {
         e.preventDefault();
@@ -432,9 +433,12 @@ function CheckInStaffSection({ eventId }) {
         }
     }
 
-    async function handleRevoke(inviteId) {
-        try { await revokeInvite({ eventId, inviteId }).unwrap(); }
-        catch { /* silently fail — list will not update */ }
+    async function handleRevokeConfirm() {
+        if (!pendingRevoke) return;
+        try {
+            await revokeInvite({ eventId, inviteId: pendingRevoke.id }).unwrap();
+        } catch { /* list will refetch */ }
+        setPendingRevoke(null);
     }
 
     function copyToken() {
@@ -570,7 +574,7 @@ function CheckInStaffSection({ eventId }) {
                             </span>
                             {invite.status === 'ACTIVE' && (
                                 <button
-                                    onClick={() => handleRevoke(invite.id)}
+                                    onClick={() => setPendingRevoke(invite)}
                                     disabled={revokeState.isLoading}
                                     aria-label={`Revoke ${invite.name}`}
                                     style={{
@@ -586,6 +590,35 @@ function CheckInStaffSection({ eventId }) {
                     </div>
                 );
             })}
+
+            {pendingRevoke && (
+                <div
+                    role="dialog"
+                    onClick={() => setPendingRevoke(null)}
+                    style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(2,16,45,0.55)', display: 'grid', placeItems: 'center', padding: 20 }}
+                >
+                    <div
+                        onClick={(e) => e.stopPropagation()}
+                        style={{ width: '100%', maxWidth: 400, background: 'white', borderRadius: 16, boxShadow: 'var(--shadow-modal)', padding: 28 }}
+                    >
+                        <h2 className="mp-h3" style={{ margin: '0 0 8px', color: 'var(--text-1)' }}>Revoke access?</h2>
+                        <p className="body-sm" style={{ margin: '0 0 6px', color: 'var(--text-2)' }}>
+                            <strong>{pendingRevoke.name}</strong> ({pendingRevoke.email}) will immediately lose the ability to scan tickets for this event.
+                        </p>
+                        <p className="body-sm" style={{ margin: '0 0 24px', color: 'var(--text-3)' }}>
+                            Their staff token will be invalidated. This cannot be undone — you can create a new invite if needed.
+                        </p>
+                        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+                            <Button variant="ghost" size="md" onClick={() => setPendingRevoke(null)} disabled={revokeState.isLoading}>
+                                Cancel
+                            </Button>
+                            <Button variant="destructive" size="md" onClick={handleRevokeConfirm} disabled={revokeState.isLoading}>
+                                {revokeState.isLoading ? 'Revoking…' : 'Yes, revoke access'}
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

@@ -6,7 +6,6 @@ import { StatusBadge } from '@/components/ui/Badge';
 import CapacityBar from '@/components/ui/CapacityBar';
 import { Icons } from '@/components/ui/Icon';
 import { formatEventDate } from '@/utils/dateFormat';
-import { useGetEventTiersQuery } from '@/features/events/eventsApi';
 import {
     useGetAdminEventByIdQuery,
     useGetAdminEventBookingsQuery,
@@ -79,14 +78,14 @@ export default function AdminEventDetailPage() {
     const navigate = useNavigate();
 
     const eventQuery    = useGetAdminEventByIdQuery(eventId);
-    const tiersQuery    = useGetEventTiersQuery(eventId);
     const bookingsQuery = useGetAdminEventBookingsQuery(eventId);
 
     const [approveEvent, approveState] = useApproveEventMutation();
     const [rejectEvent,  rejectState]  = useRejectEventMutation();
     const [cancelEvent,  cancelState]  = useCancelEventMutation();
 
-    const [showReject, setShowReject] = useState(false);
+    const [showReject, setShowReject]   = useState(false);
+    const [showCancel, setShowCancel]   = useState(false);
     const [actionError, setActionError] = useState('');
 
     async function handleApprove() {
@@ -135,7 +134,7 @@ export default function AdminEventDetailPage() {
     }
 
     const event   = eventQuery.data;
-    const tiers   = tiersQuery.data ?? [];
+    const tiers   = event?.tiers ?? [];
     const bookings = bookingsQuery.data ?? [];
 
     const isPending   = event.status === 'PENDING_APPROVAL';
@@ -179,10 +178,13 @@ export default function AdminEventDetailPage() {
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: 'var(--text-2)' }}>
                                 <Icons.calendar size={15} style={{ color: 'var(--text-3)' }} />{formatEventDate(event.startTime)}
                             </div>
-                            {event.createdBy && (
+                            {(event.organizer || event.createdBy) && (
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: 'var(--text-2)' }}>
                                     <Icons.users size={15} style={{ color: 'var(--text-3)' }} />
-                                    Organiser ID: <span className="mp-num" style={{ color: 'var(--text-1)' }}>{event.createdBy}</span>
+                                    {event.organizer
+                                        ? <>Hosted by <strong style={{ color: 'var(--text-1)' }}>{event.organizer.firstName} {event.organizer.lastName}</strong> · <span style={{ color: 'var(--text-3)' }}>{event.organizer.email}</span></>
+                                        : <span className="mp-num" style={{ color: 'var(--text-1)' }}>{event.createdBy}</span>
+                                    }
                                 </div>
                             )}
                         </div>
@@ -197,6 +199,31 @@ export default function AdminEventDetailPage() {
                                 background: 'var(--error-bg)', fontSize: 13, color: 'var(--error)',
                             }}>
                                 <strong>Rejection reason:</strong> {event.rejectionReason}
+                            </div>
+                        )}
+
+                        {/* Pending update chip */}
+                        {event.pendingUpdate && (
+                            <div style={{
+                                marginTop: 14, padding: '10px 14px', borderRadius: 8,
+                                background: '#EFF6FF', border: '1px solid #BFDBFE',
+                                fontSize: 13, color: '#1E40AF',
+                                display: 'flex', alignItems: 'flex-start', gap: 8,
+                            }}>
+                                <Icons.clock size={14} style={{ color: '#3B82F6', flexShrink: 0, marginTop: 1 }} />
+                                <div>
+                                    <strong>Pending edit request</strong> — organiser has submitted changes for review.
+                                    {event.pendingUpdate.proposedChanges?.description && (
+                                        <div style={{ marginTop: 6, color: '#1D4ED8' }}>
+                                            Proposed description: "{event.pendingUpdate.proposedChanges.description}"
+                                        </div>
+                                    )}
+                                    <div style={{ marginTop: 4 }}>
+                                        <a href={`/admin/event-edits`} style={{ color: '#2563EB', fontWeight: 600, textDecoration: 'none' }}>
+                                            Review in Event Edits →
+                                        </a>
+                                    </div>
+                                </div>
                             </div>
                         )}
                     </div>
@@ -214,8 +241,8 @@ export default function AdminEventDetailPage() {
                             </>
                         )}
                         {isPublished && (
-                            <Button variant="destructive" size="md" onClick={handleCancel} disabled={busy}>
-                                {cancelState.isLoading ? 'Cancelling…' : 'Force cancel'}
+                            <Button variant="destructive" size="md" onClick={() => setShowCancel(true)} disabled={busy}>
+                                Force cancel
                             </Button>
                         )}
                     </div>
@@ -346,6 +373,35 @@ export default function AdminEventDetailPage() {
                     onDismiss={() => setShowReject(false)}
                     loading={rejectState.isLoading}
                 />
+            )}
+
+            {showCancel && (
+                <div
+                    role="dialog"
+                    onClick={() => setShowCancel(false)}
+                    style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(2,16,45,0.55)', display: 'grid', placeItems: 'center', padding: 20 }}
+                >
+                    <div
+                        onClick={(e) => e.stopPropagation()}
+                        style={{ width: '100%', maxWidth: 400, background: 'white', borderRadius: 16, boxShadow: 'var(--shadow-modal)', padding: 28 }}
+                    >
+                        <h2 className="mp-h3" style={{ margin: '0 0 8px', color: 'var(--text-1)' }}>Force cancel event?</h2>
+                        <p className="body-sm" style={{ margin: '0 0 6px', color: 'var(--text-2)' }}>
+                            <strong>{event.title}</strong> will be immediately taken down and marked as cancelled.
+                        </p>
+                        <p className="body-sm" style={{ margin: '0 0 24px', color: 'var(--error)' }}>
+                            This cannot be undone. All existing ticket holders will be affected.
+                        </p>
+                        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+                            <Button variant="ghost" size="md" onClick={() => setShowCancel(false)} disabled={cancelState.isLoading}>
+                                Cancel
+                            </Button>
+                            <Button variant="destructive" size="md" onClick={handleCancel} disabled={cancelState.isLoading}>
+                                {cancelState.isLoading ? 'Cancelling…' : 'Force cancel'}
+                            </Button>
+                        </div>
+                    </div>
+                </div>
             )}
         </Shell>
     );

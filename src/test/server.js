@@ -519,12 +519,30 @@ export const server = setupServer(
         });
     }),
 
-    // Admin: single event detail
+    // Admin: single event detail (tiers + organizer + pendingUpdate embedded)
     http.get(`${BASE_URL}/admin/events/:id`, ({ params }) => {
         const event = [...MOCK_EVENTS, ...MOCK_PENDING_EVENTS, ...MOCK_ORGANIZER_EVENTS]
             .find((e) => e.id === params.id);
         if (!event) return HttpResponse.json({ success: false, message: 'Not found' }, { status: 404 });
-        return HttpResponse.json({ success: true, data: event });
+
+        const tiers = MOCK_TIERS[params.id] ?? [];
+        const organiserUser = MOCK_ADMIN_USERS.find((u) => u.id === event.createdBy) ?? null;
+        const organizer = organiserUser
+            ? { id: organiserUser.id, firstName: organiserUser.firstName, lastName: organiserUser.lastName, email: organiserUser.email }
+            : null;
+
+        const pendingEdit   = MOCK_EVENT_EDITS.find((e) => e.eventId === params.id && e.status === 'PENDING');
+        const rejectedEdit  = !pendingEdit && MOCK_EVENT_EDITS.find((e) => e.eventId === params.id && e.status === 'REJECTED');
+        const activeEdit    = pendingEdit ?? rejectedEdit ?? null;
+        const pendingUpdate = activeEdit ? {
+            id: activeEdit.id,
+            proposedChanges: activeEdit.proposedChanges,
+            status: activeEdit.status,
+            rejectionReason: activeEdit.rejectionReason,
+            submittedAt: activeEdit.submittedAt,
+        } : null;
+
+        return HttpResponse.json({ success: true, data: { ...event, tiers, organizer, pendingUpdate } });
     }),
 
     // Admin: bookings for a specific event

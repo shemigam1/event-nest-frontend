@@ -31,8 +31,9 @@ export default function LoginPage() {
             const data = await login(formData).unwrap();
             dispatch(setCredentials(data));
             const tokenUser = userFromToken(data.accessToken);
-            const isAdmin = tokenUser?.roles?.includes('ROLE_ADMIN') ?? false;
-            const destination = location.state?.from ?? (isAdmin ? '/admin' : '/dashboard');
+            const isAdmin   = tokenUser?.roles?.includes('ROLE_ADMIN') ?? false;
+            const defaultDest = isAdmin ? '/admin/moderation' : '/dashboard';
+            const destination = location.state?.from ?? defaultDest;
             navigate(destination, { replace: true });
         } catch {
             setErrorMessage("Invalid email or password.");

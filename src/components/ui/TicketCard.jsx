@@ -13,6 +13,9 @@ import { formatEventDate } from '@/utils/dateFormat';
  * `venue` (optional) is rendered into "Where".
  */
 export default function TicketCard({ ticket, eventStartTime, venue, onShowQr }) {
+    // Accept the values from props (legacy) or from the ticket object directly
+    const resolvedStartTime = eventStartTime ?? ticket.eventStartTime ?? null;
+    const resolvedVenue     = venue ?? ticket.eventVenue ?? null;
     const muted = ticket.status === 'USED' || ticket.status === 'REFUNDED';
     return (
         <div
@@ -46,8 +49,8 @@ export default function TicketCard({ ticket, eventStartTime, venue, onShowQr }) 
                     gap: 24,
                     marginTop: 14,
                 }}>
-                    <Field label="When" value={eventStartTime ? formatEventDate(eventStartTime) : '—'} />
-                    <Field label="Where" value={venue ?? '—'} />
+                    <Field label="When" value={resolvedStartTime ? formatEventDate(resolvedStartTime) : '—'} />
+                    <Field label="Where" value={resolvedVenue ?? '—'} />
                     <Field label="Tier" value={ticket.tierName ?? '—'} />
                 </div>
             </div>
