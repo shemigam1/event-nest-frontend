@@ -251,7 +251,7 @@ export default function AdminEventDetailPage() {
 
             {/* Stats row */}
             {tiers.length > 0 && (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 20 }}>
+                <div className="mp-stat-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 20 }}>
                     {[
                         { label: 'Tickets sold',    value: totalSold.toLocaleString(), sub: `of ${totalCapacity.toLocaleString()}`, icon: <Icons.ticket size={15} /> },
                         { label: 'Revenue',         value: totalRevenue === 0 ? '₦0' : `₦${totalRevenue.toLocaleString()}`, icon: <Icons.wallet size={15} /> },
@@ -328,6 +328,7 @@ export default function AdminEventDetailPage() {
                     return (
                         <div
                             key={booking.id}
+                            className="mp-org-bookings-row"
                             style={{
                                 display: 'grid',
                                 gridTemplateColumns: '1fr 160px 110px 90px',

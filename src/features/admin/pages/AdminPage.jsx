@@ -113,6 +113,7 @@ function EventRow({ event, isLast, onApprove, onReject, approving, rejecting }) 
     return (
         <div
             data-testid={`event-row-${event.id}`}
+            className="mp-event-row"
             style={{
                 display: 'grid',
                 gridTemplateColumns: '1fr auto auto',
@@ -275,6 +276,7 @@ export function UsersPanel() {
                     <div
                         key={user.id}
                         data-testid={`user-row-${user.id}`}
+                        className="mp-user-row"
                         style={{
                             display: 'grid',
                             gridTemplateColumns: '1fr auto auto',
@@ -343,8 +345,8 @@ function InviteAdminPanel() {
                     <Icons.check size={16} /> Invitation sent successfully.
                 </div>
             )}
-            <form onSubmit={submit} style={{ display: 'flex', gap: 10 }}>
-                <div style={{ flex: 1 }}>
+            <form onSubmit={submit} style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                <div style={{ flex: '1 1 200px', minWidth: 0 }}>
                     <input
                         type="email"
                         placeholder="admin@example.com"
@@ -403,7 +405,7 @@ export default function AdminPage() {
                 </div>
 
                 {/* Analytics strip */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 32 }}>
+                <div className="mp-stat-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 32 }}>
                     <StatTile
                         testId="stat-pending"
                         label="Pending review"
@@ -434,7 +436,8 @@ export default function AdminPage() {
                 {/* Tab nav */}
                 <div
                     data-testid="admin-tabs"
-                    style={{ display: 'flex', gap: 4, marginBottom: 20, background: 'white', border: '1px solid var(--border)', borderRadius: 12, padding: 4, width: 'fit-content' }}
+                    className="mp-tab-scroll"
+                    style={{ display: 'flex', gap: 4, marginBottom: 20, background: 'white', border: '1px solid var(--border)', borderRadius: 12, padding: 4, width: 'fit-content', maxWidth: '100%' }}
                 >
                     {TABS.map(({ id, label, badge }) => {
                         const active = tab === id;

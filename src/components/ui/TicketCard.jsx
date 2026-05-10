@@ -20,6 +20,7 @@ export default function TicketCard({ ticket, eventStartTime, venue, onShowQr }) 
     return (
         <div
             data-testid={`ticket-${ticket.id}`}
+            className="mp-ticket-card"
             style={{
                 background: 'white',
                 border: '1px solid var(--border)',
@@ -44,9 +45,10 @@ export default function TicketCard({ ticket, eventStartTime, venue, onShowQr }) 
                     {ticket.eventTitle}
                 </h3>
                 <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(3, auto)',
-                    gap: 24,
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: 18,
+                    rowGap: 12,
                     marginTop: 14,
                 }}>
                     <Field label="When" value={resolvedStartTime ? formatEventDate(resolvedStartTime) : '—'} />

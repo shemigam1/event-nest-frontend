@@ -92,7 +92,7 @@ function QrModalContent({ ticket, onClose }) {
                 </button>
             </div>
 
-            <div style={{
+            <div className="mp-grid-stack" style={{
                 padding: 24,
                 display: 'grid',
                 gridTemplateColumns: '1fr 1fr',

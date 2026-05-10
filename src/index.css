@@ -107,6 +107,251 @@ a:hover { text-decoration: underline; }
   font-size: 64px;
   line-height: 1.05;
 }
+
+/* ─────────────────────────────────────────────────
+   MOBILE RESPONSIVE OVERRIDES
+   The codebase uses inline styles heavily, so we
+   provide utility classes whose @media rules
+   override hardcoded grid/flex/padding values.
+───────────────────────────────────────────────── */
+
+/* Stack any 2+ column grid into a single column on mobile */
+.mp-grid-stack { display: grid; }
+@media (max-width: 640px) {
+  .mp-grid-stack { grid-template-columns: 1fr !important; }
+}
+
+/* Stats grid: 4 cols → 2 cols on tablet → 1 col on phone (with overrides) */
+.mp-stat-grid { display: grid; }
+@media (max-width: 900px) {
+  .mp-stat-grid { grid-template-columns: repeat(2, 1fr) !important; }
+}
+@media (max-width: 480px) {
+  .mp-stat-grid { grid-template-columns: 1fr !important; gap: 12px !important; }
+}
+
+/* Pillars / 3-col card grid → 1 col on phone, 2 on tablet */
+.mp-3col-grid { display: grid; }
+@media (max-width: 900px) {
+  .mp-3col-grid { grid-template-columns: repeat(2, 1fr) !important; }
+}
+@media (max-width: 600px) {
+  .mp-3col-grid { grid-template-columns: 1fr !important; }
+}
+
+/* Hero / two-column layout: stack image+copy on mobile */
+.mp-hero-grid { display: grid; }
+@media (max-width: 900px) {
+  .mp-hero-grid {
+    grid-template-columns: 1fr !important;
+    gap: 32px !important;
+  }
+}
+
+/* Event detail aside: stack on mobile, remove sticky */
+.mp-detail-grid { display: grid; }
+@media (max-width: 900px) {
+  .mp-detail-grid {
+    grid-template-columns: 1fr !important;
+    gap: 24px !important;
+    padding: 24px !important;
+  }
+  .mp-detail-grid aside > div {
+    position: static !important;
+  }
+}
+
+/* Generic row: grid that becomes a flex column on mobile */
+.mp-row-stack {}
+@media (max-width: 700px) {
+  .mp-row-stack {
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+  }
+  .mp-row-stack > * {
+    text-align: left !important;
+    justify-content: flex-start !important;
+  }
+}
+
+/* Action buttons row — wrap on mobile */
+.mp-actions-row {}
+@media (max-width: 600px) {
+  .mp-actions-row {
+    flex-wrap: wrap;
+  }
+  .mp-actions-row > * {
+    flex: 1 1 auto;
+  }
+}
+
+/* Page wrapper — reduce padding on mobile */
+.mp-page-wrap {}
+@media (max-width: 640px) {
+  .mp-page-wrap {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+    padding-top: 20px !important;
+    padding-bottom: 48px !important;
+  }
+}
+
+/* Card padding — softer on mobile */
+.mp-card-pad {}
+@media (max-width: 640px) {
+  .mp-card-pad {
+    padding: 20px !important;
+  }
+}
+
+/* Hide on mobile */
+@media (max-width: 768px) {
+  .mp-hide-mobile { display: none !important; }
+}
+/* Hide on desktop */
+@media (min-width: 769px) {
+  .mp-hide-desktop { display: none !important; }
+}
+
+/* Hero typography — smaller on phone */
+@media (max-width: 640px) {
+  .mp-h-display { font-size: 34px !important; line-height: 40px !important; }
+  .mp-h1 { font-size: 28px !important; line-height: 34px !important; }
+  .mp-h2 { font-size: 22px !important; line-height: 30px !important; }
+  .mp-h3 { font-size: 19px !important; line-height: 26px !important; }
+  .mp-display { font-size: 40px !important; line-height: 1.1 !important; }
+}
+
+/* Horizontal scroll for tab strips on small screens */
+.mp-tab-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.mp-tab-scroll::-webkit-scrollbar { display: none; }
+.mp-tab-scroll > * { flex-shrink: 0; }
+
+/* Tickets card — header (left) over seat hero (right) on mobile */
+.mp-ticket-card {}
+@media (max-width: 600px) {
+  .mp-ticket-card {
+    grid-template-columns: 1fr !important;
+  }
+  .mp-ticket-card > :last-child {
+    border-left: 0 !important;
+    border-top: 1px dashed var(--border-strong);
+    flex-direction: row !important;
+    justify-content: space-between !important;
+    min-width: 0 !important;
+  }
+}
+
+/* Auth layout — stack on mobile */
+.mp-auth-grid {}
+@media (max-width: 900px) {
+  .mp-auth-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .mp-auth-aside {
+    padding: 32px 24px !important;
+    min-height: auto !important;
+  }
+  .mp-auth-aside .mp-h1 {
+    font-size: 24px !important;
+    line-height: 30px !important;
+  }
+  .mp-auth-aside .body-lg {
+    font-size: 15px !important;
+    line-height: 22px !important;
+  }
+  .mp-auth-main {
+    padding: 24px !important;
+  }
+}
+
+/* Generic table-row wrapper that allows horizontal scrolling when needed */
+.mp-scroll-x {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* TopNav adjustments for mobile */
+@media (max-width: 768px) {
+  nav[data-testid="topnav"] {
+    padding: 0 16px !important;
+    gap: 12px !important;
+  }
+}
+
+/* Booking row — collapse to two lines on phone */
+@media (max-width: 600px) {
+  .mp-booking-row {
+    grid-template-columns: 56px 1fr !important;
+    gap: 14px !important;
+    row-gap: 8px !important;
+  }
+  .mp-booking-row > :nth-child(3),
+  .mp-booking-row > :nth-child(4) {
+    grid-column: 1 / -1 !important;
+    justify-self: start !important;
+  }
+}
+
+/* Organizer event row + Admin user/event rows — stack on small screens */
+@media (max-width: 700px) {
+  .mp-event-row,
+  .mp-user-row,
+  .mp-org-bookings-row {
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+    row-gap: 8px !important;
+  }
+  .mp-event-row > *,
+  .mp-user-row > *,
+  .mp-org-bookings-row > * {
+    text-align: left !important;
+    justify-self: start !important;
+  }
+  .mp-event-row .mp-actions,
+  .mp-user-row .mp-actions {
+    margin-top: 4px;
+  }
+}
+
+/* Discovery / event card grid — already uses auto-fill, but reduce min size on tiny phones */
+@media (max-width: 380px) {
+  .mp-events-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* CreateEvent date/time grid — stack on phone */
+@media (max-width: 600px) {
+  .mp-date-grid {
+    grid-template-columns: 1fr 1fr !important;
+  }
+  .mp-tier-seats-grid {
+    grid-template-columns: 1fr 1fr !important;
+  }
+}
+
+/* Quantity stepper — keep numbers readable on phone */
+@media (max-width: 480px) {
+  .mp-qty-display { font-size: 44px !important; }
+}
+
+/* Hero section reduce padding */
+@media (max-width: 640px) {
+  .mp-hero-section {
+    padding: 40px 16px 56px !important;
+  }
+  .mp-section-pad {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+    padding-top: 48px !important;
+    padding-bottom: 48px !important;
+  }
+}
 .mp-display-em {
   font-style: italic;
   color: var(--mp-blue);

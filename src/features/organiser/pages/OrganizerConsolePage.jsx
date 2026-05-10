@@ -92,6 +92,7 @@ function EventRow({ event, isLast, onView, onSubmit, onDelete, submitting }) {
             )}
             <div
                 data-testid={`event-row-${event.id}`}
+                className="mp-event-row"
                 style={{
                     display: 'grid',
                     gridTemplateColumns: '1fr 120px 130px auto',
@@ -228,7 +229,7 @@ export default function OrganizerConsolePage() {
             <div style={{ maxWidth: 1100, margin: '0 auto', padding: '32px 24px 80px' }}>
 
                 {/* Header */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 28 }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 28 }}>
                     <div>
                         <h1 className="mp-h1" style={{ margin: 0, color: 'var(--text-1)' }}>Organiser Console</h1>
                         <p className="body" style={{ margin: '6px 0 0', color: 'var(--text-2)' }}>
@@ -241,7 +242,7 @@ export default function OrganizerConsolePage() {
                 </div>
 
                 {/* Stats */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 32 }}>
+                <div className="mp-stat-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 32 }}>
                     <StatTile label="Total events" value={isLoading ? '—' : events.length} icon={<Icons.calendar size={16} />} />
                     <StatTile label="Published" value={isLoading ? '—' : published} icon={<Icons.bolt size={16} />} />
                     <StatTile label="Tickets sold" value={isLoading ? '—' : totalSold.toLocaleString()} icon={<Icons.ticket size={16} />} />
@@ -260,7 +261,7 @@ export default function OrganizerConsolePage() {
                 )}
 
                 {/* Filter tabs */}
-                <div style={{ display: 'flex', gap: 4, marginBottom: 16, background: 'white', border: '1px solid var(--border)', borderRadius: 12, padding: 4, width: 'fit-content' }}>
+                <div className="mp-tab-scroll" style={{ display: 'flex', gap: 4, marginBottom: 16, background: 'white', border: '1px solid var(--border)', borderRadius: 12, padding: 4, width: 'fit-content', maxWidth: '100%' }}>
                     {FILTERS.map(({ id, label }) => {
                         const active = filter === id;
                         return (

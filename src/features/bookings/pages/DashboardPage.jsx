@@ -60,6 +60,7 @@ function BookingRow({ booking, isLast, onCancel, cancelling }) {
     return (
         <div
             data-testid={`booking-row-${booking.id}`}
+            className="mp-booking-row"
             style={{
                 display: 'grid',
                 gridTemplateColumns: '70px 1fr auto auto',
@@ -217,7 +218,7 @@ export default function DashboardPage() {
                 </p>
 
                 {/* Stats */}
-                <div style={{
+                <div className="mp-stat-grid" style={{
                     display: 'grid',
                     gridTemplateColumns: 'repeat(4, 1fr)',
                     gap: 16,

@@ -3,19 +3,20 @@ import Brand from './Brand';
 
 export default function AuthLayout({ children }) {
     return (
-        <div style={{
+        <div className="mp-auth-grid" style={{
             minHeight: '100vh',
             display: 'grid',
             gridTemplateColumns: '1fr 1fr',
             background: 'white',
         }}>
-            <aside style={{
+            <aside className="mp-auth-aside" style={{
                 background: 'var(--mp-navy)',
                 color: 'white',
                 padding: '64px 56px',
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'space-between',
+                gap: 24,
             }}>
                 <Link to="/" style={{ textDecoration: 'none' }}>
                     <Brand color="white" size={20} />
@@ -32,12 +33,12 @@ export default function AuthLayout({ children }) {
                         at a partner event — all from the same login.
                     </p>
                 </div>
-                <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.55)' }}>
+                <div className="mp-hide-mobile" style={{ fontSize: 13, color: 'rgba(255,255,255,0.55)' }}>
                     Capstone 8 · Moniepoint DreamDev
                 </div>
             </aside>
 
-            <main style={{
+            <main className="mp-auth-main" style={{
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
