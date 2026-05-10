@@ -238,7 +238,7 @@ function Empty({ title, body, cta }) {
 function Stepper({ step }) {
     const labels = ['Select tier', 'Choose quantity', 'Review'];
     return (
-        <div data-testid="booking-stepper" style={{
+        <div data-testid="booking-stepper" className="mp-tab-scroll" style={{
             display: 'flex',
             alignItems: 'center',
             gap: 12,
@@ -389,7 +389,7 @@ function QuantityStep({ tier, qty, cap, total, onDec, onInc, onBack, onContinue 
             }}>
                 <StepperButton onClick={onDec} disabled={qty <= 1} aria-label="Decrease quantity">−</StepperButton>
                 <div style={{ textAlign: 'center', minWidth: 100 }}>
-                    <div className="mp-num" data-testid="qty-display" style={{
+                    <div className="mp-num mp-qty-display" data-testid="qty-display" style={{
                         fontSize: 56, fontWeight: 700, color: 'var(--text-1)', lineHeight: 1,
                     }}>
                         {qty}
@@ -420,7 +420,7 @@ function QuantityStep({ tier, qty, cap, total, onDec, onInc, onBack, onContinue 
                 </span>
             </div>
 
-            <div style={{ marginTop: 24, display: 'flex', gap: 10, justifyContent: 'space-between' }}>
+            <div className="mp-actions-row" style={{ marginTop: 24, display: 'flex', gap: 10, justifyContent: 'space-between' }}>
                 <Button variant="ghost" size="lg" icon={<Icons.arrowL size={16} />} onClick={onBack}>Back</Button>
                 <Button variant="primary" size="lg" iconRight={<Icons.arrowR size={16} />} onClick={onContinue}>Review</Button>
             </div>
@@ -499,7 +499,7 @@ function ReviewStep({ event, tier, qty, total, submitting, errorMessage, onBack,
                 </div>
             )}
 
-            <div style={{ marginTop: 24, display: 'flex', gap: 10, justifyContent: 'space-between' }}>
+            <div className="mp-actions-row" style={{ marginTop: 24, display: 'flex', gap: 10, justifyContent: 'space-between' }}>
                 <Button variant="ghost" size="lg" icon={<Icons.arrowL size={16} />} onClick={onBack} disabled={submitting}>Back</Button>
                 <Button variant="primary" size="lg" onClick={onConfirm} disabled={submitting}>
                     {submitting ? 'Confirming…' : 'Confirm booking'}
@@ -572,7 +572,7 @@ function SuccessStep({ eventTitle, booking, onTickets, onMore }) {
                 </div>
             )}
 
-            <div style={{ marginTop: 24, display: 'flex', gap: 10, justifyContent: 'center' }}>
+            <div className="mp-actions-row" style={{ marginTop: 24, display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
                 <Button variant="primary" size="lg" icon={<Icons.ticket size={16} />} onClick={onTickets}>
                     View tickets
                 </Button>

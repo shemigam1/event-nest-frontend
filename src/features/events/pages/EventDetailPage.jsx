@@ -51,7 +51,7 @@ export default function EventDetailPage() {
             />
 
             <div style={{ maxWidth: 1200, margin: '-80px auto 0', padding: '0 24px 64px', position: 'relative' }}>
-                <div style={{
+                <div className="mp-detail-grid" style={{
                     background: 'white',
                     border: '1px solid var(--border)',
                     borderRadius: 16,
@@ -82,7 +82,7 @@ export default function EventDetailPage() {
                             </p>
                         )}
 
-                        <div style={{
+                        <div className="mp-grid-stack" style={{
                             display: 'grid',
                             gridTemplateColumns: '1fr 1fr',
                             gap: 16,

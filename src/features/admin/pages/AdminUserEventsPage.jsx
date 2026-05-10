@@ -258,6 +258,7 @@ export default function AdminUserEventsPage() {
                         return (
                             <div
                                 key={event.id}
+                                className="mp-event-row"
                                 style={{
                                     display: 'grid',
                                     gridTemplateColumns: '1fr auto auto',

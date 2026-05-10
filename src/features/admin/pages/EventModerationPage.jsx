@@ -132,6 +132,7 @@ function EventRow({ event, isLast, filter, onApprove, onReject, onCancel, approv
     return (
         <div
             data-testid={`event-row-${event.id}`}
+            className="mp-event-row"
             style={{
                 display: 'grid',
                 gridTemplateColumns: '1fr auto auto',
@@ -275,7 +276,7 @@ export default function EventModerationPage() {
                 </div>
 
                 {/* Stats strip */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 28 }}>
+                <div className="mp-stat-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 28 }}>
                     <StatTile label="Pending review" value={analyticsLoading ? '—' : pending} icon={<Icons.clock size={16} />} sub="awaiting approval" />
                     <StatTile label="Published"      value={analyticsLoading ? '—' : published} icon={<Icons.bolt size={16} />} />
                     <StatTile label="Cancelled"      value={analyticsLoading ? '—' : cancelled} icon={<Icons.x size={16} />} />
@@ -289,7 +290,7 @@ export default function EventModerationPage() {
                 )}
 
                 {/* Filter tabs */}
-                <div style={{ display: 'flex', gap: 4, marginBottom: 16, background: 'white', border: '1px solid var(--border)', borderRadius: 12, padding: 4, width: 'fit-content' }}>
+                <div className="mp-tab-scroll" style={{ display: 'flex', gap: 4, marginBottom: 16, background: 'white', border: '1px solid var(--border)', borderRadius: 12, padding: 4, width: 'fit-content', maxWidth: '100%' }}>
                     {FILTERS.map(({ id, label, analyticsKey }) => {
                         const active = filter === id;
                         const count  = byStatus[analyticsKey] ?? null;

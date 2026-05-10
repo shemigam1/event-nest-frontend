@@ -234,7 +234,7 @@ export default function LandingPage() {
       <TopNav variant="transparent" />
 
       {/* ── Hero ── */}
-      <section style={{
+      <section className="mp-hero-section" style={{
         padding: '64px 24px 80px',
         borderBottom: '1px solid var(--border)',
         background: 'var(--mp-navy)',
@@ -287,7 +287,7 @@ export default function LandingPage() {
             ))}
           </div>
 
-          <div style={{
+          <div className="mp-hero-grid" style={{
             display: 'grid',
             gridTemplateColumns: '1.1fr 1fr',
             gap: 64,
@@ -363,6 +363,7 @@ export default function LandingPage() {
               {/* Stats strip */}
               <div style={{
                 display: 'flex',
+                flexWrap: 'wrap',
                 gap: 32,
                 marginTop: 48,
                 paddingTop: 32,
@@ -388,7 +389,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── Feature pillars ── */}
-      <section style={{ maxWidth: 1200, margin: '0 auto', padding: '80px 24px' }}>
+      <section className="mp-section-pad" style={{ maxWidth: 1200, margin: '0 auto', padding: '80px 24px' }}>
         <div style={{ maxWidth: 720 }}>
           <span style={{
             fontSize: 13,
@@ -402,7 +403,7 @@ export default function LandingPage() {
             {config.pillarsHeadline}
           </h2>
         </div>
-        <div style={{
+        <div className="mp-3col-grid" style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(3, 1fr)',
           gap: 24,
@@ -444,7 +445,7 @@ export default function LandingPage() {
               Browse all →
             </button>
           </div>
-          <div style={{
+          <div className="mp-3col-grid" style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(3, 1fr)',
             gap: 20,
@@ -470,6 +471,8 @@ export default function LandingPage() {
           maxWidth: 1200,
           margin: '0 auto',
           display: 'flex',
+          flexWrap: 'wrap',
+          gap: 12,
           justifyContent: 'space-between',
           alignItems: 'center',
         }}>

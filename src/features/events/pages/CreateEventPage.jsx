@@ -66,6 +66,7 @@ function StepIndicator({ currentStep }) {
     return (
         <div
             data-testid="step-indicator"
+            className="mp-tab-scroll"
             style={{ display: 'flex', alignItems: 'center', gap: 0, marginBottom: 40 }}
         >
             {steps.map((label, i) => {
@@ -186,7 +187,7 @@ function BasicsStep({ data, onChange, onNext }) {
                     aria-label="Venue"
                 />
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div className="mp-date-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                     <div>
                         <label style={{ display: 'block', fontSize: 14, fontWeight: 500, color: 'var(--text-1)', marginBottom: 6 }}>
                             Start date
@@ -396,7 +397,7 @@ function TierCard({ tier, onChange, onRemove, errors = {} }) {
                 </div>
             )}
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+            <div className="mp-tier-seats-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
                 <Input
                     label="Row prefix"
                     placeholder="e.g. VIP"
@@ -648,7 +649,7 @@ function ReviewStep({ basics, tiers, onBack, onSaveDraft, onSubmitForApproval, s
             )}
 
             {totalSeats > 0 && (
-                <div style={{
+                <div className="mp-grid-stack" style={{
                     background: 'white',
                     border: '1px solid var(--border)',
                     borderRadius: 12,
@@ -705,11 +706,11 @@ function ReviewStep({ basics, tiers, onBack, onSaveDraft, onSubmitForApproval, s
                 </div>
             )}
 
-            <div style={{ marginTop: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+            <div className="mp-actions-row" style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
                 <Button type="button" variant="secondary" size="lg" icon={<Icons.arrowL size={16} />} onClick={onBack} disabled={submitting}>
                     Back
                 </Button>
-                <div style={{ display: 'flex', gap: 10 }}>
+                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                     <Button
                         type="button"
                         variant="secondary"

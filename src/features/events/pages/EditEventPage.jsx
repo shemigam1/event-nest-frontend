@@ -237,7 +237,7 @@ function DraftTierCard({ tier, eventId, onDelete, isLast }) {
 
             {editing && (
                 <div style={{ padding: '0 16px 16px', borderTop: '1px solid var(--border)', paddingTop: 14, display: 'flex', flexDirection: 'column', gap: 12 }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                    <div className="mp-grid-stack" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                         <div>
                             <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--text-1)', marginBottom: 4 }}>Name</label>
                             <input value={draft.name} onChange={field('name')} style={inputStyle} />
@@ -518,7 +518,7 @@ export default function EditEventPage() {
 
                     {/* Dates (draft only) */}
                     {isDraft && (
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                        <div className="mp-grid-stack" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                             <DateField label="Start date" type="date" value={startDate} onChange={setStartDate} min={today} />
                             <DateField label="Start time" type="time" value={startTime} onChange={setStartTime} />
                             <DateField label="End date" type="date" value={endDate} onChange={setEndDate} min={startDate || today} />
@@ -528,7 +528,7 @@ export default function EditEventPage() {
 
                     {/* Dates (published — locked) */}
                     {isPublished && (
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                        <div className="mp-grid-stack" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                             <LockedField label="Start" value={event.startTime ? new Date(event.startTime).toLocaleString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'} icon={<Icons.calendar size={14} />} />
                             <LockedField label="End" value={event.endTime ? new Date(event.endTime).toLocaleString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'} />
                         </div>
@@ -614,7 +614,7 @@ function AddTierForm({ eventId, onDone }) {
     return (
         <form onSubmit={submit} style={{ margin: '0 16px 16px', padding: 16, background: 'var(--surface-subtle)', borderRadius: 10, display: 'flex', flexDirection: 'column', gap: 12, border: '1px dashed var(--border)' }}>
             <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-1)' }}>New tier</div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <div className="mp-grid-stack" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                 <div>
                     <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--text-1)', marginBottom: 4 }}>Name</label>
                     <input value={form.name} onChange={field('name')} placeholder="e.g. VIP" style={inputStyle} />

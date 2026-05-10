@@ -206,8 +206,8 @@ export default function OrganizerEventPage() {
                     </div>
                 )}
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16 }}>
-                    <div style={{ flex: 1 }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16 }}>
+                    <div style={{ flex: '1 1 260px', minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
                             <StatusBadge status={event.status} />
                         </div>
@@ -264,7 +264,7 @@ export default function OrganizerEventPage() {
             </div>
 
             {/* Stats */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 20 }}>
+            <div className="mp-stat-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 20 }}>
                 <StatTile label="Tickets sold" value={totalSold.toLocaleString()} icon={<Icons.ticket size={16} />} sub={`of ${totalCapacity.toLocaleString()} capacity`} />
                 <StatTile label="Revenue" value={totalRevenue === 0 ? '₦0' : `₦${totalRevenue.toLocaleString()}`} icon={<Icons.wallet size={16} />} />
                 <StatTile label="Bookings" value={confirmedBookings} icon={<Icons.users size={16} />} sub="confirmed" />
@@ -353,6 +353,7 @@ export default function OrganizerEventPage() {
                     return (
                         <div
                             key={booking.id}
+                            className="mp-org-bookings-row"
                             style={{
                                 display: 'grid',
                                 gridTemplateColumns: '1fr 140px 100px 80px',

@@ -41,7 +41,7 @@ function ChangeDiff({ field, current, proposed }) {
             <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>
                 {label}
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <div className="mp-grid-stack" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                 <div style={{
                     padding: '12px 14px', borderRadius: 10,
                     background: '#FEF2F2', border: '1px solid #FECACA',

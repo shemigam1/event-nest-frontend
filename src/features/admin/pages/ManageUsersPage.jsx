@@ -159,6 +159,7 @@ export default function ManageUsersPage() {
                                 <div
                                     key={user.id}
                                     data-testid={`user-row-${user.id}`}
+                                    className="mp-user-row"
                                     style={{
                                         display: 'grid',
                                         gridTemplateColumns: '1fr auto auto auto',

@@ -18,10 +18,11 @@ const FILTERS = [
 
 function FilterTabs({ active, onChange }) {
     return (
-        <div data-testid="filter-tabs" style={{
+        <div data-testid="filter-tabs" className="mp-tab-scroll" style={{
             display: 'flex', gap: 4, padding: 4,
             background: 'var(--surface-subtle)',
             borderRadius: 12, border: '1px solid var(--border)',
+            maxWidth: '100%',
         }}>
             {FILTERS.map(({ id, label }) => (
                 <button
@@ -189,9 +190,9 @@ export default function DiscoveryPage() {
                 {isError ? (
                     <ErrorState onRetry={refetch} />
                 ) : isLoading ? (
-                    <div style={{
+                    <div className="mp-events-grid" style={{
                         display: 'grid',
-                        gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+                        gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
                         gap: 20,
                     }}>
                         {Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)}
@@ -199,9 +200,9 @@ export default function DiscoveryPage() {
                 ) : filtered.length === 0 ? (
                     <EmptyState hasQuery={Boolean(query || filter !== 'all')} />
                 ) : (
-                    <div style={{
+                    <div className="mp-events-grid" style={{
                         display: 'grid',
-                        gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+                        gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
                         gap: 20,
                     }}>
                         {filtered.map(event => (
