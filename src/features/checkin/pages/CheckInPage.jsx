@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router';
 import { useScanTicketMutation } from '../checkInApi';
+import { useGetEventByIdQuery } from '@/features/events/eventsApi';
 import { Icons } from '@/components/ui/Icon';
 import Button from '@/components/ui/Button';
 import Brand from '@/components/ui/Brand';
+import { formatEventDate } from '@/utils/dateFormat';
 
 /* ── Setup screen ────────────────────────────────── */
 function SetupScreen({ onStart, prefillEventId = '', prefillToken = '' }) {
@@ -413,34 +415,160 @@ function Field({ label, placeholder, value, onChange, icon }) {
     );
 }
 
+/* ── Event info screen ───────────────────────────── */
+function EventInfoScreen({ credentials, onProceed, onBack }) {
+    const { data: event, isLoading, isError, refetch } = useGetEventByIdQuery(credentials.eventId);
+    const [now, setNow] = useState(() => new Date());
+
+    // Re-check the clock every 30 s so the button enables automatically
+    useEffect(() => {
+        const t = setInterval(() => setNow(new Date()), 30_000);
+        return () => clearInterval(t);
+    }, []);
+
+    const checkInStart = event?.checkInStartTime ? new Date(event.checkInStartTime) : null;
+    const eventStart   = event?.startTime        ? new Date(event.startTime)        : null;
+    const isOpen       = checkInStart ? now >= checkInStart : false;
+
+    const fmtTime = (d) => d ? d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '—';
+    const fmtDate = (d) => d ? d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) : '—';
+
+    return (
+        <div style={{
+            minHeight: '100vh', background: 'var(--surface-subtle)',
+            display: 'grid', placeItems: 'center', padding: 24,
+        }}>
+            <div style={{ width: '100%', maxWidth: 480 }}>
+                <div style={{ textAlign: 'center', marginBottom: 28 }}>
+                    <Brand size={20} />
+                </div>
+
+                {isLoading && (
+                    <div style={{
+                        background: 'white', border: '1px solid var(--border)',
+                        borderRadius: 16, padding: 40, textAlign: 'center',
+                        animation: 'mp-flash 1.6s ease-in-out infinite',
+                        height: 260,
+                    }} />
+                )}
+
+                {isError && (
+                    <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: 16, padding: 28, textAlign: 'center', boxShadow: 'var(--shadow-card)' }}>
+                        <Icons.alert size={28} style={{ color: 'var(--error)' }} />
+                        <p className="mp-h4" style={{ margin: '12px 0 6px', color: 'var(--text-1)' }}>Event not found</p>
+                        <p className="body-sm" style={{ color: 'var(--text-2)', marginBottom: 20 }}>
+                            Check the event ID and try again.
+                        </p>
+                        <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
+                            <Button variant="ghost" size="md" onClick={onBack}>Back</Button>
+                            <Button variant="secondary" size="md" onClick={refetch}>Retry</Button>
+                        </div>
+                    </div>
+                )}
+
+                {!isLoading && !isError && event && (
+                    <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden', boxShadow: 'var(--shadow-card)' }}>
+                        {/* Event header */}
+                        <div style={{ padding: '24px 28px', borderBottom: '1px solid var(--border)' }}>
+                            <h1 className="mp-h2" style={{ margin: '0 0 12px', color: 'var(--text-1)' }}>
+                                {event.title}
+                            </h1>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 14, color: 'var(--text-2)' }}>
+                                    <Icons.pin size={15} style={{ color: 'var(--text-3)', flexShrink: 0 }} />
+                                    {event.venue}
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 14, color: 'var(--text-2)' }}>
+                                    <Icons.calendar size={15} style={{ color: 'var(--text-3)', flexShrink: 0 }} />
+                                    {eventStart ? `${fmtDate(eventStart)} · ${fmtTime(eventStart)}` : '—'}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Check-in window */}
+                        <div style={{
+                            padding: '20px 28px',
+                            background: isOpen ? 'var(--success-bg)' : '#FFF8E1',
+                            borderBottom: '1px solid var(--border)',
+                        }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+                                <Icons.scan size={18} style={{ color: isOpen ? 'var(--success)' : '#D97706' }} />
+                                <span style={{ fontWeight: 600, fontSize: 14, color: isOpen ? 'var(--success)' : '#92400E' }}>
+                                    {isOpen ? 'Check-in is open' : 'Check-in not yet open'}
+                                </span>
+                            </div>
+                            <div style={{ fontSize: 13, color: isOpen ? 'var(--success)' : '#78350F', paddingLeft: 28 }}>
+                                {checkInStart
+                                    ? isOpen
+                                        ? `Opened at ${fmtTime(checkInStart)} · ${fmtDate(checkInStart)}`
+                                        : `Opens at ${fmtTime(checkInStart)} · ${fmtDate(checkInStart)}`
+                                    : 'Check-in start time not set — contact the organiser.'}
+                            </div>
+                        </div>
+
+                        {/* Actions */}
+                        <div style={{ padding: '20px 28px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                            {!isOpen && (
+                                <p style={{ margin: '0 0 4px', fontSize: 13, color: 'var(--text-3)', textAlign: 'center' }}>
+                                    This page refreshes automatically every 30 seconds.
+                                </p>
+                            )}
+                            <Button
+                                variant="primary"
+                                size="lg"
+                                onClick={onProceed}
+                                disabled={!isOpen}
+                                icon={<Icons.scan size={16} />}
+                                style={{ width: '100%' }}
+                            >
+                                {isOpen ? 'Start scanning tickets' : 'Waiting for check-in window…'}
+                            </Button>
+                            <Button
+                                variant="ghost"
+                                size="md"
+                                onClick={onBack}
+                                style={{ width: '100%' }}
+                            >
+                                Back
+                            </Button>
+                        </div>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
+
 /* ── Page ────────────────────────────────────────── */
 export default function CheckInPage() {
     const [searchParams] = useSearchParams();
-    const [session, setSession] = useState(null);
+    const [step, setStep] = useState('setup');           // 'setup' | 'info' | 'active'
+    const [credentials, setCredentials] = useState(null);
 
-    // Deep-link from the staff-invite email lands here with credentials in
-    // the query string. Capture them once on first render, then scrub the URL
-    // via history.replaceState so the token doesn't leak via Referer / browser
-    // history / shoulder-surfing.
+    // Deep-link from the staff-invite lands here as e.g.
+    // /checkin?eventId=evt_001&token=… or /checkin?eventCode=TECH-AB12&token=…
+    // Capture once on first render, then scrub the URL via history.replaceState
+    // so the token doesn't leak via Referer / history / shoulder-surfing.
     const [prefill, setPrefill] = useState(() => ({
-        eventId: searchParams.get('eventId') ?? '',
-        token: searchParams.get('token') ?? '',
+        eventId: (searchParams.get('eventId') || searchParams.get('eventCode') || '').trim(),
+        token: (searchParams.get('token') || '').trim(),
     }));
 
     useEffect(() => {
         if (prefill.eventId || prefill.token) {
             window.history.replaceState({}, '', '/checkin');
         }
-        // first-render only — we don't want every URL change to re-scrub
+        // first-render only
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    if (!session) {
+    if (step === 'setup') {
         return (
             <SetupScreen
                 onStart={(creds) => {
                     setPrefill({ eventId: '', token: '' });
-                    setSession(creds);
+                    setCredentials(creds);
+                    setStep('info');
                 }}
                 prefillEventId={prefill.eventId}
                 prefillToken={prefill.token}
@@ -448,5 +576,20 @@ export default function CheckInPage() {
         );
     }
 
-    return <ActiveSession credentials={session} onEnd={() => setSession(null)} />;
+    if (step === 'info') {
+        return (
+            <EventInfoScreen
+                credentials={credentials}
+                onProceed={() => setStep('active')}
+                onBack={() => { setCredentials(null); setStep('setup'); }}
+            />
+        );
+    }
+
+    return (
+        <ActiveSession
+            credentials={credentials}
+            onEnd={() => { setCredentials(null); setStep('setup'); }}
+        />
+    );
 }
