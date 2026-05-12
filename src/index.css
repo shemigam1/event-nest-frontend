@@ -413,3 +413,5 @@ select:focus-visible {
 * { scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent; }
 *::-webkit-scrollbar { width: 8px; height: 8px; }
 *::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 99px; }
+
+@keyframes spin { to { transform: rotate(360deg); } }
