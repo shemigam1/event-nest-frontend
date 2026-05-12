@@ -4,7 +4,12 @@ import TopNav from '@/components/ui/TopNav';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import { Icons } from '@/components/ui/Icon';
-import { useCreateEventMutation, useSubmitEventMutation } from '../eventsApi';
+import {
+    useCreateEventMutation,
+    useSubmitEventMutation,
+    useUploadCoverImageMutation,
+} from '../eventsApi';
+import CoverImageField from '../components/CoverImageField';
 
 /* ── Helpers ─────────────────────────────────────── */
 function newTier() {
@@ -118,9 +123,14 @@ function StepIndicator({ currentStep }) {
 }
 
 /* ── Step 1: Event basics ────────────────────────── */
-function BasicsStep({ data, onChange, onNext }) {
+function BasicsStep({ data, onChange, coverFile, onCoverFileChange, onNext }) {
     const [errors, setErrors] = useState({});
     const today = new Date().toISOString().split('T')[0];
+    // Local object URL so the field can preview the picked file before
+    // the event exists. We don't revoke this on unmount because the same
+    // File object lives in the parent state and may need to be previewed
+    // again if the user navigates back to this step.
+    const coverPreviewUrl = coverFile ? URL.createObjectURL(coverFile) : null;
 
     function handle(field) {
         return (e) => onChange({ ...data, [field]: e.target.value });
@@ -185,6 +195,11 @@ function BasicsStep({ data, onChange, onNext }) {
                     error={errors.venue}
                     icon={<Icons.pin size={16} />}
                     aria-label="Venue"
+                />
+
+                <CoverImageField
+                    onPickFile={onCoverFileChange}
+                    currentUrl={coverPreviewUrl}
                 />
 
                 <div className="mp-date-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
@@ -790,12 +805,16 @@ export default function CreateEventPage() {
         endTime: '',
     });
     const [tiers, setTiers] = useState([]);
+    // Optional cover image held client-side until the event exists.
+    // Uploaded after createEvent returns the new event id.
+    const [coverFile, setCoverFile] = useState(null);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState('');
     const [submitted, setSubmitted] = useState(false);
 
     const [createEvent] = useCreateEventMutation();
     const [submitEvent] = useSubmitEventMutation();
+    const [uploadCoverImage] = useUploadCoverImageMutation();
 
     async function createEventSequence(shouldSubmit) {
         setSubmitting(true);
@@ -830,6 +849,18 @@ export default function CreateEventPage() {
 
             const event = await createEvent(payload).unwrap();
 
+            // Cover image is optional. If the user picked one in step 1
+            // we upload it now that the event exists. Treat a failed
+            // upload as non-fatal — the event is still created, the
+            // organiser can retry from the edit screen.
+            if (coverFile) {
+                try {
+                    await uploadCoverImage({ eventId: event.id, file: coverFile }).unwrap();
+                } catch {
+                    /* swallowed — event creation already succeeded */
+                }
+            }
+
             if (shouldSubmit) {
                 await submitEvent(event.id).unwrap();
                 setSubmitted(true);
@@ -849,7 +880,13 @@ export default function CreateEventPage() {
             <div style={{ maxWidth: 680, margin: '0 auto', padding: '40px 24px 80px' }}>
                 {step < 4 && <StepIndicator currentStep={step} />}
                 {step === 1 && (
-                    <BasicsStep data={basics} onChange={setBasics} onNext={() => setStep(2)} />
+                    <BasicsStep
+                        data={basics}
+                        onChange={setBasics}
+                        coverFile={coverFile}
+                        onCoverFileChange={setCoverFile}
+                        onNext={() => setStep(2)}
+                    />
                 )}
                 {step === 2 && (
                     <TiersStep tiers={tiers} onTiersChange={setTiers} onNext={() => setStep(3)} onBack={() => setStep(1)} />

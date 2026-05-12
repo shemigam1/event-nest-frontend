@@ -32,9 +32,30 @@ export const eventsApi = baseApi.injectEndpoints({
             invalidatesTags: (result, error, id) => [{ type: 'Event', id }],
             transformResponse: (response) => response.data ?? response,
         }),
+        // Backs the "Withdraw" action on pending-approval events in
+        // My events. Flips status back to DRAFT.
+        withdrawEvent: builder.mutation({
+            query: (id) => ({ url: `/events/${id}/withdraw`, method: 'POST' }),
+            invalidatesTags: (result, error, id) => ['Event', { type: 'Event', id }],
+            transformResponse: (response) => response.data ?? response,
+        }),
         deleteEvent: builder.mutation({
             query: (id) => ({ url: `/events/${id}`, method: 'DELETE' }),
             invalidatesTags: ['Event'],
+        }),
+        // Multipart cover image upload. The backend caps at 5MB
+        // (JPEG/PNG only) and validates magic bytes server-side.
+        uploadCoverImage: builder.mutation({
+            query: ({ eventId, file }) => {
+                const body = new FormData();
+                body.append('file', file);
+                return { url: `/events/${eventId}/cover-image`, method: 'POST', body };
+            },
+            invalidatesTags: (result, error, { eventId }) => [
+                'Event',
+                { type: 'Event', id: eventId },
+            ],
+            transformResponse: (response) => response?.data ?? response,
         }),
     }),
 });
@@ -46,5 +67,7 @@ export const {
     useCreateEventMutation,
     useUpdateEventMutation,
     useSubmitEventMutation,
+    useWithdrawEventMutation,
     useDeleteEventMutation,
+    useUploadCoverImageMutation,
 } = eventsApi;

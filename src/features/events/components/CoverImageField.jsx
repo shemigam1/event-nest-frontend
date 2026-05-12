@@ -7,20 +7,31 @@ const MAX_BYTES = 5 * 1024 * 1024;
 const ACCEPTED = ['image/jpeg', 'image/png'];
 
 /**
- * Cover image upload control for the event edit form.
+ * Cover image upload control.
  *
- * Uploads happen against POST /events/{id}/cover-image immediately on
- * file pick — no "Save" button. The backend persists the URL on the
- * event row, so on next refetch the parent shows the new cover.
+ * Two modes:
+ *   * Immediate (default): pass {@code eventId}. The picked file uploads
+ *     to {@code POST /events/{id}/cover-image} right away. Used on the
+ *     Edit screen, where the event already exists.
+ *   * Deferred: pass {@code onPickFile} instead of {@code eventId}. The
+ *     component validates client-side and hands the File back to the
+ *     parent without touching the network. The Create flow uses this —
+ *     the parent uploads the file after createEvent returns an id.
  *
  * Validates client-side (type + size) so the user gets immediate feedback;
- * the backend re-validates including magic-bytes.
+ * the backend re-validates magic bytes on upload.
  */
-export default function CoverImageField({ eventId, currentUrl, disabled = false }) {
+export default function CoverImageField({
+    eventId,
+    currentUrl,
+    disabled = false,
+    onPickFile,   // deferred mode — called with the validated File
+}) {
     const fileRef = useRef(null);
     const [uploadCover, uploadState] = useUploadCoverImageMutation();
     const [localError, setLocalError] = useState('');
     const [previewUrl, setPreviewUrl] = useState(currentUrl ?? null);
+    const isDeferred = typeof onPickFile === 'function';
 
     async function handleFile(file) {
         setLocalError('');
@@ -38,6 +49,12 @@ export default function CoverImageField({ eventId, currentUrl, disabled = false 
         // change before the round-trip finishes.
         const localUrl = URL.createObjectURL(file);
         setPreviewUrl(localUrl);
+
+        // Deferred mode — hand the file back; no network call here.
+        if (isDeferred) {
+            onPickFile(file);
+            return;
+        }
 
         try {
             const result = await uploadCover({ eventId, file }).unwrap();
@@ -102,7 +119,11 @@ export default function CoverImageField({ eventId, currentUrl, disabled = false 
                         marginTop: 10, gap: 12,
                     }}>
                         <span style={{ fontSize: 12, color: 'var(--text-3)' }}>
-                            {uploadState.isLoading ? 'Uploading…' : 'Cover saved'}
+                            {uploadState.isLoading
+                                ? 'Uploading…'
+                                : isDeferred
+                                    ? 'Will upload after the event is created'
+                                    : 'Cover saved'}
                         </span>
                         <Button
                             type="button"
