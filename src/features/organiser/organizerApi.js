@@ -23,6 +23,16 @@ export const organizerApi = baseApi.injectEndpoints({
             ],
             transformResponse: (response) => response?.data ?? response ?? [],
         }),
+        getEventAnalytics: builder.query({
+            // Backs the Live dashboard tiles + per-tier bars + daily
+            // bookings chart on the event manage page.
+            query: (eventId) => `/organizer/events/${eventId}/analytics`,
+            providesTags: (result, error, eventId) => [
+                { type: 'Event', id: `${eventId}-analytics` },
+                'Booking',
+            ],
+            transformResponse: (response) => response?.data ?? response ?? null,
+        }),
     }),
 });
 
@@ -30,4 +40,5 @@ export const {
     useGetOrganizerEventsQuery,
     useGetOrganizerEventByIdQuery,
     useGetEventBookingsQuery,
+    useGetEventAnalyticsQuery,
 } = organizerApi;

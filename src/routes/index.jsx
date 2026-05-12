@@ -15,7 +15,7 @@ import AdminUserEventsPage from '../features/admin/pages/AdminUserEventsPage';
 import InviteAdminPage from '../features/admin/pages/InviteAdminPage';
 import EventEditsPage from '../features/admin/pages/EventEditsPage';
 import AdminEventDetailPage from '../features/admin/pages/AdminEventDetailPage';
-import OrganizerConsolePage from '../features/organiser/pages/OrganizerConsolePage';
+import MyEventsPage from '../features/organiser/pages/MyEventsPage';
 import OrganizerEventPage from '../features/organiser/pages/OrganizerEventPage';
 import CheckInPage from '../features/checkin/pages/CheckInPage';
 import PrivateRoute from './PrivateRoute';
@@ -44,7 +44,7 @@ const router = createBrowserRouter([
                     { path: '/events/:id/book',   element: <BookingPage /> },
                     { path: '/tickets',           element: <TicketsPage /> },
                     { path: '/dashboard',         element: <DashboardPage /> },
-                    { path: '/organiser',         element: <OrganizerConsolePage /> },
+                    { path: '/organiser',         element: <MyEventsPage /> },
                     { path: '/organiser/events/:id', element: <OrganizerEventPage /> },
                 ],
             },
