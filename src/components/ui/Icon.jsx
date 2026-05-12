@@ -43,6 +43,8 @@ export const Icons = {
   list:      p => <Icon {...p} d="M4 6h16M4 12h16M4 18h16" />,
   trend:     p => <Icon {...p} d="M3 17l6-6 4 4 8-8M14 7h7v7" />,
   wallet:    p => <Icon {...p} d={<><rect x="3" y="6" width="18" height="14" rx="2" /><path d="M3 10h18M16 14h2" /></>} />,
+  chevronD:  p => <Icon {...p} d="M6 9l6 6 6-6" />,
+  chevronR:  p => <Icon {...p} d="M9 6l6 6-6 6" />,
 };
 
 export default Icon;

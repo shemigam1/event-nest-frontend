@@ -4,10 +4,17 @@ import { Icons } from './Icon';
 
 export default function EventCard({ event, onClick }) {
   const navigate = useNavigate();
-  const lowest = Math.min(...(event.tiers || [{ price: 0 }]).map(t => t.price));
-  const totalCap = (event.tiers || []).reduce((s, t) => s + (t.total ?? t.totalCapacity ?? 0), 0) || 100;
-  const totalSold = (event.tiers || []).reduce((s, t) => s + (t.sold ?? 0), 0) || 0;
-  const pct = (totalSold / totalCap) * 100;
+  const tiers = event.tiers || [];
+  const prices = tiers.length ? tiers.map(t => Number(t.price ?? 0)) : [0];
+  const lowest = Math.min(...prices);
+  // Backend gives `totalCapacity` + `availableCapacity`; mock/legacy data uses
+  // `total` + `sold`. Handle both.
+  const totalCap = tiers.reduce((s, t) => s + (t.total ?? t.totalCapacity ?? 0), 0) || 0;
+  const totalSold = tiers.reduce(
+    (s, t) => s + (t.sold ?? ((t.totalCapacity ?? 0) - (t.availableCapacity ?? 0))),
+    0,
+  );
+  const pct = totalCap ? (totalSold / totalCap) * 100 : 0;
 
   const handleClick = () => {
     if (onClick) onClick(event);
@@ -39,11 +46,25 @@ export default function EventCard({ event, onClick }) {
         e.currentTarget.style.transform = 'translateY(0)';
       }}
     >
-      <div
-        className="mp-placeholder"
-        data-label={event.imageNote || 'EVENT IMAGE'}
-        style={{ height: 160 }}
-      />
+      {event.coverImageUrl ? (
+        <div
+          style={{
+            height: 160,
+            backgroundImage: `url(${event.coverImageUrl})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            backgroundColor: 'var(--surface-subtle)',
+          }}
+          role="img"
+          aria-label={event.title}
+        />
+      ) : (
+        <div
+          className="mp-placeholder"
+          data-label={event.imageNote || 'EVENT IMAGE'}
+          style={{ height: 160 }}
+        />
+      )}
       <div style={{ padding: 20, flex: 1, display: 'flex', flexDirection: 'column' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
           <StatusBadge status={event.status} size="sm" />
@@ -102,9 +123,11 @@ export default function EventCard({ event, onClick }) {
             )}
             {lowest === 0 ? 'Free' : `₦${lowest.toLocaleString()}`}
           </span>
-          <span className="mp-num" style={{ fontSize: 12, color: 'var(--text-3)' }}>
-            {totalSold}/{totalCap} sold
-          </span>
+          {totalCap > 0 && (
+            <span className="mp-num" style={{ fontSize: 12, color: 'var(--text-3)' }}>
+              {totalSold}/{totalCap} sold
+            </span>
+          )}
         </div>
       </div>
     </button>

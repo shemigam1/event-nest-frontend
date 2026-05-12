@@ -43,12 +43,26 @@ export default function EventDetailPage() {
 
     return (
         <PageShell>
-            <div
-                className="mp-placeholder"
-                data-label="EVENT IMAGE"
-                style={{ height: 320 }}
-                aria-hidden="true"
-            />
+            {e.coverImageUrl ? (
+                <div
+                    style={{
+                        height: 320,
+                        backgroundImage: `url(${e.coverImageUrl})`,
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                        backgroundColor: 'var(--surface-subtle)',
+                    }}
+                    role="img"
+                    aria-label={e.title}
+                />
+            ) : (
+                <div
+                    className="mp-placeholder"
+                    data-label="EVENT IMAGE"
+                    style={{ height: 320 }}
+                    aria-hidden="true"
+                />
+            )}
 
             <div style={{ maxWidth: 1200, margin: '-80px auto 0', padding: '0 24px 64px', position: 'relative' }}>
                 <div className="mp-detail-grid" style={{
