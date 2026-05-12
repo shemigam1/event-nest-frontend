@@ -10,6 +10,10 @@ import {
     useGetEventBookingsQuery,
     useGetEventAnalyticsQuery,
 } from '../organizerApi';
+import ProgrammeTab from '../components/ProgrammeTab';
+import GuestsTab from '../components/GuestsTab';
+import BudgetTab from '../components/BudgetTab';
+import TeamTab from '../components/TeamTab';
 import ActivityFeed from '@/features/activity/ActivityFeed';
 import {
     useListCheckInInvitesQuery,
@@ -113,8 +117,23 @@ export default function OrganizerEventPage() {
                     <AttendeesTab bookings={bookings} loading={bookingsQuery.isLoading} />
                 )}
 
-                {tab === 'staff' && (
-                    <CheckInStaffSection eventId={eventId} />
+                {tab === 'programme' && (
+                    <ProgrammeTab eventId={eventId} event={event} />
+                )}
+
+                {tab === 'guests' && (
+                    <GuestsTab eventId={eventId} />
+                )}
+
+                {tab === 'budget' && (
+                    <BudgetTab eventId={eventId} />
+                )}
+
+                {tab === 'team' && (
+                    <>
+                        <TeamTab eventId={eventId} />
+                        <CheckInStaffSection eventId={eventId} />
+                    </>
                 )}
 
                 {tab === 'settings' && (
@@ -170,8 +189,11 @@ function Header({ event, totalSold, totalCapacity, checkedIn, checkInRate, tab, 
     const tabs = [
         { id: 'dashboard', label: 'Live dashboard' },
         { id: 'attendees', label: 'Attendees' },
-        { id: 'staff', label: 'Staff' },
-        { id: 'settings', label: 'Settings' },
+        { id: 'guests',    label: 'Guests' },
+        { id: 'programme', label: 'Programme' },
+        { id: 'budget',    label: 'Budget' },
+        { id: 'team',      label: 'Team' },
+        { id: 'settings',  label: 'Settings' },
     ];
     return (
         <div style={{ background: 'white', borderBottom: '1px solid var(--border)' }}>
@@ -184,7 +206,7 @@ function Header({ event, totalSold, totalCapacity, checkedIn, checkInRate, tab, 
                 }}>
                     <div>
                         <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
-                            <RoleBadge role="ORGANIZER" size="sm" />
+                            <RoleBadge role="ORGANISER" size="sm" />
                             <StatusBadge status={event.status} size="sm" />
                             {isLive && (
                                 <span style={{

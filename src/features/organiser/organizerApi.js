@@ -33,6 +33,36 @@ export const organizerApi = baseApi.injectEndpoints({
             ],
             transformResponse: (response) => response?.data ?? response ?? null,
         }),
+        // Managers — backed by ManagerController via OrganizerController routes.
+        // A manager has read/write access to the event but cannot delete or
+        // transfer ownership. Backend resolves the assignee by email.
+        getEventManagers: builder.query({
+            query: (eventId) => `/organizer/events/${eventId}/managers`,
+            providesTags: (result, error, eventId) => [
+                { type: 'Manager', id: eventId },
+            ],
+            transformResponse: (response) => response?.data ?? response ?? [],
+        }),
+        assignManager: builder.mutation({
+            query: ({ eventId, email }) => ({
+                url: `/organizer/events/${eventId}/managers`,
+                method: 'POST',
+                body: { email },
+            }),
+            invalidatesTags: (result, error, { eventId }) => [
+                { type: 'Manager', id: eventId },
+            ],
+            transformResponse: (response) => response?.data ?? response,
+        }),
+        removeManager: builder.mutation({
+            query: ({ eventId, managerId }) => ({
+                url: `/organizer/events/${eventId}/managers/${managerId}`,
+                method: 'DELETE',
+            }),
+            invalidatesTags: (result, error, { eventId }) => [
+                { type: 'Manager', id: eventId },
+            ],
+        }),
     }),
 });
 
@@ -41,4 +71,7 @@ export const {
     useGetOrganizerEventByIdQuery,
     useGetEventBookingsQuery,
     useGetEventAnalyticsQuery,
+    useGetEventManagersQuery,
+    useAssignManagerMutation,
+    useRemoveManagerMutation,
 } = organizerApi;

@@ -43,6 +43,28 @@ export const eventsApi = baseApi.injectEndpoints({
             query: (id) => ({ url: `/events/${id}`, method: 'DELETE' }),
             invalidatesTags: ['Event'],
         }),
+        // Per-event module toggles (programme, ratings, guest-list, ticketing).
+        // Backend gates the relevant feature endpoints with these flags, so
+        // turning a module off makes its surface return 409.
+        getEventConfig: builder.query({
+            query: (eventId) => `/events/${eventId}/config`,
+            providesTags: (result, error, eventId) => [
+                { type: 'Event', id: `${eventId}-config` },
+            ],
+            transformResponse: (response) => response?.data ?? response ?? null,
+        }),
+        updateEventConfig: builder.mutation({
+            query: ({ eventId, ...body }) => ({
+                url: `/events/${eventId}/config`,
+                method: 'PATCH',
+                body,
+            }),
+            invalidatesTags: (result, error, { eventId }) => [
+                { type: 'Event', id: `${eventId}-config` },
+                { type: 'Programme', id: eventId },
+            ],
+            transformResponse: (response) => response?.data ?? response,
+        }),
         // Multipart cover image upload. The backend caps at 5MB
         // (JPEG/PNG only) and validates magic bytes server-side.
         uploadCoverImage: builder.mutation({
@@ -70,4 +92,6 @@ export const {
     useWithdrawEventMutation,
     useDeleteEventMutation,
     useUploadCoverImageMutation,
+    useGetEventConfigQuery,
+    useUpdateEventConfigMutation,
 } = eventsApi;
