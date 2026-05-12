@@ -32,7 +32,9 @@ export default function LoginPage() {
             dispatch(setCredentials(data));
             const tokenUser = userFromToken(data.accessToken);
             const isAdmin   = tokenUser?.roles?.includes('ROLE_ADMIN') ?? false;
-            const defaultDest = isAdmin ? '/admin/moderation' : '/dashboard';
+            // Default landing is the public events browse — the user can
+            // jump into their own events via the sidebar / "My events".
+            const defaultDest = isAdmin ? '/admin/moderation' : '/events';
             const destination = location.state?.from ?? defaultDest;
             navigate(destination, { replace: true });
         } catch {

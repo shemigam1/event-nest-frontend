@@ -13,6 +13,7 @@ import { baseApi } from '@/services/baseApi';
 import Brand from './Brand';
 import Button from './Button';
 import UserMenu from './UserMenu';
+import SidebarPanel from './SidebarPanel';
 import { Icons } from './Icon';
 
 /**
@@ -32,6 +33,9 @@ export default function TopNav({ variant = 'light', showBrowse = true }) {
     const email = useSelector(selectAuthEmail);
     const onDark = variant === 'transparent';
     const [menuOpen, setMenuOpen] = useState(false);
+    // Desktop-only right-side drawer. Triggered by the sidebar icon OR by
+    // clicking the avatar pill. Mobile uses the existing menuOpen / slide-down panel.
+    const [sidebarOpen, setSidebarOpen] = useState(false);
 
     const styles = onDark
         ? {
@@ -113,7 +117,35 @@ export default function TopNav({ variant = 'light', showBrowse = true }) {
                         </Button>
                     )}
                     {isAuthenticated ? (
-                        <UserMenu onDark={onDark} />
+                        <>
+                            {/*
+                              Sidebar trigger — separate dedicated icon as
+                              well as the avatar both open the right-side
+                              drawer on desktop. The old in-place dropdown
+                              under the avatar is replaced by the drawer.
+                            */}
+                            <button
+                                type="button"
+                                aria-label="Open menu"
+                                onClick={() => setSidebarOpen(true)}
+                                style={{
+                                    background: 'transparent',
+                                    border: `1px solid ${onDark ? 'rgba(255,255,255,0.20)' : 'var(--border)'}`,
+                                    color: onDark ? 'white' : 'var(--text-1)',
+                                    padding: 8,
+                                    borderRadius: 8,
+                                    cursor: 'pointer',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    minWidth: 40,
+                                    minHeight: 40,
+                                }}
+                            >
+                                <Icons.list size={18} />
+                            </button>
+                            <UserMenu onDark={onDark} onOpenSidebar={() => setSidebarOpen(true)} />
+                        </>
                     ) : (
                         <>
                             <Button
@@ -154,6 +186,14 @@ export default function TopNav({ variant = 'light', showBrowse = true }) {
                     {menuOpen ? <Icons.x size={20} /> : <Icons.list size={20} />}
                 </button>
             </nav>
+
+            {/* Desktop right-side drawer (replaces the old avatar dropdown) */}
+            {isAuthenticated && (
+                <SidebarPanel
+                    open={sidebarOpen}
+                    onClose={() => setSidebarOpen(false)}
+                />
+            )}
 
             {/* Mobile slide-down panel */}
             {menuOpen && (
@@ -207,14 +247,11 @@ export default function TopNav({ variant = 'light', showBrowse = true }) {
                                     <MobileMenuItem onDark={onDark} onClick={() => go('/events/new')}>
                                         Create event
                                     </MobileMenuItem>
-                                    <MobileMenuItem onDark={onDark} onClick={() => go('/dashboard')}>
+                                    <MobileMenuItem onDark={onDark} onClick={() => go('/organiser')}>
                                         My events
                                     </MobileMenuItem>
                                     <MobileMenuItem onDark={onDark} onClick={() => go('/tickets')}>
                                         My tickets
-                                    </MobileMenuItem>
-                                    <MobileMenuItem onDark={onDark} onClick={() => go('/organiser')}>
-                                        Organiser console
                                     </MobileMenuItem>
                                     <MobileMenuItem onDark={onDark} onClick={() => go('/checkin')}>
                                         Check-in station
