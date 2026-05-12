@@ -12,6 +12,7 @@ import {
 } from '../organizerApi';
 import ProgrammeTab from '../components/ProgrammeTab';
 import GuestsTab from '../components/GuestsTab';
+import VendorsTab from '../components/VendorsTab';
 import BudgetTab from '../components/BudgetTab';
 import TeamTab from '../components/TeamTab';
 import ActivityFeed from '@/features/activity/ActivityFeed';
@@ -125,6 +126,10 @@ export default function OrganizerEventPage() {
                     <GuestsTab eventId={eventId} />
                 )}
 
+                {tab === 'vendors' && (
+                    <VendorsTab eventId={eventId} />
+                )}
+
                 {tab === 'budget' && (
                     <BudgetTab eventId={eventId} />
                 )}
@@ -191,6 +196,7 @@ function Header({ event, totalSold, totalCapacity, checkedIn, checkInRate, tab, 
         { id: 'attendees', label: 'Attendees' },
         { id: 'guests',    label: 'Guests' },
         { id: 'programme', label: 'Programme' },
+        { id: 'vendors',   label: 'Vendors' },
         { id: 'budget',    label: 'Budget' },
         { id: 'team',      label: 'Team' },
         { id: 'settings',  label: 'Settings' },

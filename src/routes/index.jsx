@@ -17,6 +17,8 @@ import EventEditsPage from '../features/admin/pages/EventEditsPage';
 import AdminEventDetailPage from '../features/admin/pages/AdminEventDetailPage';
 import OrganizerConsolePage from '../features/organiser/pages/OrganizerConsolePage';
 import OrganizerEventPage from '../features/organiser/pages/OrganizerEventPage';
+import VendorOpportunitiesPage from '../features/vendor/pages/VendorOpportunitiesPage';
+import MyApplicationsPage from '../features/vendor/pages/MyApplicationsPage';
 import CheckInPage from '../features/checkin/pages/CheckInPage';
 import StubPaymentPage from '../features/bookings/pages/StubPaymentPage';
 import PaymentResultPage from '../features/bookings/pages/PaymentResultPage';
@@ -50,6 +52,8 @@ const router = createBrowserRouter([
                     { path: '/dashboard',         element: <DashboardPage /> },
                     { path: '/organiser',         element: <OrganizerConsolePage /> },
                     { path: '/organiser/events/:id', element: <OrganizerEventPage /> },
+                    { path: '/vendor/opportunities', element: <VendorOpportunitiesPage /> },
+                    { path: '/vendor/applications', element: <MyApplicationsPage /> },
                 ],
             },
 

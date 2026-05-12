@@ -154,6 +154,24 @@ export default function UserMenu({ onDark = false, onOpenSidebar }) {
                             <MenuItem icon={<Icons.scan size={16} />} onClick={() => go('/checkin')}>
                                 Check-in station
                             </MenuItem>
+
+                            <div style={{ height: 1, background: 'var(--border)', margin: '6px 4px' }} />
+                            <div style={{
+                                padding: '6px 12px 4px',
+                                fontSize: 11,
+                                fontWeight: 600,
+                                color: 'var(--text-3)',
+                                letterSpacing: 0.4,
+                                textTransform: 'uppercase',
+                            }}>
+                                For vendors
+                            </div>
+                            <MenuItem icon={<Icons.spark size={16} />} onClick={() => go('/vendor/opportunities')}>
+                                Find work
+                            </MenuItem>
+                            <MenuItem icon={<Icons.inbox size={16} />} onClick={() => go('/vendor/applications')}>
+                                My applications
+                            </MenuItem>
                         </>
                     )}
 
