@@ -18,6 +18,8 @@ import AdminEventDetailPage from '../features/admin/pages/AdminEventDetailPage';
 import OrganizerConsolePage from '../features/organiser/pages/OrganizerConsolePage';
 import OrganizerEventPage from '../features/organiser/pages/OrganizerEventPage';
 import CheckInPage from '../features/checkin/pages/CheckInPage';
+import StubPaymentPage from '../features/bookings/pages/StubPaymentPage';
+import PaymentResultPage from '../features/bookings/pages/PaymentResultPage';
 import PrivateRoute from './PrivateRoute';
 import AdminRoute from './AdminRoute';
 import ErrorPage from '../components/ui/ErrorPage';
@@ -34,7 +36,9 @@ const router = createBrowserRouter([
             { path: '/events/:id', element: <EventDetailPage /> },
             { path: '/login',     element: <LoginPage /> },
             { path: '/register',  element: <RegisterPage /> },
-            { path: '/checkin',   element: <CheckInPage /> },
+            { path: '/checkin',        element: <CheckInPage /> },
+            { path: '/stub-payment',   element: <StubPaymentPage /> },
+            { path: '/payment-result', element: <PaymentResultPage /> },
 
             {
                 element: <PrivateRoute />,
