@@ -1,19 +1,15 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
-import {
-    useGetVendorByIdQuery,
-    useGetVendorScheduleQuery,
-    useGetVendorCompletedWorkQuery,
-} from '@/features/organiser/vendorsApi';
+import { useGetVendorProfileQuery } from '@/features/organiser/vendorsApi';
 import TopNav from '@/components/ui/TopNav';
 import Button from '@/components/ui/Button';
 import { Icons } from '@/components/ui/Icon';
 
 const SECTION_TABS = [
-    { key: 'overview',   label: 'Overview' },
-    { key: 'schedule',   label: 'Schedule' },
-    { key: 'completed',  label: 'Completed work' },
-    { key: 'reviews',    label: 'Reviews' },
+    { key: 'overview',  label: 'Overview' },
+    { key: 'schedule',  label: 'Schedule' },
+    { key: 'completed', label: 'Completed work' },
+    { key: 'reviews',   label: 'Reviews' },
 ];
 
 const AVATAR_COLORS = [
@@ -48,9 +44,11 @@ function fmtDateRange(start, end) {
     return s === e ? s : `${s} – ${e}`;
 }
 
-function isUpcoming(dateIso) {
-    if (!dateIso) return false;
-    return new Date(dateIso) >= new Date();
+function ngn(amount) {
+    if (amount == null) return null;
+    const n = Number(amount);
+    if (!Number.isFinite(n)) return null;
+    return `₦${n.toLocaleString('en-NG', { maximumFractionDigits: 0 })}`;
 }
 
 function StarRow({ rating, size = 14 }) {
@@ -64,18 +62,18 @@ function StarRow({ rating, size = 14 }) {
     );
 }
 
+/* ─── Page ────────────────────────────────────────── */
+
 export default function VendorDetailPage() {
     const { id } = useParams();
     const navigate = useNavigate();
     const [tab, setTab] = useState('overview');
 
-    const vendor   = useGetVendorByIdQuery(id);
-    const schedule = useGetVendorScheduleQuery(id, { skip: tab !== 'schedule' });
-    const completed = useGetVendorCompletedWorkQuery(id, { skip: tab !== 'completed' && tab !== 'reviews' });
+    const profile = useGetVendorProfileQuery(id);
 
-    if (vendor.isLoading) return <Shell><PageSkeleton /></Shell>;
+    if (profile.isLoading) return <Shell><PageSkeleton /></Shell>;
 
-    if (vendor.isError || !vendor.data) {
+    if (profile.isError || !profile.data) {
         return (
             <Shell>
                 <div style={{
@@ -84,7 +82,7 @@ export default function VendorDetailPage() {
                 }}>
                     <Icons.alert size={28} style={{ color: 'var(--error)' }} />
                     <p className="body-sm" style={{ marginTop: 8, color: 'var(--text-2)' }}>
-                        {vendor.error?.data?.message || 'Vendor profile not found.'}
+                        {profile.error?.data?.message || 'Vendor profile not found.'}
                     </p>
                     <Button variant="secondary" size="sm" onClick={() => navigate('/vendors')} style={{ marginTop: 12 }}>
                         Back to marketplace
@@ -94,12 +92,14 @@ export default function VendorDetailPage() {
         );
     }
 
-    const v = vendor.data;
-    const [bg, fg] = avatarColor(v.name);
+    const v = profile.data;
+    const upcoming  = v.upcomingSchedule || [];
+    const completed = v.completedWork    || [];
+    const ratedWork = completed.filter((c) => c.ratingScore != null);
+    const [bg, fg] = avatarColor(v.vendorName);
 
     return (
         <Shell>
-            {/* Back link */}
             <button
                 onClick={() => navigate(-1)}
                 style={{
@@ -113,7 +113,7 @@ export default function VendorDetailPage() {
                 Back
             </button>
 
-            {/* Profile header card */}
+            {/* Profile header */}
             <div style={{
                 background: 'white',
                 border: '1px solid var(--border)',
@@ -122,23 +122,21 @@ export default function VendorDetailPage() {
                 marginBottom: 20,
             }}>
                 <div style={{ display: 'flex', gap: 20, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-                    {/* Avatar */}
                     <div style={{
                         width: 80, height: 80, borderRadius: 16, flexShrink: 0,
                         background: bg, color: fg,
                         display: 'grid', placeItems: 'center',
                         fontSize: 26, fontWeight: 700,
                     }}>
-                        {initials(v.name)}
+                        {initials(v.vendorName)}
                     </div>
 
-                    {/* Name + meta */}
                     <div style={{ flex: 1, minWidth: 200 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 4 }}>
                             <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: 'var(--text-1)' }}>
-                                {v.name}
+                                {v.vendorName}
                             </h1>
-                            {v.verified && (
+                            {v.vendorVerified && (
                                 <span style={{
                                     display: 'inline-flex', alignItems: 'center', gap: 4,
                                     background: '#EAF1FE', color: 'var(--mp-blue)',
@@ -149,52 +147,45 @@ export default function VendorDetailPage() {
                                     Verified vendor
                                 </span>
                             )}
-                            {v.category && (
+                            {v.serviceType && (
                                 <span style={{
                                     background: 'var(--surface-subtle)',
                                     color: 'var(--text-2)',
                                     fontSize: 12, fontWeight: 600,
                                     padding: '3px 10px', borderRadius: 99,
                                 }}>
-                                    {v.category}
+                                    {v.serviceType}
                                 </span>
                             )}
                         </div>
 
-                        {v.lead && (
-                            <p style={{ margin: '0 0 8px', fontSize: 15, color: 'var(--text-2)' }}>
-                                {v.lead}
+                        {v.profileDescription && (
+                            <p style={{
+                                margin: '4px 0 0', fontSize: 14, color: 'var(--text-2)',
+                                lineHeight: 1.5, whiteSpace: 'pre-wrap',
+                            }}>
+                                {v.profileDescription}
                             </p>
                         )}
 
-                        <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', fontSize: 13, color: 'var(--text-3)' }}>
-                            {v.city && (
-                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                                    <Icons.pin size={13} />
-                                    {v.city}
-                                </span>
-                            )}
-                            {v.email && (
+                        {v.email && (
+                            <div style={{ marginTop: 10, fontSize: 13 }}>
                                 <a
                                     href={`mailto:${v.email}`}
-                                    style={{ color: 'var(--mp-blue)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 5 }}
+                                    style={{
+                                        color: 'var(--mp-blue)', textDecoration: 'none',
+                                        display: 'inline-flex', alignItems: 'center', gap: 5,
+                                    }}
                                 >
                                     <Icons.mail size={13} />
                                     {v.email}
                                 </a>
-                            )}
-                            {v.responseHrs != null && (
-                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                                    <Icons.clock size={13} />
-                                    Replies within ~{v.responseHrs}h
-                                </span>
-                            )}
-                        </div>
+                            </div>
+                        )}
                     </div>
 
-                    {/* Contact CTA */}
-                    <div style={{ flexShrink: 0 }}>
-                        {v.email && (
+                    {v.email && (
+                        <div style={{ flexShrink: 0 }}>
                             <Button
                                 variant="primary"
                                 size="md"
@@ -203,55 +194,54 @@ export default function VendorDetailPage() {
                             >
                                 Contact vendor
                             </Button>
-                        )}
-                    </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* Stats row */}
                 <div style={{
                     display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
                     gap: 16,
                     marginTop: 24,
                     paddingTop: 20,
                     borderTop: '1px solid var(--border)',
                 }}>
-                    {v.rating != null && (
-                        <StatCell label="Rating">
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                <StarRow rating={v.rating} size={16} />
-                                <span className="mp-num" style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-1)' }}>
-                                    {v.rating.toFixed(1)}
-                                </span>
-                            </div>
-                            {v.reviews != null && (
-                                <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 3 }}>
-                                    {v.reviews} review{v.reviews !== 1 ? 's' : ''}
+                    <StatCell label="Rating">
+                        {v.averageRating != null ? (
+                            <>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                    <StarRow rating={v.averageRating} size={16} />
+                                    <span className="mp-num" style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-1)' }}>
+                                        {Number(v.averageRating).toFixed(1)}
+                                    </span>
                                 </div>
-                            )}
-                        </StatCell>
-                    )}
-                    {v.eventsCompleted != null && (
-                        <StatCell label="Events completed">
-                            <span className="mp-num" style={{ fontSize: 22, fontWeight: 700, color: 'var(--text-1)' }}>
-                                {v.eventsCompleted}
-                            </span>
-                        </StatCell>
-                    )}
-                    {v.priceLabel && (
-                        <StatCell label="Pricing">
-                            <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-1)' }}>
-                                {v.priceLabel}
-                            </span>
-                        </StatCell>
-                    )}
-                    {v.responseHrs != null && (
-                        <StatCell label="Avg. response">
-                            <span className="mp-num" style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-1)' }}>
-                                {v.responseHrs}h
-                            </span>
-                        </StatCell>
-                    )}
+                                <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 3 }}>
+                                    {v.totalRatings} rating{v.totalRatings !== 1 ? 's' : ''}
+                                </div>
+                            </>
+                        ) : (
+                            <span style={{ fontSize: 13, color: 'var(--text-3)' }}>No ratings yet</span>
+                        )}
+                    </StatCell>
+                    <StatCell label="Completed events">
+                        <span className="mp-num" style={{ fontSize: 22, fontWeight: 700, color: 'var(--text-1)' }}>
+                            {completed.length}
+                        </span>
+                    </StatCell>
+                    <StatCell label="Upcoming">
+                        <span className="mp-num" style={{ fontSize: 22, fontWeight: 700, color: 'var(--text-1)' }}>
+                            {upcoming.length}
+                        </span>
+                    </StatCell>
+                    <StatCell label="Status">
+                        <span style={{
+                            fontSize: 14, fontWeight: 600,
+                            color: v.vendorVerified ? 'var(--success)' : 'var(--text-3)',
+                        }}>
+                            {v.vendorVerified ? 'Verified' : 'Unverified'}
+                        </span>
+                    </StatCell>
                 </div>
             </div>
 
@@ -283,11 +273,10 @@ export default function VendorDetailPage() {
                 })}
             </div>
 
-            {/* Tab content */}
             {tab === 'overview'  && <OverviewTab vendor={v} />}
-            {tab === 'schedule'  && <ScheduleTab vendorId={id} query={schedule} />}
-            {tab === 'completed' && <CompletedTab vendorId={id} query={completed} />}
-            {tab === 'reviews'   && <ReviewsTab query={completed} />}
+            {tab === 'schedule'  && <ScheduleTab items={upcoming} />}
+            {tab === 'completed' && <CompletedTab items={completed} />}
+            {tab === 'reviews'   && <ReviewsTab items={ratedWork} />}
         </Shell>
     );
 }
@@ -297,63 +286,24 @@ function OverviewTab({ vendor: v }) {
     return (
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 280px', gap: 20, alignItems: 'start' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                {v.bio && (
+                {v.profileDescription ? (
                     <Section title="About">
                         <p style={{ margin: 0, fontSize: 14, color: 'var(--text-2)', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
-                            {v.bio}
+                            {v.profileDescription}
                         </p>
                     </Section>
-                )}
-
-                {v.skills?.length > 0 && (
-                    <Section title="Services & skills">
-                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                            {v.skills.map((s) => (
-                                <span key={s} style={{
-                                    padding: '6px 14px',
-                                    background: 'var(--surface-subtle)',
-                                    border: '1px solid var(--border)',
-                                    borderRadius: 99,
-                                    fontSize: 13, fontWeight: 500,
-                                    color: 'var(--text-1)',
-                                }}>
-                                    {s}
-                                </span>
-                            ))}
-                        </div>
-                    </Section>
-                )}
-
-                {!v.bio && !v.skills?.length && (
+                ) : (
                     <div style={{
                         background: 'white', border: '1px solid var(--border)',
                         borderRadius: 12, padding: 40, textAlign: 'center',
                         color: 'var(--text-3)', fontSize: 14,
                     }}>
-                        No additional details provided yet.
+                        This vendor hasn&apos;t added a description yet.
                     </div>
                 )}
             </div>
 
-            {/* Sidebar */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                {v.priceLabel && (
-                    <div style={{
-                        background: 'white', border: '1px solid var(--border)',
-                        borderRadius: 12, padding: 18,
-                    }}>
-                        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-3)', marginBottom: 6 }}>
-                            PRICING
-                        </div>
-                        <div style={{ fontWeight: 600, color: 'var(--text-1)', fontSize: 15 }}>
-                            {v.priceLabel}
-                        </div>
-                        <p style={{ margin: '6px 0 0', fontSize: 12, color: 'var(--text-3)', lineHeight: 1.5 }}>
-                            Contact the vendor for a custom quote based on your event size and requirements.
-                        </p>
-                    </div>
-                )}
-
                 <div style={{
                     background: 'white', border: '1px solid var(--border)',
                     borderRadius: 12, padding: 18,
@@ -362,20 +312,22 @@ function OverviewTab({ vendor: v }) {
                         AT A GLANCE
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                        {v.eventsCompleted != null && (
-                            <MetaRow icon={<Icons.check size={14} />} label="Events completed" value={v.eventsCompleted} />
+                        <MetaRow icon={<Icons.check size={14} />} label="Completed events" value={v.completedWork?.length ?? 0} />
+                        <MetaRow icon={<Icons.calendar size={14} />} label="Upcoming events" value={v.upcomingSchedule?.length ?? 0} />
+                        {v.averageRating != null && (
+                            <MetaRow
+                                icon={<span style={{ fontSize: 14, color: '#F59E0B' }}>★</span>}
+                                label="Avg. rating"
+                                value={`${Number(v.averageRating).toFixed(1)} / 5`}
+                            />
                         )}
-                        {v.rating != null && (
-                            <MetaRow icon={<span style={{ fontSize: 14, color: '#F59E0B' }}>★</span>} label="Avg. rating" value={`${v.rating.toFixed(1)} / 5`} />
-                        )}
-                        {v.reviews != null && (
-                            <MetaRow icon={<Icons.users size={14} />} label="Reviews" value={v.reviews} />
-                        )}
-                        {v.responseHrs != null && (
-                            <MetaRow icon={<Icons.clock size={14} />} label="Response time" value={`~${v.responseHrs}h`} />
-                        )}
-                        {v.city && (
-                            <MetaRow icon={<Icons.pin size={14} />} label="Location" value={v.city} />
+                        <MetaRow
+                            icon={<Icons.users size={14} />}
+                            label="Total ratings"
+                            value={v.totalRatings ?? 0}
+                        />
+                        {v.serviceType && (
+                            <MetaRow icon={<Icons.spark size={14} />} label="Service" value={v.serviceType} />
                         )}
                     </div>
                 </div>
@@ -385,72 +337,31 @@ function OverviewTab({ vendor: v }) {
 }
 
 /* ─── Schedule tab ────────────────────────────────── */
-function ScheduleTab({ query }) {
-    if (query.isLoading) return <ListSkeleton />;
-    if (query.isError) return (
-        <EmptyOrError message="Could not load schedule." onRetry={query.refetch} isError />
-    );
-
-    const items = query.data || [];
-    const upcoming = items.filter((e) => isUpcoming(e.startDate));
-    const past     = items.filter((e) => !isUpcoming(e.startDate));
-
+function ScheduleTab({ items }) {
     if (items.length === 0) {
-        return <EmptyOrError message="No scheduled engagements on record." sub="This vendor has no upcoming or historical bookings in the system yet." />;
+        return <EmptyOrError message="No upcoming engagements." sub="Accepted vendor applications on future events will appear here." />;
     }
-
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            {upcoming.length > 0 && (
-                <Section title={`Upcoming (${upcoming.length})`}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-                        {upcoming.map((e, i) => (
-                            <EngagementRow
-                                key={e.id}
-                                engagement={e}
-                                isLast={i === upcoming.length - 1}
-                                variant="upcoming"
-                            />
-                        ))}
-                    </div>
-                </Section>
-            )}
-
-            {past.length > 0 && (
-                <Section title={`Past engagements (${past.length})`}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-                        {past.map((e, i) => (
-                            <EngagementRow
-                                key={e.id}
-                                engagement={e}
-                                isLast={i === past.length - 1}
-                                variant="past"
-                            />
-                        ))}
-                    </div>
-                </Section>
-            )}
-        </div>
+        <Section title={`Upcoming (${items.length})`}>
+            <div>
+                {items.map((e, i) => (
+                    <ScheduleRow key={e.applicationId} item={e} isLast={i === items.length - 1} variant="upcoming" />
+                ))}
+            </div>
+        </Section>
     );
 }
 
 /* ─── Completed work tab ──────────────────────────── */
-function CompletedTab({ query }) {
-    if (query.isLoading) return <ListSkeleton />;
-    if (query.isError) return (
-        <EmptyOrError message="Could not load completed work." onRetry={query.refetch} isError />
-    );
-
-    const items = query.data || [];
+function CompletedTab({ items }) {
     if (items.length === 0) {
-        return <EmptyOrError message="No completed work recorded yet." sub="Completed engagements and outcomes will appear here." />;
+        return <EmptyOrError message="No completed work yet." sub="Engagements move here once the event has ended." />;
     }
-
     return (
         <Section title={`Completed events (${items.length})`}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+            <div>
                 {items.map((e, i) => (
-                    <CompletedRow key={e.id} engagement={e} isLast={i === items.length - 1} />
+                    <ScheduleRow key={e.applicationId} item={e} isLast={i === items.length - 1} variant="completed" />
                 ))}
             </div>
         </Section>
@@ -458,22 +369,18 @@ function CompletedTab({ query }) {
 }
 
 /* ─── Reviews tab ─────────────────────────────────── */
-function ReviewsTab({ query }) {
-    if (query.isLoading) return <ListSkeleton />;
-    if (query.isError) return (
-        <EmptyOrError message="Could not load reviews." onRetry={query.refetch} isError />
-    );
+function ReviewsTab({ items }) {
+    const avg = useMemo(() => {
+        if (items.length === 0) return 0;
+        return items.reduce((s, r) => s + (r.ratingScore || 0), 0) / items.length;
+    }, [items]);
 
-    const items = (query.data || []).filter((e) => e.review);
     if (items.length === 0) {
-        return <EmptyOrError message="No reviews yet." sub="Organisers who've worked with this vendor can leave a review after the event." />;
+        return <EmptyOrError message="No reviews yet." sub="Organisers can rate this vendor 1–5 stars after the event ends." />;
     }
-
-    const avg = items.reduce((s, e) => s + (e.review.rating || 0), 0) / items.length;
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            {/* Summary bar */}
             <div style={{
                 background: 'white', border: '1px solid var(--border)',
                 borderRadius: 12, padding: '18px 24px',
@@ -485,17 +392,16 @@ function ReviewsTab({ query }) {
                     </div>
                     <StarRow rating={avg} size={18} />
                     <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 4 }}>
-                        {items.length} review{items.length !== 1 ? 's' : ''}
+                        {items.length} rating{items.length !== 1 ? 's' : ''}
                     </div>
                 </div>
-                <RatingBreakdown reviews={items.map((e) => e.review)} />
+                <RatingBreakdown reviews={items} />
             </div>
 
-            {/* Individual reviews */}
             <Section title="All reviews">
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-                    {items.map((e, i) => (
-                        <ReviewRow key={e.id} engagement={e} isLast={i === items.length - 1} />
+                <div>
+                    {items.map((r, i) => (
+                        <ReviewRow key={r.applicationId} item={r} isLast={i === items.length - 1} />
                     ))}
                 </div>
             </Section>
@@ -504,56 +410,9 @@ function ReviewsTab({ query }) {
 }
 
 /* ─── Row components ──────────────────────────────── */
-function EngagementRow({ engagement: e, isLast, variant }) {
+function ScheduleRow({ item, isLast, variant }) {
     const upcoming = variant === 'upcoming';
-    return (
-        <div style={{
-            display: 'grid',
-            gridTemplateColumns: '1fr auto',
-            gap: 16,
-            padding: '16px 20px',
-            borderBottom: isLast ? 0 : '1px solid var(--border)',
-            alignItems: 'flex-start',
-        }}>
-            <div>
-                <div style={{ fontWeight: 600, color: 'var(--text-1)', marginBottom: 4 }}>
-                    {e.eventTitle || 'Untitled event'}
-                </div>
-                <div style={{ display: 'flex', gap: 12, fontSize: 13, color: 'var(--text-3)', flexWrap: 'wrap' }}>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                        <Icons.calendar size={12} />
-                        {fmtDateRange(e.startDate, e.endDate)}
-                    </span>
-                    {e.venue && (
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                            <Icons.pin size={12} />
-                            {e.venue}
-                        </span>
-                    )}
-                    {e.serviceType && (
-                        <span style={{
-                            padding: '1px 8px', borderRadius: 6,
-                            background: 'var(--surface-subtle)',
-                            color: 'var(--text-2)', fontWeight: 500, fontSize: 11,
-                        }}>
-                            {e.serviceType}
-                        </span>
-                    )}
-                </div>
-            </div>
-            <span style={{
-                padding: '3px 10px', borderRadius: 99, fontSize: 11, fontWeight: 600,
-                background: upcoming ? '#EAF1FE' : 'var(--surface-subtle)',
-                color: upcoming ? 'var(--mp-blue)' : 'var(--text-3)',
-            }}>
-                {upcoming ? 'Upcoming' : 'Past'}
-            </span>
-        </div>
-    );
-}
-
-function CompletedRow({ engagement: e, isLast }) {
-    const hasMeta = e.attendees != null || e.outcome;
+    const amount = ngn(item.agreedAmount);
     return (
         <div style={{
             padding: '16px 20px',
@@ -561,84 +420,72 @@ function CompletedRow({ engagement: e, isLast }) {
         }}>
             <div style={{
                 display: 'grid', gridTemplateColumns: '1fr auto',
-                gap: 16, alignItems: 'flex-start', marginBottom: hasMeta ? 10 : 0,
+                gap: 16, alignItems: 'flex-start',
             }}>
-                <div>
+                <div style={{ minWidth: 0 }}>
                     <div style={{ fontWeight: 600, color: 'var(--text-1)', marginBottom: 4 }}>
-                        {e.eventTitle || 'Untitled event'}
+                        {item.eventTitle || 'Untitled event'}
                     </div>
                     <div style={{ display: 'flex', gap: 12, fontSize: 13, color: 'var(--text-3)', flexWrap: 'wrap' }}>
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                             <Icons.calendar size={12} />
-                            {fmtDateRange(e.startDate, e.endDate)}
+                            {fmtDateRange(item.eventStartTime, item.eventEndTime)}
                         </span>
-                        {e.venue && (
+                        {item.eventVenue && (
                             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                                 <Icons.pin size={12} />
-                                {e.venue}
+                                {item.eventVenue}
                             </span>
                         )}
-                        {e.serviceType && (
+                        {item.serviceType && (
                             <span style={{
                                 padding: '1px 8px', borderRadius: 6,
                                 background: 'var(--surface-subtle)',
                                 color: 'var(--text-2)', fontWeight: 500, fontSize: 11,
                             }}>
-                                {e.serviceType}
+                                {item.serviceType}
+                            </span>
+                        )}
+                        {amount && (
+                            <span className="mp-num" style={{ color: 'var(--text-2)', fontWeight: 600 }}>
+                                {amount}
                             </span>
                         )}
                     </div>
                 </div>
-                {e.review?.rating != null && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
-                        <StarRow rating={e.review.rating} />
-                        <span className="mp-num" style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-1)' }}>
-                            {e.review.rating.toFixed(1)}
-                        </span>
-                    </div>
-                )}
-            </div>
-
-            {/* Outcome + attendees */}
-            {hasMeta && (
-                <div style={{
-                    display: 'flex', gap: 16, fontSize: 12, color: 'var(--text-3)', flexWrap: 'wrap',
-                    paddingLeft: 0,
-                }}>
-                    {e.attendees != null && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                    {item.ratingScore != null && (
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                            <Icons.users size={12} />
-                            {e.attendees.toLocaleString()} attendees
+                            <StarRow rating={item.ratingScore} />
+                            <span className="mp-num" style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-1)' }}>
+                                {item.ratingScore}
+                            </span>
                         </span>
                     )}
-                    {e.outcome && (
-                        <span style={{ color: 'var(--text-2)', fontStyle: 'italic' }}>{e.outcome}</span>
-                    )}
+                    <span style={{
+                        padding: '3px 10px', borderRadius: 99, fontSize: 11, fontWeight: 600,
+                        background: upcoming ? '#EAF1FE' : 'var(--surface-subtle)',
+                        color: upcoming ? 'var(--mp-blue)' : 'var(--text-3)',
+                    }}>
+                        {upcoming ? 'Upcoming' : 'Completed'}
+                    </span>
                 </div>
-            )}
-
-            {/* Review comment */}
-            {e.review?.comment && (
+            </div>
+            {item.ratingComment && (
                 <blockquote style={{
                     margin: '10px 0 0', padding: '10px 14px',
                     borderLeft: '3px solid var(--border)',
                     color: 'var(--text-2)', fontSize: 13, lineHeight: 1.6,
                     fontStyle: 'italic',
                 }}>
-                    &ldquo;{e.review.comment}&rdquo;
-                    {e.review.organiserName && (
-                        <div style={{ marginTop: 4, fontStyle: 'normal', fontSize: 12, color: 'var(--text-3)' }}>
-                            — {e.review.organiserName}
-                        </div>
-                    )}
+                    &ldquo;{item.ratingComment}&rdquo;
                 </blockquote>
             )}
         </div>
     );
 }
 
-function ReviewRow({ engagement: e, isLast }) {
-    const r = e.review;
+function ReviewRow({ item, isLast }) {
     return (
         <div style={{
             padding: '18px 20px',
@@ -647,24 +494,23 @@ function ReviewRow({ engagement: e, isLast }) {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, marginBottom: 8 }}>
                 <div>
                     <div style={{ fontWeight: 600, color: 'var(--text-1)', fontSize: 14 }}>
-                        {r.organiserName || 'Anonymous organiser'}
+                        {item.eventTitle || 'Event'}
                     </div>
-                    {e.eventTitle && (
-                        <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>
-                            for {e.eventTitle} · {fmtDate(e.endDate || e.startDate)}
-                        </div>
-                    )}
+                    <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>
+                        {fmtDate(item.eventEndTime || item.eventStartTime)}
+                        {item.serviceType ? ` · ${item.serviceType}` : ''}
+                    </div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
-                    <StarRow rating={r.rating} />
+                    <StarRow rating={item.ratingScore} />
                     <span className="mp-num" style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-1)' }}>
-                        {r.rating?.toFixed(1)}
+                        {item.ratingScore}
                     </span>
                 </div>
             </div>
-            {r.comment && (
+            {item.ratingComment && (
                 <p style={{ margin: 0, fontSize: 13, color: 'var(--text-2)', lineHeight: 1.6 }}>
-                    &ldquo;{r.comment}&rdquo;
+                    &ldquo;{item.ratingComment}&rdquo;
                 </p>
             )}
         </div>
@@ -684,7 +530,7 @@ function Section({ title, children }) {
             }}>
                 {title}
             </div>
-            <div style={{ padding: 20 }}>
+            <div>
                 {children}
             </div>
         </div>
@@ -717,7 +563,7 @@ function MetaRow({ icon, label, value }) {
 function RatingBreakdown({ reviews }) {
     const counts = [5, 4, 3, 2, 1].map((n) => ({
         star: n,
-        count: reviews.filter((r) => Math.round(r.rating) === n).length,
+        count: reviews.filter((r) => Math.round(r.ratingScore) === n).length,
     }));
     const max = Math.max(...counts.map((c) => c.count), 1);
 
@@ -749,7 +595,7 @@ function RatingBreakdown({ reviews }) {
     );
 }
 
-function EmptyOrError({ message, sub, onRetry, isError }) {
+function EmptyOrError({ message, sub }) {
     return (
         <div style={{
             background: 'white', border: '1px solid var(--border)',
@@ -760,32 +606,11 @@ function EmptyOrError({ message, sub, onRetry, isError }) {
                 margin: '0 auto 14px', background: 'var(--surface-subtle)',
                 display: 'grid', placeItems: 'center', color: 'var(--text-3)',
             }}>
-                {isError ? <Icons.alert size={22} style={{ color: 'var(--error)' }} /> : <Icons.calendar size={22} />}
+                <Icons.calendar size={22} />
             </div>
             <div className="mp-h4" style={{ color: 'var(--text-1)', margin: 0 }}>{message}</div>
             {sub && <p className="body-sm" style={{ color: 'var(--text-2)', marginTop: 6 }}>{sub}</p>}
-            {onRetry && (
-                <Button variant="secondary" size="sm" onClick={onRetry} style={{ marginTop: 12 }}>
-                    Retry
-                </Button>
-            )}
         </div>
-    );
-}
-
-function ListSkeleton() {
-    const row = (op = 1) => ({
-        height: 80, background: 'white', border: '1px solid var(--border)',
-        borderRadius: 12, marginBottom: 10,
-        animation: 'mp-flash 1.6s ease-in-out infinite',
-        opacity: op,
-    });
-    return (
-        <>
-            <div style={row(1)} />
-            <div style={row(0.7)} />
-            <div style={row(0.4)} />
-        </>
     );
 }
 

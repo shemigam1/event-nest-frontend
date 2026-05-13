@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import {
-    useGetAdminVendorVerificationQueueQuery,
+    useGetAdminVendorVerificationsQuery,
     useApproveVendorVerificationMutation,
     useRejectVendorVerificationMutation,
 } from '@/features/organiser/vendorsApi';
@@ -8,13 +8,11 @@ import TopNav from '@/components/ui/TopNav';
 import Button from '@/components/ui/Button';
 import { Icons } from '@/components/ui/Icon';
 
-const DOC_LABELS = {
-    CAC:        'CAC Registration',
-    PORTFOLIO:  'Portfolio',
-    INSURANCE:  'Insurance',
-    TAX:        'Tax Certificate',
-    REFERENCE:  'References',
-};
+const STATUS_TABS = [
+    { key: 'PENDING',  label: 'Pending' },
+    { key: 'VERIFIED', label: 'Verified' },
+    { key: 'REJECTED', label: 'Rejected' },
+];
 
 function initials(name) {
     if (!name) return '?';
@@ -28,21 +26,27 @@ function fmtDate(iso) {
         : d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
+function fullName(app) {
+    return `${app.firstName ?? ''} ${app.lastName ?? ''}`.trim() || app.email || 'Unknown vendor';
+}
+
 export default function VendorVerificationPage() {
-    const { data: queue = [], isLoading, isError, refetch } = useGetAdminVendorVerificationQueueQuery();
+    const [status, setStatus] = useState('PENDING');
+    const { data: queue = [], isLoading, isError, refetch } =
+        useGetAdminVendorVerificationsQuery({ status });
     const [approve, approveState] = useApproveVendorVerificationMutation();
-    const [reject, rejectState]   = useRejectVendorVerificationMutation();
+    const [reject,  rejectState]  = useRejectVendorVerificationMutation();
 
-    const [selected,      setSelected]      = useState(null);
-    const [rejectReason,  setRejectReason]  = useState('');
-    const [rejectTarget,  setRejectTarget]  = useState(null);
-    const [actionError,   setActionError]   = useState('');
+    const [selected,     setSelected]     = useState(null);
+    const [rejectTarget, setRejectTarget] = useState(null);
+    const [rejectReason, setRejectReason] = useState('');
+    const [actionError,  setActionError]  = useState('');
 
-    async function handleApprove(applicationId) {
+    async function handleApprove(userId) {
         setActionError('');
         try {
-            await approve(applicationId).unwrap();
-            if (selected?.id === applicationId) setSelected(null);
+            await approve(userId).unwrap();
+            if (selected?.userId === userId) setSelected(null);
         } catch (err) {
             setActionError(err?.data?.message || 'Could not approve application.');
         }
@@ -52,8 +56,11 @@ export default function VendorVerificationPage() {
         if (!rejectTarget) return;
         setActionError('');
         try {
-            await reject({ applicationId: rejectTarget.id, reason: rejectReason.trim() || null }).unwrap();
-            if (selected?.id === rejectTarget.id) setSelected(null);
+            await reject({
+                userId: rejectTarget.userId,
+                reason: rejectReason.trim() || null,
+            }).unwrap();
+            if (selected?.userId === rejectTarget.userId) setSelected(null);
             setRejectTarget(null);
             setRejectReason('');
         } catch (err) {
@@ -61,19 +68,54 @@ export default function VendorVerificationPage() {
         }
     }
 
+    const isPendingTab = status === 'PENDING';
+    const emptyCopy = {
+        PENDING:  { title: 'All clear!',         body: 'No vendor verification applications pending.' },
+        VERIFIED: { title: 'No verified vendors yet', body: 'Approved vendors show up here.' },
+        REJECTED: { title: 'No rejected applications', body: 'Rejected applications show up here.' },
+    }[status];
+
     return (
         <div style={{ background: 'var(--surface-subtle)', minHeight: '100vh' }}>
             <TopNav />
             <div style={{ maxWidth: 1200, margin: '0 auto', padding: '32px 24px 80px' }}>
 
                 {/* Header */}
-                <div style={{ marginBottom: 24 }}>
+                <div style={{ marginBottom: 20 }}>
                     <h1 className="mp-h1" style={{ margin: 0, color: 'var(--text-1)' }}>
                         Vendor verification queue
                     </h1>
                     <p className="body" style={{ margin: '8px 0 0', color: 'var(--text-2)' }}>
-                        Review vendor documents and grant or deny the verified badge.
+                        Review vendor applications and grant or deny the verified badge.
                     </p>
+                </div>
+
+                {/* Status tabs */}
+                <div style={{
+                    display: 'flex', gap: 0,
+                    borderBottom: '1px solid var(--border)',
+                    marginBottom: 20,
+                }}>
+                    {STATUS_TABS.map(({ key, label }) => {
+                        const active = status === key;
+                        return (
+                            <button
+                                key={key}
+                                onClick={() => { setStatus(key); setSelected(null); setActionError(''); }}
+                                style={{
+                                    padding: '10px 18px', border: 0,
+                                    borderBottom: active ? '2px solid var(--mp-blue)' : '2px solid transparent',
+                                    background: 'none', cursor: 'pointer',
+                                    fontFamily: 'inherit', fontSize: 14,
+                                    fontWeight: active ? 600 : 500,
+                                    color: active ? 'var(--mp-blue)' : 'var(--text-2)',
+                                    marginBottom: -1,
+                                }}
+                            >
+                                {label}
+                            </button>
+                        );
+                    })}
                 </div>
 
                 {isLoading && (
@@ -120,7 +162,7 @@ export default function VendorVerificationPage() {
                                 display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                             }}>
                                 <span style={{ fontWeight: 600, fontSize: 14, color: 'var(--text-1)' }}>
-                                    Pending review
+                                    {STATUS_TABS.find((t) => t.key === status)?.label}
                                 </span>
                                 <span className="mp-num" style={{ fontSize: 13, color: 'var(--text-3)' }}>
                                     {queue.length}
@@ -147,25 +189,26 @@ export default function VendorVerificationPage() {
                                         <Icons.check size={22} />
                                     </div>
                                     <div className="mp-h4" style={{ color: 'var(--text-1)', margin: 0 }}>
-                                        All clear!
+                                        {emptyCopy.title}
                                     </div>
                                     <p className="body-sm" style={{ color: 'var(--text-2)', marginTop: 6 }}>
-                                        No vendor verification applications pending.
+                                        {emptyCopy.body}
                                     </p>
                                 </div>
                             ) : (
                                 queue.map((app, i) => (
                                     <QueueRow
-                                        key={app.id}
+                                        key={app.userId}
                                         application={app}
                                         isLast={i === queue.length - 1}
-                                        isActive={selected?.id === app.id}
+                                        isActive={selected?.userId === app.userId}
+                                        isPendingTab={isPendingTab}
                                         busy={
-                                            (approveState.isLoading && approveState.originalArgs === app.id)
-                                            || (rejectState.isLoading && rejectTarget?.id === app.id)
+                                            (approveState.isLoading && approveState.originalArgs === app.userId)
+                                            || (rejectState.isLoading && rejectTarget?.userId === app.userId)
                                         }
-                                        onSelect={() => setSelected(selected?.id === app.id ? null : app)}
-                                        onApprove={() => handleApprove(app.id)}
+                                        onSelect={() => setSelected(selected?.userId === app.userId ? null : app)}
+                                        onApprove={() => handleApprove(app.userId)}
                                         onReject={() => { setRejectTarget(app); setRejectReason(''); }}
                                     />
                                 ))
@@ -176,18 +219,16 @@ export default function VendorVerificationPage() {
                         {selected && (
                             <DetailPanel
                                 application={selected}
+                                isPendingTab={isPendingTab}
                                 onClose={() => setSelected(null)}
-                                onApprove={() => handleApprove(selected.id)}
+                                onApprove={() => handleApprove(selected.userId)}
                                 onReject={() => { setRejectTarget(selected); setRejectReason(''); }}
-                                busy={
-                                    approveState.isLoading || rejectState.isLoading
-                                }
+                                busy={approveState.isLoading || rejectState.isLoading}
                             />
                         )}
                     </div>
                 )}
 
-                {/* Reject reason modal */}
                 {rejectTarget && (
                     <div
                         role="dialog"
@@ -208,8 +249,8 @@ export default function VendorVerificationPage() {
                                 Reject verification
                             </h2>
                             <p className="body-sm" style={{ margin: '8px 0 16px', color: 'var(--text-2)' }}>
-                                Rejecting <strong>{rejectTarget.vendorName}</strong>&apos;s verification
-                                application. Optionally include a reason so they know what to fix.
+                                Rejecting <strong>{fullName(rejectTarget)}</strong>&apos;s verification.
+                                Optionally tell them why so they can fix it.
                             </p>
                             <label style={{ display: 'block' }}>
                                 <span style={{
@@ -222,7 +263,7 @@ export default function VendorVerificationPage() {
                                     value={rejectReason}
                                     onChange={(e) => setRejectReason(e.target.value)}
                                     rows={4}
-                                    placeholder="e.g. CAC certificate expired, portfolio links broken…"
+                                    placeholder="e.g. Description too vague — tell us what you actually do."
                                     style={{
                                         width: '100%', padding: 12,
                                         fontFamily: 'inherit', fontSize: 14,
@@ -248,7 +289,7 @@ export default function VendorVerificationPage() {
     );
 }
 
-function QueueRow({ application, isLast, isActive, busy, onSelect, onApprove, onReject }) {
+function QueueRow({ application: app, isLast, isActive, isPendingTab, busy, onSelect, onApprove, onReject }) {
     return (
         <div style={{
             display: 'grid', gridTemplateColumns: '48px 1fr auto',
@@ -266,52 +307,46 @@ function QueueRow({ application, isLast, isActive, busy, onSelect, onApprove, on
                 display: 'grid', placeItems: 'center',
                 fontSize: 14, fontWeight: 700, flexShrink: 0,
             }}>
-                {initials(application.vendorName)}
+                {initials(fullName(app))}
             </div>
             <div style={{ minWidth: 0 }}>
                 <div style={{
                     fontWeight: 600, color: 'var(--text-1)', marginBottom: 4,
                     display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
                 }}>
-                    {application.vendorName}
-                    {application.category && (
+                    {fullName(app)}
+                    {app.serviceType && (
                         <span style={{
                             fontSize: 11, padding: '2px 8px',
                             background: 'var(--surface-subtle)', borderRadius: 6,
                             color: 'var(--text-2)', fontWeight: 600,
                         }}>
-                            {application.category}
+                            {app.serviceType}
                         </span>
                     )}
                 </div>
                 <div style={{ fontSize: 13, color: 'var(--text-3)' }}>
-                    Applied {fmtDate(application.createdAt)}
-                    {application.documents?.length > 0 && (
-                        <span> · {application.documents.length} document{application.documents.length !== 1 ? 's' : ''}</span>
+                    {app.email}
+                    {app.submittedAt && (
+                        <span> · Applied {fmtDate(app.submittedAt)}</span>
                     )}
                 </div>
             </div>
-            <div onClick={(e) => e.stopPropagation()} style={{ display: 'flex', gap: 8, paddingTop: 4 }}>
-                <Button
-                    size="sm" variant="primary"
-                    icon={<Icons.check size={13} />}
-                    onClick={onApprove} disabled={busy}
-                >
-                    Approve
-                </Button>
-                <Button
-                    size="sm" variant="secondary"
-                    icon={<Icons.x size={13} />}
-                    onClick={onReject} disabled={busy}
-                >
-                    Reject
-                </Button>
-            </div>
+            {isPendingTab && (
+                <div onClick={(e) => e.stopPropagation()} style={{ display: 'flex', gap: 8, paddingTop: 4 }}>
+                    <Button size="sm" variant="primary" icon={<Icons.check size={13} />} onClick={onApprove} disabled={busy}>
+                        Approve
+                    </Button>
+                    <Button size="sm" variant="secondary" icon={<Icons.x size={13} />} onClick={onReject} disabled={busy}>
+                        Reject
+                    </Button>
+                </div>
+            )}
         </div>
     );
 }
 
-function DetailPanel({ application, onClose, onApprove, onReject, busy }) {
+function DetailPanel({ application: app, isPendingTab, onClose, onApprove, onReject, busy }) {
     return (
         <div style={{
             background: 'white', border: '1px solid var(--border)',
@@ -338,124 +373,70 @@ function DetailPanel({ application, onClose, onApprove, onReject, busy }) {
             </div>
 
             <div style={{ padding: '18px 18px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
-                {/* Vendor info */}
                 <div>
                     <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--text-1)', marginBottom: 4 }}>
-                        {application.vendorName}
+                        {fullName(app)}
                     </div>
-                    {application.vendorLead && (
-                        <div style={{ fontSize: 13, color: 'var(--text-2)' }}>{application.vendorLead}</div>
-                    )}
-                    {application.vendorCity && (
-                        <div style={{ fontSize: 13, color: 'var(--text-3)', marginTop: 2 }}>
-                            <Icons.pin size={12} style={{ verticalAlign: 'middle' }} /> {application.vendorCity}
-                        </div>
+                    {app.email && (
+                        <div style={{ fontSize: 13, color: 'var(--text-2)' }}>{app.email}</div>
                     )}
                 </div>
 
-                {application.vendorBio && (
+                {app.serviceType && (
                     <div>
                         <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-3)', marginBottom: 6 }}>
-                            BIO
+                            SERVICE TYPE
                         </div>
-                        <p style={{ margin: 0, fontSize: 13, color: 'var(--text-2)', lineHeight: 1.5 }}>
-                            {application.vendorBio}
+                        <div style={{ fontSize: 14, color: 'var(--text-1)', fontWeight: 500 }}>
+                            {app.serviceType}
+                        </div>
+                    </div>
+                )}
+
+                {app.description && (
+                    <div>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-3)', marginBottom: 6 }}>
+                            DESCRIPTION
+                        </div>
+                        <p style={{ margin: 0, fontSize: 13, color: 'var(--text-2)', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
+                            {app.description}
                         </p>
                     </div>
                 )}
 
-                {/* Documents */}
-                {application.documents?.length > 0 && (
-                    <div>
-                        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-3)', marginBottom: 8 }}>
-                            SUBMITTED DOCUMENTS
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                            {application.documents.map((doc) => (
-                                <a
-                                    key={doc.id}
-                                    href={doc.url}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    style={{
-                                        display: 'flex', alignItems: 'center', gap: 8,
-                                        padding: '8px 12px',
-                                        background: 'var(--surface-subtle)', borderRadius: 8,
-                                        color: 'var(--mp-blue)', fontSize: 13, textDecoration: 'none',
-                                        fontWeight: 500,
-                                    }}
-                                >
-                                    <Icons.inbox size={14} style={{ flexShrink: 0 }} />
-                                    {DOC_LABELS[doc.type] || doc.type}
-                                    <Icons.arrowR size={12} style={{ marginLeft: 'auto', opacity: 0.6 }} />
-                                </a>
-                            ))}
-                        </div>
-                    </div>
-                )}
-
-                {/* References */}
-                {application.references?.length > 0 && (
-                    <div>
-                        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-3)', marginBottom: 8 }}>
-                            ORGANISER REFERENCES
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                            {application.references.map((ref, i) => (
-                                <div key={i} style={{
-                                    padding: '10px 12px',
-                                    background: 'var(--surface-subtle)', borderRadius: 8,
-                                }}>
-                                    <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--text-1)' }}>
-                                        {ref.organiserName}
-                                    </div>
-                                    {ref.eventTitle && (
-                                        <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>
-                                            {ref.eventTitle}
-                                        </div>
-                                    )}
-                                    {ref.rating != null && (
-                                        <div style={{ fontSize: 12, color: '#F59E0B', marginTop: 4 }}>
-                                            {'★'.repeat(Math.round(ref.rating))}
-                                            {'☆'.repeat(5 - Math.round(ref.rating))}
-                                            <span style={{ color: 'var(--text-3)', marginLeft: 4 }}>
-                                                {ref.rating}/5
-                                            </span>
-                                        </div>
-                                    )}
-                                    {ref.comment && (
-                                        <p style={{ margin: '6px 0 0', fontSize: 12, color: 'var(--text-2)', lineHeight: 1.5 }}>
-                                            &ldquo;{ref.comment}&rdquo;
-                                        </p>
-                                    )}
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                )}
-
-                {/* Actions */}
-                <div style={{
-                    display: 'flex', gap: 10, paddingTop: 8,
-                    borderTop: '1px solid var(--border)',
-                }}>
-                    <Button
-                        variant="primary" size="md"
-                        icon={<Icons.check size={14} />}
-                        onClick={onApprove} disabled={busy}
-                        style={{ flex: 1 }}
-                    >
-                        Approve
-                    </Button>
-                    <Button
-                        variant="destructive" size="md"
-                        icon={<Icons.x size={14} />}
-                        onClick={onReject} disabled={busy}
-                        style={{ flex: 1 }}
-                    >
-                        Reject
-                    </Button>
+                <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', fontSize: 12, color: 'var(--text-3)' }}>
+                    {app.submittedAt && <span>Submitted {fmtDate(app.submittedAt)}</span>}
+                    {app.verifiedAt && <span>Verified {fmtDate(app.verifiedAt)}</span>}
                 </div>
+
+                {app.rejectionReason && (
+                    <div style={{
+                        padding: '10px 12px',
+                        background: '#FBE9E9',
+                        borderRadius: 8,
+                        fontSize: 13,
+                        color: 'var(--text-2)',
+                    }}>
+                        <div style={{ fontWeight: 600, fontSize: 12, color: 'var(--error)', marginBottom: 4 }}>
+                            Rejection reason
+                        </div>
+                        {app.rejectionReason}
+                    </div>
+                )}
+
+                {isPendingTab && (
+                    <div style={{
+                        display: 'flex', gap: 10, paddingTop: 8,
+                        borderTop: '1px solid var(--border)',
+                    }}>
+                        <Button variant="primary" size="md" icon={<Icons.check size={14} />} onClick={onApprove} disabled={busy} style={{ flex: 1 }}>
+                            Approve
+                        </Button>
+                        <Button variant="destructive" size="md" icon={<Icons.x size={14} />} onClick={onReject} disabled={busy} style={{ flex: 1 }}>
+                            Reject
+                        </Button>
+                    </div>
+                )}
             </div>
         </div>
     );

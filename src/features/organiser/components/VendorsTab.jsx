@@ -1,26 +1,17 @@
-import { useEffect, useRef, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
     useGetEventVendorApplicationsQuery,
     useAcceptVendorApplicationMutation,
     useRejectVendorApplicationMutation,
-    useGetEventVendorInquiriesQuery,
-    useOpenVendorInquiryMutation,
-    useGetInquiryMessagesQuery,
-    useSendInquiryMessageMutation,
     useGetVendorsQuery,
 } from '../vendorsApi';
 import Button from '@/components/ui/Button';
 import { Icons } from '@/components/ui/Icon';
 
 const STATUS_STYLE = {
-    PENDING:         { bg: '#FEF4E2', fg: '#B8770A', label: 'Pending' },
-    ACCEPTED:        { bg: '#E6F4EA', fg: '#0F9D58', label: 'Accepted' },
-    REJECTED:        { bg: '#FBE9E9', fg: '#D62828', label: 'Rejected' },
-    OPEN:            { bg: '#EAF1FE', fg: '#1967D2', label: 'Open' },
-    NEGOTIATING:     { bg: '#FEF4E2', fg: '#B8770A', label: 'Negotiating' },
-    CONTRACT_DRAFT:  { bg: '#F0E8FE', fg: '#7B2FBE', label: 'Contract' },
-    ENGAGED:         { bg: '#E6F4EA', fg: '#0F9D58', label: 'Engaged' },
-    DECLINED:        { bg: '#FBE9E9', fg: '#D62828', label: 'Declined' },
+    PENDING:  { bg: '#FEF4E2', fg: '#B8770A', label: 'Pending' },
+    ACCEPTED: { bg: '#E6F4EA', fg: '#0F9D58', label: 'Accepted' },
+    REJECTED: { bg: '#FBE9E9', fg: '#D62828', label: 'Rejected' },
 };
 
 const APP_FILTERS = [
@@ -29,7 +20,6 @@ const APP_FILTERS = [
 
 const TABS = [
     { key: 'applications', label: 'Applications' },
-    { key: 'inquiries',    label: 'Inquiries' },
     { key: 'marketplace',  label: 'Browse marketplace' },
 ];
 
@@ -51,17 +41,9 @@ function fmtDate(iso) {
         : d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-function fmtTime(iso) {
-    if (!iso) return '';
-    const d = new Date(iso);
-    return Number.isNaN(d.getTime()) ? ''
-        : d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-}
-
 /* ─── Tab entry point ─────────────────────────────── */
 export default function VendorsTab({ eventId }) {
     const [activeTab, setActiveTab] = useState('applications');
-    const [chatInquiry, setChatInquiry] = useState(null);
 
     return (
         <div>
@@ -92,14 +74,7 @@ export default function VendorsTab({ eventId }) {
             </div>
 
             {activeTab === 'applications' && <ApplicationsPane eventId={eventId} />}
-            {activeTab === 'inquiries'    && (
-                <InquiriesPane
-                    eventId={eventId}
-                    chatInquiry={chatInquiry}
-                    setChatInquiry={setChatInquiry}
-                />
-            )}
-            {activeTab === 'marketplace' && <MarketplacePane eventId={eventId} />}
+            {activeTab === 'marketplace'  && <MarketplacePane eventId={eventId} />}
         </div>
     );
 }
@@ -229,293 +204,49 @@ function ApplicationsPane({ eventId }) {
         </div>
     );
 }
-
-/* ─── Inquiries pane ──────────────────────────────── */
-function InquiriesPane({ eventId, chatInquiry, setChatInquiry }) {
-    const { data: inquiries = [], isLoading, isError, refetch } = useGetEventVendorInquiriesQuery(eventId);
-
-    if (isLoading) return <Skeleton />;
-    if (isError) return <ErrorCard message="Could not load inquiries." onRetry={refetch} />;
-
-    return (
-        <div style={{
-            display: 'grid',
-            gridTemplateColumns: chatInquiry ? '1fr 380px' : '1fr',
-            gap: 20,
-        }}>
-            <div>
-                <div style={{
-                    background: 'white', border: '1px solid var(--border)',
-                    borderRadius: 12, overflow: 'hidden',
-                }}>
-                    <div style={{
-                        padding: '14px 20px', borderBottom: '1px solid var(--border)',
-                        fontSize: 14, fontWeight: 600, color: 'var(--text-1)',
-                    }}>
-                        Vendor inquiries
-                        <span className="mp-num" style={{ marginLeft: 8, fontSize: 13, color: 'var(--text-3)', fontWeight: 500 }}>
-                            {inquiries.length}
-                        </span>
-                    </div>
-
-                    {inquiries.length === 0 ? (
-                        <EmptyCard
-                            message="No inquiries yet."
-                            sub="Browse the marketplace to find and contact vendors directly."
-                        />
-                    ) : (
-                        inquiries.map((inq, i) => (
-                            <InquiryRow
-                                key={inq.id}
-                                inquiry={inq}
-                                isLast={i === inquiries.length - 1}
-                                isActive={chatInquiry?.id === inq.id}
-                                onClick={() => setChatInquiry(chatInquiry?.id === inq.id ? null : inq)}
-                            />
-                        ))
-                    )}
-                </div>
-            </div>
-
-            {chatInquiry && (
-                <ChatPane
-                    eventId={eventId}
-                    inquiry={chatInquiry}
-                    onClose={() => setChatInquiry(null)}
-                />
-            )}
-        </div>
-    );
-}
-
-function InquiryRow({ inquiry, isLast, isActive, onClick }) {
-    const s = STATUS_STYLE[inquiry.status] || STATUS_STYLE.OPEN;
-    return (
-        <div
-            onClick={onClick}
-            style={{
-                display: 'grid', gridTemplateColumns: '48px 1fr auto',
-                gap: 14, alignItems: 'flex-start',
-                padding: '16px 20px',
-                borderBottom: isLast ? 0 : '1px solid var(--border)',
-                background: isActive ? '#F0F4FF' : 'white',
-                cursor: 'pointer',
-                transition: 'background 0.1s',
-            }}
-        >
-            <div style={{
-                width: 48, height: 48, borderRadius: 10,
-                background: 'var(--surface-subtle)', color: 'var(--text-2)',
-                display: 'grid', placeItems: 'center',
-                fontSize: 14, fontWeight: 700, flexShrink: 0,
-            }}>
-                {initials(inquiry.vendorName)}
-            </div>
-            <div style={{ minWidth: 0 }}>
-                <div style={{ fontWeight: 600, color: 'var(--text-1)', marginBottom: 4 }}>
-                    {inquiry.vendorName}
-                </div>
-                {inquiry.lastMessage && (
-                    <p style={{
-                        margin: 0, fontSize: 13, color: 'var(--text-2)',
-                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                    }}>
-                        {inquiry.lastMessage}
-                    </p>
-                )}
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
-                <span style={{
-                    padding: '2px 9px', background: s.bg, color: s.fg,
-                    fontSize: 11, fontWeight: 600, borderRadius: 99,
-                }}>
-                    {s.label}
-                </span>
-                <span style={{ fontSize: 11, color: 'var(--text-3)' }}>
-                    {fmtDate(inquiry.updatedAt)}
-                </span>
-            </div>
-        </div>
-    );
-}
-
-function ChatPane({ eventId, inquiry, onClose }) {
-    const { data: messages = [], isLoading } = useGetInquiryMessagesQuery({ eventId, inquiryId: inquiry.id });
-    const [send, sendState] = useSendInquiryMessageMutation();
-    const [draft, setDraft] = useState('');
-    const bottomRef = useRef(null);
-
-    useEffect(() => {
-        bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [messages]);
-
-    async function handleSend() {
-        const body = draft.trim();
-        if (!body) return;
-        setDraft('');
-        try {
-            await send({ eventId, inquiryId: inquiry.id, body }).unwrap();
-        } catch {
-            setDraft(body);
-        }
-    }
-
-    function onKey(e) {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            handleSend();
-        }
-    }
-
-    return (
-        <div style={{
-            background: 'white', border: '1px solid var(--border)',
-            borderRadius: 12, display: 'flex', flexDirection: 'column',
-            height: 520,
-        }}>
-            {/* Header */}
-            <div style={{
-                padding: '14px 16px', borderBottom: '1px solid var(--border)',
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-            }}>
-                <div>
-                    <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--text-1)' }}>
-                        {inquiry.vendorName}
-                    </div>
-                    <div style={{ fontSize: 12, color: 'var(--text-3)' }}>
-                        {STATUS_STYLE[inquiry.status]?.label || inquiry.status}
-                    </div>
-                </div>
-                <button
-                    onClick={onClose}
-                    style={{
-                        background: 'none', border: 0, cursor: 'pointer',
-                        color: 'var(--text-3)', padding: 4,
-                    }}
-                    aria-label="Close chat"
-                >
-                    <Icons.x size={18} />
-                </button>
-            </div>
-
-            {/* Messages */}
-            <div style={{ flex: 1, overflowY: 'auto', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {isLoading && (
-                    <div style={{ textAlign: 'center', color: 'var(--text-3)', fontSize: 13, paddingTop: 20 }}>
-                        Loading messages…
-                    </div>
-                )}
-                {!isLoading && messages.length === 0 && (
-                    <div style={{ textAlign: 'center', color: 'var(--text-3)', fontSize: 13, paddingTop: 20 }}>
-                        No messages yet. Send the first one.
-                    </div>
-                )}
-                {messages.map((m) => {
-                    const isMe = m.senderRole === 'ORGANISER';
-                    return (
-                        <div key={m.id} style={{
-                            alignSelf: isMe ? 'flex-end' : 'flex-start',
-                            maxWidth: '80%',
-                        }}>
-                            <div style={{
-                                padding: '8px 12px', borderRadius: 12,
-                                background: isMe ? 'var(--mp-blue)' : 'var(--surface-subtle)',
-                                color: isMe ? 'white' : 'var(--text-1)',
-                                fontSize: 13, lineHeight: 1.5,
-                                borderBottomRightRadius: isMe ? 2 : 12,
-                                borderBottomLeftRadius: isMe ? 12 : 2,
-                            }}>
-                                {m.body}
-                            </div>
-                            <div style={{
-                                fontSize: 11, color: 'var(--text-3)',
-                                marginTop: 3, textAlign: isMe ? 'right' : 'left',
-                            }}>
-                                {fmtTime(m.createdAt)}
-                            </div>
-                        </div>
-                    );
-                })}
-                <div ref={bottomRef} />
-            </div>
-
-            {/* Composer */}
-            <div style={{
-                padding: '10px 12px', borderTop: '1px solid var(--border)',
-                display: 'flex', gap: 8, alignItems: 'flex-end',
-            }}>
-                <textarea
-                    value={draft}
-                    onChange={(e) => setDraft(e.target.value)}
-                    onKeyDown={onKey}
-                    rows={1}
-                    placeholder="Type a message… (Enter to send)"
-                    style={{
-                        flex: 1, resize: 'none', border: '1px solid var(--border)',
-                        borderRadius: 8, padding: '8px 10px',
-                        fontFamily: 'inherit', fontSize: 13,
-                        color: 'var(--text-1)', boxSizing: 'border-box',
-                        maxHeight: 100, overflowY: 'auto',
-                    }}
-                />
-                <Button
-                    size="sm"
-                    variant="primary"
-                    onClick={handleSend}
-                    disabled={!draft.trim() || sendState.isLoading}
-                    style={{ flexShrink: 0 }}
-                >
-                    Send
-                </Button>
-            </div>
-        </div>
-    );
-}
-
 /* ─── Marketplace pane ────────────────────────────── */
-function MarketplacePane({ eventId }) {
+/* Marketplace browse view inside the organiser's Vendors tab. Sends
+   the user to the public vendor profile page on click — no inquiry CTA,
+   no separate chat thread (the inquiry endpoints don't exist on the
+   backend). When a chat module lands we'll surface a "Message vendor"
+   action here. */
+function MarketplacePane() {
     const [search, setSearch] = useState('');
     const [category, setCategory] = useState('all');
-    const { data: vendors = [], isLoading, isError, refetch } = useGetVendorsQuery({ category, search });
-    const [openInquiry, openState] = useOpenVendorInquiryMutation();
-    const [targetVendor, setTargetVendor] = useState(null);
-    const [message, setMessage]           = useState('');
-    const [inquiryError, setInquiryError] = useState('');
-    const [inquiryDone, setInquiryDone]   = useState(false);
 
     const CATS = [
-        { key: 'all', label: 'All' },
-        { key: 'CATERING', label: 'Catering' },
-        { key: 'AV', label: 'AV' },
-        { key: 'PHOTO', label: 'Photo' },
-        { key: 'VENUE', label: 'Venue' },
-        { key: 'SECURITY', label: 'Security' },
-        { key: 'PRINT', label: 'Print' },
-        { key: 'DECOR', label: 'Decor' },
-        { key: 'TRANSPORT', label: 'Transport' },
+        { key: 'all',       label: 'All',       keyword: null },
+        { key: 'catering',  label: 'Catering',  keyword: 'cater' },
+        { key: 'av',        label: 'AV',        keyword: 'av' },
+        { key: 'photo',     label: 'Photo',     keyword: 'photo' },
+        { key: 'venue',     label: 'Venue',     keyword: 'venue' },
+        { key: 'security',  label: 'Security',  keyword: 'security' },
+        { key: 'print',     label: 'Print',     keyword: 'print' },
+        { key: 'decor',     label: 'Decor',     keyword: 'decor' },
+        { key: 'transport', label: 'Transport', keyword: 'transport' },
     ];
 
-    async function handleOpenInquiry() {
-        if (!message.trim()) { setInquiryError('Add a message to introduce yourself.'); return; }
-        setInquiryError('');
-        try {
-            await openInquiry({ eventId, vendorId: targetVendor.vendorId ?? targetVendor.id, message: message.trim() }).unwrap();
-            setInquiryDone(true);
-        } catch (err) {
-            setInquiryError(err?.data?.message || 'Could not open inquiry.');
-        }
-    }
+    const keyword = CATS.find((c) => c.key === category)?.keyword || null;
+    const { data: rawVendors = [], isLoading, isError, refetch } =
+        useGetVendorsQuery({ serviceType: keyword });
 
-    function closeInquiry() {
-        setTargetVendor(null);
-        setMessage('');
-        setInquiryError('');
-        setInquiryDone(false);
+    // Backend doesn't support a name search — apply it client-side.
+    const vendors = useMemo(() => {
+        const q = search.trim().toLowerCase();
+        if (!q) return rawVendors;
+        return rawVendors.filter((v) => {
+            const hay = `${v.vendorName || ''} ${v.serviceType || ''} ${v.profileDescription || ''}`.toLowerCase();
+            return hay.includes(q);
+        });
+    }, [rawVendors, search]);
+
+    function viewVendor(v) {
+        // Public profile page handles loading state + 404.
+        window.location.assign(`/vendors/${v.vendorId}`);
     }
 
     return (
         <div>
-            {/* Search + chips */}
             <div style={{ marginBottom: 14 }}>
                 <input
                     value={search}
@@ -566,103 +297,21 @@ function MarketplacePane({ eventId }) {
                     gap: 14,
                 }}>
                     {vendors.map((v) => (
-                        <MiniVendorCard key={v.vendorId ?? v.id} vendor={v} onContact={() => setTargetVendor(v)} />
+                        <MiniVendorCard key={v.vendorId} vendor={v} onView={() => viewVendor(v)} />
                     ))}
-                </div>
-            )}
-
-            {/* Inquiry modal */}
-            {targetVendor && (
-                <div
-                    role="dialog"
-                    aria-label="Contact vendor"
-                    onClick={closeInquiry}
-                    style={{
-                        position: 'fixed', inset: 0, zIndex: 1000,
-                        background: 'rgba(2,16,45,0.55)',
-                        display: 'grid', placeItems: 'center', padding: 20,
-                    }}
-                >
-                    <div onClick={(e) => e.stopPropagation()} style={{
-                        width: '100%', maxWidth: 440,
-                        background: 'white', borderRadius: 16,
-                        boxShadow: 'var(--shadow-modal)', padding: 28,
-                    }}>
-                        {inquiryDone ? (
-                            <>
-                                <div style={{
-                                    width: 52, height: 52, borderRadius: 99,
-                                    background: '#E6F4EA', color: '#0F7B3E',
-                                    display: 'grid', placeItems: 'center', margin: '0 auto 14px',
-                                }}>
-                                    <Icons.check size={24} />
-                                </div>
-                                <h3 className="mp-h3" style={{ margin: 0, color: 'var(--text-1)', textAlign: 'center' }}>
-                                    Inquiry sent!
-                                </h3>
-                                <p className="body-sm" style={{ color: 'var(--text-2)', textAlign: 'center', marginTop: 8 }}>
-                                    Your message was delivered to <strong>{(targetVendor.vendorName ?? targetVendor.name)}</strong>.
-                                    Track the conversation in the Inquiries tab.
-                                </p>
-                                <Button variant="primary" size="md" onClick={closeInquiry} style={{ display: 'block', margin: '18px auto 0' }}>
-                                    Done
-                                </Button>
-                            </>
-                        ) : (
-                            <>
-                                <h3 className="mp-h3" style={{ margin: 0, color: 'var(--text-1)' }}>
-                                    Contact {(targetVendor.vendorName ?? targetVendor.name)}
-                                </h3>
-                                <p className="body-sm" style={{ color: 'var(--text-2)', marginTop: 6, marginBottom: 16 }}>
-                                    Send an opening message to start the conversation. You can negotiate
-                                    and share details in the Inquiries tab after.
-                                </p>
-                                <textarea
-                                    value={message}
-                                    onChange={(e) => { setMessage(e.target.value); setInquiryError(''); }}
-                                    rows={5}
-                                    placeholder="Hi, we're hosting an event and need your services…"
-                                    style={{
-                                        width: '100%', padding: 12, fontFamily: 'inherit',
-                                        fontSize: 14, border: '1px solid var(--border)',
-                                        borderRadius: 8, resize: 'vertical',
-                                        color: 'var(--text-1)', boxSizing: 'border-box',
-                                    }}
-                                />
-                                {inquiryError && (
-                                    <p style={{ margin: '8px 0 0', fontSize: 13, color: 'var(--error)' }}>
-                                        {inquiryError}
-                                    </p>
-                                )}
-                                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
-                                    <Button variant="ghost" size="md" onClick={closeInquiry} disabled={openState.isLoading}>
-                                        Cancel
-                                    </Button>
-                                    <Button
-                                        variant="primary"
-                                        size="md"
-                                        onClick={handleOpenInquiry}
-                                        disabled={openState.isLoading || !message.trim()}
-                                    >
-                                        {openState.isLoading ? 'Sending…' : 'Send inquiry'}
-                                    </Button>
-                                </div>
-                            </>
-                        )}
-                    </div>
                 </div>
             )}
         </div>
     );
 }
 
-function MiniVendorCard({ vendor, onContact }) {
-    const name     = vendor.vendorName ?? vendor.name ?? '';
-    const verified = vendor.vendorVerified ?? vendor.verified ?? false;
-    const service  = vendor.serviceType ?? vendor.lead ?? '';
-    const bio      = vendor.profileDescription ?? vendor.bio ?? '';
-    const rating   = vendor.averageRating ?? vendor.rating;
-    const events   = vendor.completedEvents ?? vendor.eventsCompleted;
+function MiniVendorCard({ vendor, onView }) {
+    const name     = vendor.vendorName || '';
+    const verified = vendor.vendorVerified === true;
+    const service  = vendor.serviceType  || '';
+    const bio      = vendor.profileDescription || '';
+    const rating   = vendor.averageRating;
+    const events   = vendor.completedEvents;
 
     return (
         <div style={{
@@ -702,14 +351,14 @@ function MiniVendorCard({ vendor, onContact }) {
             )}
             <div style={{ fontSize: 12, color: 'var(--text-3)' }}>
                 {rating != null
-                    ? <>★ <span style={{ color: 'var(--text-1)', fontWeight: 600 }}>{rating.toFixed(1)}</span>{events != null && ` · ${events} events`}</>
+                    ? <>★ <span style={{ color: 'var(--text-1)', fontWeight: 600 }}>{Number(rating).toFixed(1)}</span>{events != null && ` · ${events} events`}</>
                     : events != null
                         ? `${events} event${events !== 1 ? 's' : ''} completed`
                         : 'New vendor'
                 }
             </div>
-            <Button size="sm" variant="secondary" onClick={onContact} style={{ marginTop: 'auto' }}>
-                Send inquiry
+            <Button size="sm" variant="secondary" onClick={onView} style={{ marginTop: 'auto' }}>
+                View profile
             </Button>
         </div>
     );

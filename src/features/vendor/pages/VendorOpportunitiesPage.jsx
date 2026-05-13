@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router';
 import { useGetPublishedEventsQuery } from '@/features/events/eventsApi';
 import {
     useGetMyVendorApplicationsQuery,
-    useGetMyVendorProfileQuery,
+    useGetMyVendorVerificationQuery,
     useApplyAsVendorMutation,
 } from '@/features/organiser/vendorsApi';
 import { formatEventDate } from '@/utils/dateFormat';
@@ -17,9 +17,10 @@ export default function VendorOpportunitiesPage() {
     const navigate = useNavigate();
     const events = useGetPublishedEventsQuery();
     const mine = useGetMyVendorApplicationsQuery();
-    // Profile is needed to gate the apply flow — a user must have a vendor
-    // profile before they can apply. Verification is NOT required.
-    const { data: myProfile, isLoading: profileLoading } = useGetMyVendorProfileQuery();
+    // "Profile" in this build is a verification record on the user — a single
+    // serviceType + description pair. Required before applying; verification
+    // approval is NOT required.
+    const { data: myProfile, isLoading: profileLoading } = useGetMyVendorVerificationQuery();
 
     const [query, setQuery] = useState('');
     const [target, setTarget] = useState(null);
@@ -315,7 +316,7 @@ function ApplyAsVendorModal({ event, profile, profileLoading, onClose, onGoToPro
             await applyAsVendor({
                 eventId: event.id,
                 serviceType: profile.serviceType,
-                description: note.trim() || profile.profileDescription || null,
+                description: note.trim() || profile.description || null,
                 proposedAmount: proposedAmount ? Number(proposedAmount) : null,
             }).unwrap();
             setSubmitted(true);
@@ -324,7 +325,12 @@ function ApplyAsVendorModal({ event, profile, profileLoading, onClose, onGoToPro
         }
     }
 
-    const hasProfile = !!profile;
+    // A "profile" exists once the user has filled in a service type — that's
+    // what we'll send on the application. Verification approval isn't required.
+    const hasProfile = !!profile && !!profile.serviceType;
+    const profileName = profile
+        ? `${profile.firstName ?? ''} ${profile.lastName ?? ''}`.trim() || profile.email || 'My profile'
+        : '';
 
     return (
         <Modal open={!!event} onClose={close} width={480} label="Apply as vendor">
@@ -428,16 +434,16 @@ function ApplyAsVendorModal({ event, profile, profileLoading, onClose, onGoToPro
                                     display: 'grid', placeItems: 'center',
                                     fontSize: 14, fontWeight: 700,
                                 }}>
-                                    {(profile.vendorName ?? profile.name ?? '?')[0]?.toUpperCase()}
+                                    {(profileName[0] || '?').toUpperCase()}
                                 </div>
                                 <div style={{ minWidth: 0 }}>
                                     <div style={{
                                         display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap',
                                     }}>
                                         <span style={{ fontWeight: 600, color: 'var(--text-1)', fontSize: 14 }}>
-                                            {profile.vendorName ?? profile.name}
+                                            {profileName}
                                         </span>
-                                        {(profile.vendorVerified ?? profile.verified) && (
+                                        {profile.vendorVerified && (
                                             <span style={{
                                                 display: 'inline-flex', alignItems: 'center', gap: 3,
                                                 background: '#EAF1FE', color: 'var(--mp-blue)',
@@ -448,15 +454,15 @@ function ApplyAsVendorModal({ event, profile, profileLoading, onClose, onGoToPro
                                         )}
                                     </div>
                                     <div style={{ fontSize: 12, color: 'var(--text-2)', marginTop: 2 }}>
-                                        {profile.serviceType ?? profile.lead}
+                                        {profile.serviceType}
                                     </div>
-                                    {(profile.profileDescription ?? profile.bio) && (
+                                    {profile.description && (
                                         <div style={{
                                             fontSize: 12, color: 'var(--text-3)', marginTop: 4,
                                             display: '-webkit-box', WebkitLineClamp: 2,
                                             WebkitBoxOrient: 'vertical', overflow: 'hidden',
                                         }}>
-                                            {profile.profileDescription ?? profile.bio}
+                                            {profile.description}
                                         </div>
                                     )}
                                 </div>

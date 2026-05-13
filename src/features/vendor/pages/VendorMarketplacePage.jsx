@@ -6,16 +6,19 @@ import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import { Icons } from '@/components/ui/Icon';
 
+/* Category chips map to the backend's ?serviceType= partial-match filter.
+   The keyword (lowercase) is what we send — the backend matches it against
+   the vendor's serviceType string case-insensitively. */
 const CATEGORIES = [
-    { key: 'all',       label: 'All' },
-    { key: 'CATERING',  label: 'Catering' },
-    { key: 'AV',        label: 'AV & Sound' },
-    { key: 'PHOTO',     label: 'Photography' },
-    { key: 'VENUE',     label: 'Venues' },
-    { key: 'SECURITY',  label: 'Security' },
-    { key: 'PRINT',     label: 'Print & Swag' },
-    { key: 'DECOR',     label: 'Decor' },
-    { key: 'TRANSPORT', label: 'Transport' },
+    { key: 'all',         label: 'All',           keyword: null },
+    { key: 'catering',    label: 'Catering',      keyword: 'cater' },
+    { key: 'av',          label: 'AV & Sound',    keyword: 'av' },
+    { key: 'photography', label: 'Photography',   keyword: 'photo' },
+    { key: 'venue',       label: 'Venues',        keyword: 'venue' },
+    { key: 'security',    label: 'Security',      keyword: 'security' },
+    { key: 'print',       label: 'Print & Swag',  keyword: 'print' },
+    { key: 'decor',       label: 'Decor',         keyword: 'decor' },
+    { key: 'transport',   label: 'Transport',     keyword: 'transport' },
 ];
 
 function initials(name) {
@@ -39,18 +42,22 @@ function avatarColor(name = '') {
 export default function VendorMarketplacePage() {
     const navigate = useNavigate();
     const [category, setCategory] = useState('all');
-    const [search, setSearch]     = useState('');
     const [searchInput, setSearchInput] = useState('');
 
-    const { data: vendors = [], isLoading, isError, refetch } = useGetVendorsQuery({ category, search });
+    const keyword = CATEGORIES.find((c) => c.key === category)?.keyword || null;
+    const { data: rawVendors = [], isLoading, isError, refetch } =
+        useGetVendorsQuery({ serviceType: keyword });
 
-    function applySearch() {
-        setSearch(searchInput.trim());
-    }
-
-    function handleKey(e) {
-        if (e.key === 'Enter') applySearch();
-    }
+    // Backend only filters by serviceType. Apply the free-text query
+    // client-side across name + service type so the search box still works.
+    const vendors = useMemo(() => {
+        const q = searchInput.trim().toLowerCase();
+        if (!q) return rawVendors;
+        return rawVendors.filter((v) => {
+            const hay = `${v.vendorName || ''} ${v.serviceType || ''} ${v.profileDescription || ''}`.toLowerCase();
+            return hay.includes(q);
+        });
+    }, [rawVendors, searchInput]);
 
     return (
         <div style={{ background: 'var(--surface-subtle)', minHeight: '100vh' }}>
@@ -68,20 +75,14 @@ export default function VendorMarketplacePage() {
                     </p>
                 </div>
 
-                {/* Search + category row */}
-                <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-                    <div style={{ flex: '1 1 260px', maxWidth: 380 }}>
-                        <Input
-                            placeholder="Search vendors by name or skill"
-                            value={searchInput}
-                            onChange={(e) => setSearchInput(e.target.value)}
-                            onKeyDown={handleKey}
-                            icon={<Icons.search size={16} />}
-                        />
-                    </div>
-                    <Button variant="secondary" size="md" onClick={applySearch}>
-                        Search
-                    </Button>
+                {/* Search row — filters client-side over name + service type */}
+                <div style={{ marginBottom: 20, maxWidth: 380 }}>
+                    <Input
+                        placeholder="Search vendors by name or service"
+                        value={searchInput}
+                        onChange={(e) => setSearchInput(e.target.value)}
+                        icon={<Icons.search size={16} />}
+                    />
                 </div>
 
                 {/* Category chips */}
@@ -178,18 +179,14 @@ export default function VendorMarketplacePage() {
 }
 
 function VendorCard({ vendor, onView }) {
-    // Support both the list shape (vendorId/vendorName/…) and a normalised shape
-    const id       = vendor.vendorId   ?? vendor.id;
-    const name     = vendor.vendorName ?? vendor.name ?? '';
-    const verified = vendor.vendorVerified ?? vendor.verified ?? false;
-    const service  = vendor.serviceType ?? vendor.lead ?? '';
-    const bio      = vendor.profileDescription ?? vendor.bio ?? '';
-    const rating   = vendor.averageRating ?? vendor.rating;
-    const reviews  = vendor.totalRatings ?? vendor.reviews;
-    const events   = vendor.completedEvents ?? vendor.eventsCompleted;
-    const city     = vendor.city ?? null;
-    const skills   = vendor.skills ?? [];
-    const price    = vendor.priceLabel ?? null;
+    // Maps onto VendorMarketplaceResponse from the backend.
+    const name     = vendor.vendorName || '';
+    const verified = vendor.vendorVerified === true;
+    const service  = vendor.serviceType || '';
+    const bio      = vendor.profileDescription || '';
+    const rating   = vendor.averageRating;
+    const reviews  = vendor.totalRatings;
+    const events   = vendor.completedEvents;
 
     const [bg, fg] = avatarColor(name);
     const stars = Math.round((rating || 0) * 2) / 2;
@@ -232,8 +229,7 @@ function VendorCard({ vendor, onView }) {
                         )}
                     </div>
                     <div style={{ fontSize: 13, color: 'var(--text-2)', marginTop: 2 }}>
-                        {service}
-                        {city && <span style={{ color: 'var(--text-3)' }}> · {city}</span>}
+                        {service || 'Vendor'}
                     </div>
                 </div>
             </div>
@@ -244,7 +240,7 @@ function VendorCard({ vendor, onView }) {
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--text-2)' }}>
                         <StarRow rating={stars} />
                         <span className="mp-num" style={{ color: 'var(--text-1)', fontWeight: 600 }}>
-                            {rating.toFixed(1)}
+                            {Number(rating).toFixed(1)}
                         </span>
                         {reviews != null && (
                             <span style={{ color: 'var(--text-3)' }}>({reviews})</span>
@@ -274,43 +270,14 @@ function VendorCard({ vendor, onView }) {
                 </p>
             )}
 
-            {/* Skills */}
-            {skills.length > 0 && (
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                    {skills.slice(0, 5).map((s) => (
-                        <span key={s} style={{
-                            padding: '3px 8px',
-                            background: 'var(--surface-subtle)',
-                            borderRadius: 6,
-                            fontSize: 11, fontWeight: 500,
-                            color: 'var(--text-2)',
-                        }}>
-                            {s}
-                        </span>
-                    ))}
-                    {skills.length > 5 && (
-                        <span style={{ fontSize: 11, color: 'var(--text-3)', padding: '3px 4px' }}>
-                            +{skills.length - 5}
-                        </span>
-                    )}
-                </div>
-            )}
-
-            {/* Footer: price + CTA */}
+            {/* Footer: CTA */}
             <div style={{
                 marginTop: 'auto',
                 paddingTop: 12,
                 borderTop: '1px solid var(--border)',
                 display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                gap: 8,
+                justifyContent: 'flex-end',
             }}>
-                {price ? (
-                    <span style={{ fontSize: 12, color: 'var(--text-3)', fontWeight: 500 }}>
-                        {price}
-                    </span>
-                ) : <span />}
                 <Button size="sm" variant="primary" onClick={onView} iconRight={<Icons.arrowR size={13} />}>
                     View profile
                 </Button>
