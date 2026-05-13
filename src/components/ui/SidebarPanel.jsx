@@ -195,11 +195,11 @@ export default function SidebarPanel({ open, onClose }) {
                             <SidebarItem icon={<Icons.scan size={18} />} onClick={() => go('/checkin')}>
                                 Check-in station
                             </SidebarItem>
-                            <SidebarItem icon={<Icons.search size={18} />} onClick={() => go('/vendors')}>
-                                Vendor marketplace
-                            </SidebarItem>
-                            <SidebarItem icon={<Icons.users size={18} />} onClick={() => go('/vendor/profile')}>
-                                My vendor profile
+                            {/* Single Vendors entry — marketplace lives at /vendors
+                                and the page itself surfaces the verification /
+                                profile CTA based on the caller's state. */}
+                            <SidebarItem icon={<Icons.users size={18} />} onClick={() => go('/vendors')}>
+                                Vendors
                             </SidebarItem>
                         </>
                     )}

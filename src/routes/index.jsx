@@ -19,6 +19,8 @@ import OrganizerConsolePage from '../features/organiser/pages/OrganizerConsolePa
 import OrganizerEventPage from '../features/organiser/pages/OrganizerEventPage';
 import VendorOpportunitiesPage from '../features/vendor/pages/VendorOpportunitiesPage';
 import MyApplicationsPage from '../features/vendor/pages/MyApplicationsPage';
+import VendorApplyPage from '../features/vendor/pages/VendorApplyPage';
+import VendorDashboardPage from '../features/vendor/pages/VendorDashboardPage';
 import CheckInPage from '../features/checkin/pages/CheckInPage';
 import StubPaymentPage from '../features/bookings/pages/StubPaymentPage';
 import PaymentResultPage from '../features/bookings/pages/PaymentResultPage';
@@ -58,9 +60,11 @@ const router = createBrowserRouter([
                     { path: '/dashboard',         element: <DashboardPage /> },
                     { path: '/organiser',         element: <OrganizerConsolePage /> },
                     { path: '/organiser/events/:id', element: <OrganizerEventPage /> },
+                    { path: '/vendor',               element: <VendorDashboardPage /> },
                     { path: '/vendor/opportunities', element: <VendorOpportunitiesPage /> },
-                    { path: '/vendor/applications', element: <MyApplicationsPage /> },
-                    { path: '/vendor/profile',      element: <VendorProfileSetupPage /> },
+                    { path: '/vendor/applications',  element: <MyApplicationsPage /> },
+                    { path: '/vendor/profile',       element: <VendorProfileSetupPage /> },
+                    { path: '/vendor/apply/:eventId', element: <VendorApplyPage /> },
                 ],
             },
 

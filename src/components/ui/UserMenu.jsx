@@ -155,22 +155,12 @@ export default function UserMenu({ onDark = false, onOpenSidebar }) {
                                 Check-in station
                             </MenuItem>
 
-                            <div style={{ height: 1, background: 'var(--border)', margin: '6px 4px' }} />
-                            <div style={{
-                                padding: '6px 12px 4px',
-                                fontSize: 11,
-                                fontWeight: 600,
-                                color: 'var(--text-3)',
-                                letterSpacing: 0.4,
-                                textTransform: 'uppercase',
-                            }}>
-                                For vendors
-                            </div>
-                            <MenuItem icon={<Icons.spark size={16} />} onClick={() => go('/vendor/opportunities')}>
-                                Find work
-                            </MenuItem>
-                            <MenuItem icon={<Icons.inbox size={16} />} onClick={() => go('/vendor/applications')}>
-                                My applications
+                            {/* Single Vendors entry — the marketplace page itself
+                                routes the user to the right place (apply for
+                                verification, resubmit, or view dashboard) based
+                                on their verification status. */}
+                            <MenuItem icon={<Icons.users size={16} />} onClick={() => go('/vendors')}>
+                                Vendors
                             </MenuItem>
                         </>
                     )}

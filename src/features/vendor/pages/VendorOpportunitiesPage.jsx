@@ -1,29 +1,19 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useGetPublishedEventsQuery } from '@/features/events/eventsApi';
-import {
-    useGetMyVendorApplicationsQuery,
-    useGetMyVendorVerificationQuery,
-    useApplyAsVendorMutation,
-} from '@/features/organiser/vendorsApi';
+import { useGetMyVendorApplicationsQuery } from '@/features/organiser/vendorsApi';
 import { formatEventDate } from '@/utils/dateFormat';
 import TopNav from '@/components/ui/TopNav';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
-import Modal from '@/components/ui/Modal';
 import { Icons } from '@/components/ui/Icon';
 
 export default function VendorOpportunitiesPage() {
     const navigate = useNavigate();
     const events = useGetPublishedEventsQuery();
     const mine = useGetMyVendorApplicationsQuery();
-    // "Profile" in this build is a verification record on the user — a single
-    // serviceType + description pair. Required before applying; verification
-    // approval is NOT required.
-    const { data: myProfile, isLoading: profileLoading } = useGetMyVendorVerificationQuery();
 
     const [query, setQuery] = useState('');
-    const [target, setTarget] = useState(null);
 
     const list = useMemo(() => events.data || [], [events.data]);
     const filtered = useMemo(() => {
@@ -161,21 +151,13 @@ export default function VendorOpportunitiesPage() {
                                 key={event.id}
                                 event={event}
                                 application={appliedByEvent[event.id]}
-                                onApply={() => setTarget(event)}
+                                onApply={() => navigate(`/vendor/apply/${event.id}`)}
                                 onView={() => navigate(`/events/${event.id}`)}
                             />
                         ))}
                     </div>
                 )}
             </div>
-
-            <ApplyAsVendorModal
-                event={target}
-                profile={myProfile}
-                profileLoading={profileLoading}
-                onClose={() => setTarget(null)}
-                onGoToProfile={() => navigate('/vendor/profile')}
-            />
         </div>
     );
 }
@@ -296,241 +278,6 @@ function ApplicationStatusPill({ status }) {
         </span>
     );
 }
-
-/* ─── Apply modal ─────────────────────────────────── */
-function ApplyAsVendorModal({ event, profile, profileLoading, onClose, onGoToProfile }) {
-    const [applyAsVendor, state] = useApplyAsVendorMutation();
-    const [proposedAmount, setAmount] = useState('');
-    const [note, setNote]             = useState('');
-    const [error, setError]           = useState('');
-    const [submitted, setSubmitted]   = useState(false);
-
-    function close() {
-        setAmount(''); setNote(''); setError(''); setSubmitted(false);
-        onClose();
-    }
-
-    async function submit() {
-        setError('');
-        try {
-            await applyAsVendor({
-                eventId: event.id,
-                serviceType: profile.serviceType,
-                description: note.trim() || profile.description || null,
-                proposedAmount: proposedAmount ? Number(proposedAmount) : null,
-            }).unwrap();
-            setSubmitted(true);
-        } catch (err) {
-            setError(err?.data?.message || 'Could not submit application.');
-        }
-    }
-
-    // A "profile" exists once the user has filled in a service type — that's
-    // what we'll send on the application. Verification approval isn't required.
-    const hasProfile = !!profile && !!profile.serviceType;
-    const profileName = profile
-        ? `${profile.firstName ?? ''} ${profile.lastName ?? ''}`.trim() || profile.email || 'My profile'
-        : '';
-
-    return (
-        <Modal open={!!event} onClose={close} width={480} label="Apply as vendor">
-            {event && (
-                <div style={{ padding: 24 }}>
-                    {/* ── Success ── */}
-                    {submitted && (
-                        <>
-                            <div style={{
-                                width: 56, height: 56, borderRadius: 99,
-                                background: '#E6F4EA', color: '#0F9D58',
-                                display: 'grid', placeItems: 'center',
-                                margin: '0 auto 14px',
-                            }}>
-                                <Icons.check size={26} />
-                            </div>
-                            <h3 className="mp-h3" style={{ margin: 0, color: 'var(--text-1)', textAlign: 'center' }}>
-                                Application sent!
-                            </h3>
-                            <p className="body-sm" style={{ color: 'var(--text-2)', marginTop: 8, textAlign: 'center' }}>
-                                The organiser will see your profile and pitch for{' '}
-                                <strong>{event.title}</strong>. Track status from My applications.
-                            </p>
-                            <Button
-                                variant="primary" size="md" onClick={close}
-                                style={{ display: 'block', margin: '20px auto 0' }}
-                            >
-                                Done
-                            </Button>
-                        </>
-                    )}
-
-                    {/* ── No profile yet ── */}
-                    {!submitted && !profileLoading && !hasProfile && (
-                        <>
-                            <div style={{
-                                width: 56, height: 56, borderRadius: 99,
-                                background: '#FEF4E2', color: '#B8770A',
-                                display: 'grid', placeItems: 'center',
-                                margin: '0 auto 14px',
-                            }}>
-                                <Icons.users size={24} />
-                            </div>
-                            <h3 className="mp-h3" style={{ margin: 0, color: 'var(--text-1)', textAlign: 'center' }}>
-                                Set up your vendor profile first
-                            </h3>
-                            <p className="body-sm" style={{ color: 'var(--text-2)', marginTop: 8, textAlign: 'center' }}>
-                                Organisers review your profile when they get your application.
-                                Create yours — it only takes a minute — then come back to apply for{' '}
-                                <strong>{event.title}</strong>.
-                            </p>
-                            <p className="body-sm" style={{
-                                color: 'var(--text-3)', marginTop: 6, textAlign: 'center', fontSize: 12,
-                            }}>
-                                You don&apos;t need to be verified to apply. Any active profile works.
-                            </p>
-                            <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginTop: 20 }}>
-                                <Button variant="ghost" size="md" onClick={close}>
-                                    Cancel
-                                </Button>
-                                <Button
-                                    variant="primary" size="md"
-                                    onClick={onGoToProfile}
-                                    iconRight={<Icons.arrowR size={14} />}
-                                >
-                                    Create vendor profile
-                                </Button>
-                            </div>
-                        </>
-                    )}
-
-                    {/* ── Loading profile ── */}
-                    {!submitted && profileLoading && (
-                        <div style={{ padding: '20px 0', textAlign: 'center', color: 'var(--text-3)', fontSize: 14 }}>
-                            Loading…
-                        </div>
-                    )}
-
-                    {/* ── Has profile → confirm pitch ── */}
-                    {!submitted && !profileLoading && hasProfile && (
-                        <>
-                            <h3 className="mp-h3" style={{ margin: 0, color: 'var(--text-1)' }}>
-                                Apply for this event
-                            </h3>
-                            <p className="body-sm" style={{ color: 'var(--text-2)', marginTop: 4 }}>
-                                Pitching for <strong>{event.title}</strong>.
-                            </p>
-
-                            {/* Profile preview */}
-                            <div style={{
-                                marginTop: 16,
-                                padding: '12px 14px',
-                                background: 'var(--surface-subtle)',
-                                border: '1px solid var(--border)',
-                                borderRadius: 10,
-                                display: 'flex', gap: 12, alignItems: 'flex-start',
-                            }}>
-                                <div style={{
-                                    width: 40, height: 40, borderRadius: 8, flexShrink: 0,
-                                    background: '#EAF1FE', color: 'var(--mp-blue)',
-                                    display: 'grid', placeItems: 'center',
-                                    fontSize: 14, fontWeight: 700,
-                                }}>
-                                    {(profileName[0] || '?').toUpperCase()}
-                                </div>
-                                <div style={{ minWidth: 0 }}>
-                                    <div style={{
-                                        display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap',
-                                    }}>
-                                        <span style={{ fontWeight: 600, color: 'var(--text-1)', fontSize: 14 }}>
-                                            {profileName}
-                                        </span>
-                                        {profile.vendorVerified && (
-                                            <span style={{
-                                                display: 'inline-flex', alignItems: 'center', gap: 3,
-                                                background: '#EAF1FE', color: 'var(--mp-blue)',
-                                                fontSize: 11, fontWeight: 600, padding: '2px 7px', borderRadius: 99,
-                                            }}>
-                                                <Icons.shield size={10} /> Verified
-                                            </span>
-                                        )}
-                                    </div>
-                                    <div style={{ fontSize: 12, color: 'var(--text-2)', marginTop: 2 }}>
-                                        {profile.serviceType}
-                                    </div>
-                                    {profile.description && (
-                                        <div style={{
-                                            fontSize: 12, color: 'var(--text-3)', marginTop: 4,
-                                            display: '-webkit-box', WebkitLineClamp: 2,
-                                            WebkitBoxOrient: 'vertical', overflow: 'hidden',
-                                        }}>
-                                            {profile.description}
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 16 }}>
-                                <Input
-                                    label="Proposed amount (₦, optional)"
-                                    type="number"
-                                    min="0"
-                                    value={proposedAmount}
-                                    onChange={(e) => setAmount(e.target.value)}
-                                    placeholder="e.g. 500000"
-                                />
-                                <label style={{ display: 'block' }}>
-                                    <span style={{
-                                        display: 'block', fontSize: 14, fontWeight: 500,
-                                        color: 'var(--text-1)', marginBottom: 6,
-                                    }}>
-                                        Note to organiser{' '}
-                                        <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>(optional)</span>
-                                    </span>
-                                    <textarea
-                                        value={note}
-                                        onChange={(e) => setNote(e.target.value)}
-                                        rows={3}
-                                        placeholder="Any specific angle, availability detail, or anything relevant to this event."
-                                        style={{
-                                            width: '100%', padding: 12,
-                                            fontFamily: 'inherit', fontSize: 14,
-                                            border: '1px solid var(--border)', borderRadius: 8,
-                                            resize: 'vertical', color: 'var(--text-1)',
-                                            boxSizing: 'border-box',
-                                        }}
-                                    />
-                                </label>
-                            </div>
-
-                            {error && (
-                                <div role="alert" style={{
-                                    marginTop: 12, padding: '10px 12px',
-                                    background: '#FBE9E9', color: 'var(--error)',
-                                    borderRadius: 8, fontSize: 13,
-                                }}>
-                                    {error}
-                                </div>
-                            )}
-
-                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 18 }}>
-                                <Button variant="ghost" size="md" onClick={close} disabled={state.isLoading}>
-                                    Cancel
-                                </Button>
-                                <Button
-                                    variant="primary" size="md"
-                                    onClick={submit}
-                                    disabled={state.isLoading}
-                                >
-                                    {state.isLoading ? 'Submitting…' : 'Submit application'}
-                                </Button>
-                            </div>
-                        </>
-                    )}
-                </div>
-            )}
-        </Modal>
-    );
-}
-
 function EmptyState() {
     return (
         <div style={{

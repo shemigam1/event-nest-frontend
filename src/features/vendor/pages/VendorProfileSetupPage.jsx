@@ -6,8 +6,8 @@ import {
 } from '@/features/organiser/vendorsApi';
 import TopNav from '@/components/ui/TopNav';
 import Button from '@/components/ui/Button';
-import Input from '@/components/ui/Input';
 import { Icons } from '@/components/ui/Icon';
+import { withExisting } from '../serviceTypes';
 
 /* Maps onto the backend VendorVerificationStatus enum:
    NOT_REQUESTED | PENDING | VERIFIED | REJECTED. The user record carries
@@ -221,14 +221,38 @@ function VerificationForm({ initial, status, onCancel }) {
                 </p>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                    <Input
-                        label="Service type *"
-                        value={serviceType}
-                        onChange={(e) => { setServiceType(e.target.value); setFormError(''); setSavedAt(null); }}
-                        placeholder="e.g. Catering, Photography, A/V, Security"
-                        maxLength={100}
-                        disabled={isPending}
-                    />
+                    <label style={{ display: 'block' }}>
+                        <span style={{
+                            display: 'block', fontSize: 14, fontWeight: 500,
+                            color: 'var(--text-1)', marginBottom: 6,
+                        }}>
+                            Service type *
+                        </span>
+                        <select
+                            value={serviceType}
+                            onChange={(e) => { setServiceType(e.target.value); setFormError(''); setSavedAt(null); }}
+                            disabled={isPending}
+                            aria-label="Service type"
+                            style={{
+                                width: '100%',
+                                height: 44,
+                                padding: '0 14px',
+                                background: isPending ? 'var(--surface-subtle)' : 'white',
+                                border: '1px solid var(--border)',
+                                borderRadius: 12,
+                                fontSize: 16,
+                                fontFamily: 'inherit',
+                                color: serviceType ? 'var(--text-1)' : 'var(--text-3)',
+                                boxSizing: 'border-box',
+                                cursor: isPending ? 'not-allowed' : 'pointer',
+                            }}
+                        >
+                            <option value="" disabled>Pick a service type…</option>
+                            {withExisting(serviceType).map((t) => (
+                                <option key={t.value} value={t.value}>{t.label}</option>
+                            ))}
+                        </select>
+                    </label>
 
                     <label style={{ display: 'block' }}>
                         <span style={{

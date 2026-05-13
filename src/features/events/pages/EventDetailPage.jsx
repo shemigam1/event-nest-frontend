@@ -1,16 +1,12 @@
-import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { useSelector } from 'react-redux';
 import {
     useGetEventByIdQuery,
     useGetEventTiersQuery,
 } from '../eventsApi';
-import { useApplyAsVendorMutation } from '@/features/organiser/vendorsApi';
 import { selectIsAuthenticated, selectCurrentUserId } from '@/features/auth/authSlice';
 import { formatEventDate } from '@/utils/dateFormat';
 import Button from '@/components/ui/Button';
-import Input from '@/components/ui/Input';
-import Modal from '@/components/ui/Modal';
 import CapacityBar from '@/components/ui/CapacityBar';
 import TopNav from '@/components/ui/TopNav';
 import { StatusBadge } from '@/components/ui/Badge';
@@ -26,8 +22,6 @@ export default function EventDetailPage() {
     const event = useGetEventByIdQuery(id);
     const tiersQuery = useGetEventTiersQuery(id);
 
-    const [showVendorApply, setShowVendorApply] = useState(false);
-
     const handleBook = () => {
         if (!isAuthenticated) {
             navigate('/login', { state: { from: `/events/${id}/book` } });
@@ -36,11 +30,13 @@ export default function EventDetailPage() {
         }
     };
 
+    // Send vendors to the dedicated apply page. That page owns the
+    // profile-required gate + the pitch form; this button just routes.
     const handleVendorApply = () => {
         if (!isAuthenticated) {
-            navigate('/login', { state: { from: `/events/${id}` } });
+            navigate('/login', { state: { from: `/vendor/apply/${id}` } });
         } else {
-            setShowVendorApply(true);
+            navigate(`/vendor/apply/${id}`);
         }
     };
 
@@ -285,164 +281,10 @@ export default function EventDetailPage() {
                 </div>
             </div>
 
-            <ApplyAsVendorModal
-                open={showVendorApply}
-                onClose={() => setShowVendorApply(false)}
-                eventId={id}
-                eventTitle={e.title}
-            />
         </PageShell>
     );
 }
 
-/* ─── Apply-as-vendor modal ───────────────────────── */
-function ApplyAsVendorModal({ open, onClose, eventId, eventTitle }) {
-    const [applyAsVendor, state] = useApplyAsVendorMutation();
-    const [serviceType, setServiceType]   = useState('');
-    const [description, setDescription]   = useState('');
-    const [proposedAmount, setAmount]     = useState('');
-    const [error, setError] = useState('');
-    const [submitted, setSubmitted] = useState(false);
-
-    function close() {
-        setServiceType(''); setDescription(''); setAmount('');
-        setError(''); setSubmitted(false);
-        onClose();
-    }
-
-    async function submit() {
-        if (!serviceType.trim()) {
-            setError('Tell the organiser what you do.');
-            return;
-        }
-        setError('');
-        try {
-            await applyAsVendor({
-                eventId,
-                serviceType: serviceType.trim(),
-                description: description.trim() || null,
-                proposedAmount: proposedAmount ? Number(proposedAmount) : null,
-            }).unwrap();
-            setSubmitted(true);
-        } catch (err) {
-            setError(err?.data?.message || 'Could not submit application.');
-        }
-    }
-
-    return (
-        <Modal open={open} onClose={close} width={480} label="Apply as vendor">
-            <div style={{ padding: 24 }}>
-                {submitted ? (
-                    <>
-                        <div style={{
-                            width: 56, height: 56, borderRadius: 99,
-                            background: 'var(--success-bg, #E6F4EA)',
-                            color: 'var(--success)',
-                            display: 'grid', placeItems: 'center',
-                            margin: '0 auto 14px',
-                        }}>
-                            <Icons.check size={26} />
-                        </div>
-                        <h3 className="mp-h3" style={{ margin: 0, color: 'var(--text-1)', textAlign: 'center' }}>
-                            Application sent
-                        </h3>
-                        <p className="body-sm" style={{ color: 'var(--text-2)', marginTop: 8, textAlign: 'center' }}>
-                            The organiser will review your pitch and respond. You can track
-                            it from your dashboard.
-                        </p>
-                        <Button
-                            variant="primary"
-                            size="md"
-                            onClick={close}
-                            style={{ display: 'block', margin: '20px auto 0' }}
-                        >
-                            Done
-                        </Button>
-                    </>
-                ) : (
-                    <>
-                        <h3 className="mp-h3" style={{ margin: 0, color: 'var(--text-1)' }}>
-                            Apply as vendor
-                        </h3>
-                        <p className="body-sm" style={{ color: 'var(--text-2)', marginTop: 6 }}>
-                            Pitching for <strong>{eventTitle}</strong>. Keep it tight — the
-                            organiser only sees these three fields.
-                        </p>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginTop: 18 }}>
-                            <Input
-                                label="Service type"
-                                value={serviceType}
-                                onChange={(e) => { setServiceType(e.target.value); setError(''); }}
-                                placeholder="e.g. Catering, A/V, Security, Photography"
-                            />
-                            <label style={{ display: 'block' }}>
-                                <span style={{
-                                    display: 'block',
-                                    fontSize: 14,
-                                    fontWeight: 500,
-                                    color: 'var(--text-1)',
-                                    marginBottom: 6,
-                                }}>
-                                    Description <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>(optional)</span>
-                                </span>
-                                <textarea
-                                    value={description}
-                                    onChange={(e) => setDescription(e.target.value)}
-                                    rows={4}
-                                    placeholder="What you'd deliver, links to portfolio, anything that helps."
-                                    style={{
-                                        width: '100%',
-                                        padding: 12,
-                                        fontFamily: 'inherit',
-                                        fontSize: 14,
-                                        border: '1px solid var(--border)',
-                                        borderRadius: 8,
-                                        resize: 'vertical',
-                                        color: 'var(--text-1)',
-                                        boxSizing: 'border-box',
-                                    }}
-                                />
-                            </label>
-                            <Input
-                                label="Proposed amount (₦, optional)"
-                                type="number"
-                                min="0"
-                                value={proposedAmount}
-                                onChange={(e) => setAmount(e.target.value)}
-                                placeholder="500000"
-                            />
-                        </div>
-                        {error && (
-                            <div role="alert" style={{
-                                marginTop: 14,
-                                padding: '10px 12px',
-                                background: 'var(--error-bg, #FBE9E9)',
-                                color: 'var(--error)',
-                                borderRadius: 8,
-                                fontSize: 13,
-                            }}>
-                                {error}
-                            </div>
-                        )}
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 18 }}>
-                            <Button variant="ghost" size="md" onClick={close} disabled={state.isLoading}>
-                                Cancel
-                            </Button>
-                            <Button
-                                variant="primary"
-                                size="md"
-                                onClick={submit}
-                                disabled={state.isLoading || !serviceType.trim()}
-                            >
-                                {state.isLoading ? 'Submitting…' : 'Submit application'}
-                            </Button>
-                        </div>
-                    </>
-                )}
-            </div>
-        </Modal>
-    );
-}
 
 function PageShell({ children }) {
     return (

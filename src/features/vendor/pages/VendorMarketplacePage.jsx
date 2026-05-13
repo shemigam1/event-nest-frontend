@@ -1,6 +1,11 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { useGetVendorsQuery } from '@/features/organiser/vendorsApi';
+import { useSelector } from 'react-redux';
+import {
+    useGetVendorsQuery,
+    useGetMyVendorVerificationQuery,
+} from '@/features/organiser/vendorsApi';
+import { selectIsAuthenticated } from '@/features/auth/authSlice';
 import TopNav from '@/components/ui/TopNav';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
@@ -41,12 +46,18 @@ function avatarColor(name = '') {
 
 export default function VendorMarketplacePage() {
     const navigate = useNavigate();
+    const isAuthenticated = useSelector(selectIsAuthenticated);
     const [category, setCategory] = useState('all');
     const [searchInput, setSearchInput] = useState('');
 
     const keyword = CATEGORIES.find((c) => c.key === category)?.keyword || null;
     const { data: rawVendors = [], isLoading, isError, refetch } =
         useGetVendorsQuery({ serviceType: keyword });
+
+    // Personal verification state powers the page-level CTA (Apply /
+    // Resubmit / Profile / Pending). Skipped for anon callers — the
+    // marketplace itself is public.
+    const verification = useGetMyVendorVerificationQuery(undefined, { skip: !isAuthenticated });
 
     // Backend only filters by serviceType. Apply the free-text query
     // client-side across name + service type so the search box still works.
@@ -65,14 +76,30 @@ export default function VendorMarketplacePage() {
             <div style={{ maxWidth: 1200, margin: '0 auto', padding: '32px 24px 80px' }}>
 
                 {/* Header */}
-                <div style={{ marginBottom: 24 }}>
-                    <h1 className="mp-h1" style={{ margin: 0, color: 'var(--text-1)' }}>
-                        Vendor marketplace
-                    </h1>
-                    <p className="body" style={{ margin: '8px 0 0', color: 'var(--text-2)' }}>
-                        Find verified service providers for your event — caterers, photographers,
-                        AV technicians, security, and more.
-                    </p>
+                <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'flex-start',
+                    gap: 16,
+                    flexWrap: 'wrap',
+                    marginBottom: 24,
+                }}>
+                    <div style={{ minWidth: 0, flex: '1 1 320px' }}>
+                        <h1 className="mp-h1" style={{ margin: 0, color: 'var(--text-1)' }}>
+                            Vendor marketplace
+                        </h1>
+                        <p className="body" style={{ margin: '8px 0 0', color: 'var(--text-2)' }}>
+                            Find verified service providers for your event — caterers, photographers,
+                            AV technicians, security, and more.
+                        </p>
+                    </div>
+                    {isAuthenticated && !verification.isLoading && (
+                        <PersonalCta
+                            status={verification.data?.status}
+                            onApply={() => navigate('/vendor/profile')}
+                            onProfile={() => navigate('/vendor')}
+                        />
+                    )}
                 </div>
 
                 {/* Search row — filters client-side over name + service type */}
@@ -175,6 +202,68 @@ export default function VendorMarketplacePage() {
                 )}
             </div>
         </div>
+    );
+}
+
+/* Personal CTA that flips by the caller's verification status.
+   - VERIFIED      → "Profile" → /vendor (dashboard)
+   - PENDING       → read-only pill
+   - REJECTED      → "Resubmit verification" → /vendor/profile
+   - NOT_REQUESTED → "Apply to be a verified vendor" → /vendor/profile (default) */
+function PersonalCta({ status, onApply, onProfile }) {
+    if (status === 'VERIFIED') {
+        return (
+            <Button
+                size="md"
+                variant="primary"
+                icon={<Icons.shield size={14} />}
+                onClick={onProfile}
+                iconRight={<Icons.arrowR size={13} />}
+            >
+                Profile
+            </Button>
+        );
+    }
+    if (status === 'PENDING') {
+        return (
+            <div style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 8,
+                padding: '8px 14px',
+                background: '#FEF4E2',
+                color: '#B8770A',
+                borderRadius: 10,
+                fontSize: 13,
+                fontWeight: 600,
+            }}>
+                <Icons.clock size={14} />
+                Verification pending
+            </div>
+        );
+    }
+    if (status === 'REJECTED') {
+        return (
+            <Button
+                size="md"
+                variant="primary"
+                icon={<Icons.alert size={14} />}
+                onClick={onApply}
+            >
+                Resubmit verification
+            </Button>
+        );
+    }
+    // NOT_REQUESTED or no record yet — show the apply CTA.
+    return (
+        <Button
+            size="md"
+            variant="primary"
+            icon={<Icons.shield size={14} />}
+            onClick={onApply}
+        >
+            Apply to be a verified vendor
+        </Button>
     );
 }
 
