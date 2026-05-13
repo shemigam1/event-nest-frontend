@@ -394,6 +394,61 @@ export default function ProgrammeTab({ eventId, event }) {
     }
 
     if (items.isError) {
+        // If programme is disabled, show enable button instead of retry
+        const isNotEnabledMsg = /not enabled/i.test(errMsg);
+        if (isNotEnabledMsg) {
+            return (
+                <div style={{
+                    background: 'white',
+                    border: '1px solid var(--border)',
+                    borderRadius: 12,
+                    padding: 40,
+                    textAlign: 'center',
+                    maxWidth: 560,
+                    margin: '0 auto',
+                }}>
+                    <div style={{
+                        width: 56, height: 56, borderRadius: 99,
+                        margin: '0 auto 14px',
+                        background: 'var(--mp-blue-50, #EAF1FE)',
+                        color: 'var(--mp-blue)',
+                        display: 'grid', placeItems: 'center',
+                    }}>
+                        <Icons.calendar size={22} />
+                    </div>
+                    <div className="mp-h3" style={{ color: 'var(--text-1)', margin: 0 }}>
+                        Programme module is off
+                    </div>
+                    <p className="body" style={{ color: 'var(--text-2)', marginTop: 8 }}>
+                        Turn it on to publish a run-of-show — keynote, panels, breaks,
+                        speakers and timing — that attendees see on the public event page.
+                    </p>
+                    {error && (
+                        <div role="alert" style={{
+                            marginTop: 14,
+                            padding: '10px 12px',
+                            background: 'var(--error-bg, #FBE9E9)',
+                            color: 'var(--error)',
+                            borderRadius: 8,
+                            fontSize: 13,
+                        }}>
+                            {error}
+                        </div>
+                    )}
+                    <Button
+                        variant="primary"
+                        size="md"
+                        icon={<Icons.bolt size={14} />}
+                        onClick={enableProgrammeModule}
+                        disabled={configState.isLoading}
+                        style={{ marginTop: 18 }}
+                    >
+                        {configState.isLoading ? 'Enabling…' : 'Enable programme'}
+                    </Button>
+                </div>
+            );
+        }
+
         return (
             <div style={{
                 background: 'white', border: '1px solid var(--border)',

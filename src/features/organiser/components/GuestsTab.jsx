@@ -114,6 +114,61 @@ export default function GuestsTab({ eventId }) {
     }
 
     if (guests.isError) {
+        // If guest list is disabled, show enable button instead of retry
+        const isNotEnabledMsg = /not enabled/i.test(errMsg);
+        if (isNotEnabledMsg) {
+            return (
+                <div style={{
+                    background: 'white',
+                    border: '1px solid var(--border)',
+                    borderRadius: 12,
+                    padding: 40,
+                    textAlign: 'center',
+                    maxWidth: 560,
+                    margin: '0 auto',
+                }}>
+                    <div style={{
+                        width: 56, height: 56, borderRadius: 99,
+                        margin: '0 auto 14px',
+                        background: 'var(--mp-blue-50, #EAF1FE)',
+                        color: 'var(--mp-blue)',
+                        display: 'grid', placeItems: 'center',
+                    }}>
+                        <Icons.mail size={22} />
+                    </div>
+                    <div className="mp-h3" style={{ color: 'var(--text-1)', margin: 0 }}>
+                        Guest list is off
+                    </div>
+                    <p className="body" style={{ color: 'var(--text-2)', marginTop: 8 }}>
+                        Turn it on to invite guests by email, track RSVPs, and gate
+                        bookings to accepted guests for private events.
+                    </p>
+                    {enableError && (
+                        <div role="alert" style={{
+                            marginTop: 14,
+                            padding: '10px 12px',
+                            background: 'var(--error-bg, #FBE9E9)',
+                            color: 'var(--error)',
+                            borderRadius: 8,
+                            fontSize: 13,
+                        }}>
+                            {enableError}
+                        </div>
+                    )}
+                    <Button
+                        variant="primary"
+                        size="md"
+                        icon={<Icons.bolt size={14} />}
+                        onClick={enableGuestListModule}
+                        disabled={configState.isLoading}
+                        style={{ marginTop: 18 }}
+                    >
+                        {configState.isLoading ? 'Enabling…' : 'Enable guest list'}
+                    </Button>
+                </div>
+            );
+        }
+
         return (
             <div style={{
                 background: 'white', border: '1px solid var(--border)',

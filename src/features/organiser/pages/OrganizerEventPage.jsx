@@ -43,7 +43,7 @@ import { formatEventDate } from '@/utils/dateFormat';
 export default function OrganizerEventPage() {
     const { id: eventId } = useParams();
     const navigate = useNavigate();
-    const [tab, setTab] = useState('dashboard');
+    const [tab, setTab] = useState('attendees');
 
     const eventQuery = useGetOrganizerEventByIdQuery(eventId);
     const tiersQuery = useGetEventTiersQuery(eventId);
@@ -138,8 +138,8 @@ export default function OrganizerEventPage() {
 
                 {tab === 'team' && (
                     <>
-                        <TeamTab eventId={eventId} />
-                        <CheckInStaffSection eventId={eventId} />
+                        <TeamTab eventId={eventId} isPublished={event.status === 'PUBLISHED'} />
+                        <CheckInStaffSection eventId={eventId} isPublished={event.status === 'PUBLISHED'} />
                     </>
                 )}
 
@@ -194,7 +194,7 @@ function BackLink() {
 function Header({ event, totalSold, totalCapacity, checkedIn, checkInRate, tab, onTabChange }) {
     const isLive = event.status === 'PUBLISHED';
     const tabs = [
-        { id: 'dashboard', label: 'Live dashboard' },
+        ...(isLive ? [{ id: 'dashboard', label: 'Live dashboard' }] : []),
         { id: 'attendees', label: 'Attendees' },
         { id: 'guests',    label: 'Guests' },
         { id: 'programme', label: 'Programme' },
@@ -253,19 +253,24 @@ function Header({ event, totalSold, totalCapacity, checkedIn, checkInRate, tab, 
                 <div style={{ display: 'flex', gap: 0, marginTop: 24, overflowX: 'auto' }}>
                     {tabs.map(t => {
                         const active = tab === t.id;
+                        const isDisabled = !isLive && t.id !== 'settings';
                         return (
                             <button
                                 key={t.id}
-                                onClick={() => onTabChange(t.id)}
+                                onClick={() => !isDisabled && onTabChange(t.id)}
                                 role="tab"
                                 aria-selected={active}
+                                disabled={isDisabled}
+                                title={isDisabled ? 'Publish the event to access this tab' : ''}
                                 style={{
                                     background: 'transparent', border: 0,
-                                    padding: '12px 18px', whiteSpace: 'nowrap', cursor: 'pointer',
-                                    color: active ? 'var(--mp-blue)' : 'var(--text-2)',
+                                    padding: '12px 18px', whiteSpace: 'nowrap',
+                                    cursor: isDisabled ? 'not-allowed' : 'pointer',
+                                    color: active ? 'var(--mp-blue)' : isDisabled ? 'var(--text-3)' : 'var(--text-2)',
                                     borderBottom: `2px solid ${active ? 'var(--mp-blue)' : 'transparent'}`,
                                     marginBottom: -1,
                                     fontWeight: active ? 600 : 500, fontSize: 14,
+                                    opacity: isDisabled ? 0.5 : 1,
                                 }}
                             >
                                 {t.label}
@@ -1014,7 +1019,7 @@ function DeleteDialog({ title, onConfirm, onDismiss, loading }) {
 
 /* ─────────────────── Check-in staff (carried over) ─────────────── */
 
-function CheckInStaffSection({ eventId }) {
+function CheckInStaffSection({ eventId, isPublished = true }) {
     const { data: invites = [], isLoading } = useListCheckInInvitesQuery(eventId);
     const [createInvite, createState] = useCreateCheckInInviteMutation();
     const [revokeInvite, revokeState] = useRevokeCheckInInviteMutation();
@@ -1067,6 +1072,7 @@ function CheckInStaffSection({ eventId }) {
                     </span>
                     <p style={{ margin: '2px 0 0', fontSize: 12, color: 'var(--text-3)' }}>
                         Staff tokens allow scanning tickets without a full account login.
+                        {!isPublished && ' Publish the event to invite check-in staff.'}
                     </p>
                 </div>
             </CardHeader>
@@ -1090,12 +1096,16 @@ function CheckInStaffSection({ eventId }) {
                             placeholder="e.g. David Okafor"
                             value={name}
                             onChange={(e) => setName(e.target.value)}
+                            disabled={!isPublished}
                             required
                             style={{
                                 width: '100%', height: 38, padding: '0 12px',
-                                background: 'white', border: '1px solid var(--border)',
-                                borderRadius: 8, fontSize: 14, color: 'var(--text-1)',
+                                background: !isPublished ? 'var(--surface-subtle)' : 'white',
+                                border: '1px solid var(--border)',
+                                borderRadius: 8, fontSize: 14,
+                                color: !isPublished ? 'var(--text-3)' : 'var(--text-1)',
                                 boxSizing: 'border-box',
+                                opacity: !isPublished ? 0.6 : 1,
                             }}
                         />
                     </div>
@@ -1111,17 +1121,23 @@ function CheckInStaffSection({ eventId }) {
                             placeholder="staff@example.com"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
+                            disabled={!isPublished}
                             required
                             style={{
                                 width: '100%', height: 38, padding: '0 12px',
-                                background: 'white', border: '1px solid var(--border)',
-                                borderRadius: 8, fontSize: 14, color: 'var(--text-1)',
+                                background: !isPublished ? 'var(--surface-subtle)' : 'white',
+                                border: '1px solid var(--border)',
+                                borderRadius: 8, fontSize: 14,
+                                color: !isPublished ? 'var(--text-3)' : 'var(--text-1)',
                                 boxSizing: 'border-box',
+                                opacity: !isPublished ? 0.6 : 1,
                             }}
                         />
                     </div>
                     <Button type="submit" variant="primary" size="sm"
-                        disabled={createState.isLoading} icon={<Icons.plus size={14} />}>
+                        disabled={createState.isLoading || !isPublished}
+                        icon={<Icons.plus size={14} />}
+                        title={!isPublished ? 'Publish the event before inviting check-in staff' : ''}>
                         {createState.isLoading ? 'Creating…' : 'Create invite'}
                     </Button>
                 </form>
