@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { useUploadCoverImageMutation } from '../eventsApi';
+import { usePresignCoverImageMutation } from '../eventsApi';
 import Button from '@/components/ui/Button';
 import { Icons } from '@/components/ui/Icon';
 
@@ -28,7 +28,8 @@ export default function CoverImageField({
     onPickFile,   // deferred mode — called with the validated File
 }) {
     const fileRef = useRef(null);
-    const [uploadCover, uploadState] = useUploadCoverImageMutation();
+    const [presignCover] = usePresignCoverImageMutation();
+    const [uploading, setUploading] = useState(false);
     const [localError, setLocalError] = useState('');
     const [previewUrl, setPreviewUrl] = useState(currentUrl ?? null);
     const isDeferred = typeof onPickFile === 'function';
@@ -56,15 +57,31 @@ export default function CoverImageField({
             return;
         }
 
+        setUploading(true);
         try {
-            const result = await uploadCover({ eventId, file }).unwrap();
-            const newUrl = result?.coverImageUrl ?? result?.data?.coverImageUrl;
-            if (newUrl) setPreviewUrl(newUrl);
+            // 1. Get presigned upload URL; backend saves publicUrl on the event immediately.
+            const { uploadUrl, publicUrl } = await presignCover({
+                eventId,
+                contentType: file.type,
+            }).unwrap();
+
+            // 2. PUT raw bytes directly to S3 (or local-dev endpoint).
+            //    No auth header — the signed URL carries all credentials.
+            const res = await fetch(uploadUrl, {
+                method: 'PUT',
+                headers: { 'Content-Type': file.type },
+                body: file,
+            });
+            if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
+
             URL.revokeObjectURL(localUrl);
+            setPreviewUrl(publicUrl);
         } catch (err) {
             setPreviewUrl(currentUrl ?? null);
             URL.revokeObjectURL(localUrl);
-            setLocalError(err?.data?.message || 'Upload failed. Please try again.');
+            setLocalError(err?.data?.message || err?.message || 'Upload failed. Please try again.');
+        } finally {
+            setUploading(false);
         }
     }
 
@@ -90,7 +107,7 @@ export default function CoverImageField({
                 type="file"
                 accept="image/jpeg,image/png"
                 onChange={onChange}
-                disabled={disabled || uploadState.isLoading}
+                disabled={disabled || uploading}
                 style={{ display: 'none' }}
             />
 
@@ -119,7 +136,7 @@ export default function CoverImageField({
                         marginTop: 10, gap: 12,
                     }}>
                         <span style={{ fontSize: 12, color: 'var(--text-3)' }}>
-                            {uploadState.isLoading
+                            {uploading
                                 ? 'Uploading…'
                                 : isDeferred
                                     ? 'Will upload after the event is created'
@@ -130,7 +147,7 @@ export default function CoverImageField({
                             variant="secondary"
                             size="sm"
                             onClick={onPick}
-                            disabled={disabled || uploadState.isLoading}
+                            disabled={disabled || uploading}
                         >
                             Replace
                         </Button>
@@ -140,7 +157,7 @@ export default function CoverImageField({
                 <button
                     type="button"
                     onClick={onPick}
-                    disabled={disabled || uploadState.isLoading}
+                    disabled={disabled || uploading}
                     style={{
                         display: 'flex', flexDirection: 'column',
                         alignItems: 'center', justifyContent: 'center',
@@ -154,7 +171,7 @@ export default function CoverImageField({
                 >
                     <Icons.plus size={20} style={{ color: 'var(--text-3)' }} />
                     <span style={{ fontWeight: 500, color: 'var(--text-1)' }}>
-                        {uploadState.isLoading ? 'Uploading…' : 'Upload cover image'}
+                        {uploading ? 'Uploading…' : 'Upload cover image'}
                     </span>
                     <span style={{ fontSize: 12, color: 'var(--text-3)' }}>
                         Click to browse — JPEG or PNG, max 5MB

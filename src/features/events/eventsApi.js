@@ -65,14 +65,14 @@ export const eventsApi = baseApi.injectEndpoints({
             ],
             transformResponse: (response) => response?.data ?? response,
         }),
-        // Multipart cover image upload. The backend caps at 5MB
-        // (JPEG/PNG only) and validates magic bytes server-side.
-        uploadCoverImage: builder.mutation({
-            query: ({ eventId, file }) => {
-                const body = new FormData();
-                body.append('file', file);
-                return { url: `/events/${eventId}/cover-image`, method: 'POST', body };
-            },
+        // Presign a cover-image upload. Backend generates the S3 key, saves
+        // publicUrl on the event immediately, and returns { uploadUrl, publicUrl, contentType }.
+        // The caller must then PUT the raw file bytes directly to uploadUrl.
+        presignCoverImage: builder.mutation({
+            query: ({ eventId, contentType }) => ({
+                url: `/events/${eventId}/cover-image/presign?contentType=${encodeURIComponent(contentType)}`,
+                method: 'POST',
+            }),
             invalidatesTags: (result, error, { eventId }) => [
                 'Event',
                 { type: 'Event', id: eventId },
@@ -91,7 +91,7 @@ export const {
     useSubmitEventMutation,
     useWithdrawEventMutation,
     useDeleteEventMutation,
-    useUploadCoverImageMutation,
+    usePresignCoverImageMutation,
     useGetEventConfigQuery,
     useUpdateEventConfigMutation,
 } = eventsApi;
