@@ -22,6 +22,10 @@ import MyApplicationsPage from '../features/vendor/pages/MyApplicationsPage';
 import CheckInPage from '../features/checkin/pages/CheckInPage';
 import StubPaymentPage from '../features/bookings/pages/StubPaymentPage';
 import PaymentResultPage from '../features/bookings/pages/PaymentResultPage';
+import VendorMarketplacePage from '../features/vendor/pages/VendorMarketplacePage';
+import VendorDetailPage from '../features/vendor/pages/VendorDetailPage';
+import VendorProfileSetupPage from '../features/vendor/pages/VendorProfileSetupPage';
+import VendorVerificationPage from '../features/admin/pages/VendorVerificationPage';
 import PrivateRoute from './PrivateRoute';
 import AdminRoute from './AdminRoute';
 import ErrorPage from '../components/ui/ErrorPage';
@@ -39,6 +43,8 @@ const router = createBrowserRouter([
             { path: '/login',     element: <LoginPage /> },
             { path: '/register',  element: <RegisterPage /> },
             { path: '/checkin',        element: <CheckInPage /> },
+            { path: '/vendors',        element: <VendorMarketplacePage /> },
+            { path: '/vendors/:id',    element: <VendorDetailPage /> },
             { path: '/stub-payment',   element: <StubPaymentPage /> },
             { path: '/payment-result', element: <PaymentResultPage /> },
 
@@ -54,6 +60,7 @@ const router = createBrowserRouter([
                     { path: '/organiser/events/:id', element: <OrganizerEventPage /> },
                     { path: '/vendor/opportunities', element: <VendorOpportunitiesPage /> },
                     { path: '/vendor/applications', element: <MyApplicationsPage /> },
+                    { path: '/vendor/profile',      element: <VendorProfileSetupPage /> },
                 ],
             },
 
@@ -66,7 +73,8 @@ const router = createBrowserRouter([
                     { path: '/admin/users/:id/events',   element: <AdminUserEventsPage /> },
                     { path: '/admin/invite',             element: <InviteAdminPage /> },
                     { path: '/admin/event-edits',        element: <EventEditsPage /> },
-                    { path: '/admin/events/:id',         element: <AdminEventDetailPage /> },
+                    { path: '/admin/events/:id',             element: <AdminEventDetailPage /> },
+                    { path: '/admin/vendor-verification',    element: <VendorVerificationPage /> },
                 ],
             },
 

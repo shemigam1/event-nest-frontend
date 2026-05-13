@@ -7,7 +7,7 @@ import { Icons } from '@/components/ui/Icon';
 import {
     useCreateEventMutation,
     useSubmitEventMutation,
-    useUploadCoverImageMutation,
+    usePresignCoverImageMutation,
     useUpdateEventConfigMutation,
 } from '../eventsApi';
 import CoverImageField from '../components/CoverImageField';
@@ -905,7 +905,7 @@ function ReviewStep({ basics, tiers, onBack, onSaveDraft, onSubmitForApproval, s
 }
 
 /* ── Step 4: Success ─────────────────────────────── */
-function SuccessStep({ submitted, navigate }) {
+function SuccessStep({ submitted, navigate, coverUploadFailed, eventId }) {
     return (
         <div data-testid="step-success" style={{ textAlign: 'center', padding: '40px 0' }}>
             <div style={{
@@ -931,6 +931,35 @@ function SuccessStep({ submitted, navigate }) {
                     : 'Your event draft has been saved. Come back to add tiers and submit for approval.'
                 }
             </p>
+
+            {coverUploadFailed && (
+                <div role="alert" style={{
+                    display: 'flex', alignItems: 'flex-start', gap: 10,
+                    maxWidth: 420, margin: '0 auto 28px',
+                    padding: '12px 14px',
+                    background: '#FFF7ED',
+                    border: '1px solid #FDBA74',
+                    borderRadius: 10,
+                    textAlign: 'left',
+                }}>
+                    <Icons.alert size={16} style={{ color: '#C2410C', flexShrink: 0, marginTop: 1 }} />
+                    <div style={{ fontSize: 13, color: '#7C2D12' }}>
+                        <strong>Cover image not uploaded.</strong> The rest of your event was saved
+                        successfully.{' '}
+                        <button
+                            type="button"
+                            onClick={() => navigate(`/events/${eventId}/edit`)}
+                            style={{
+                                background: 'none', border: 'none', padding: 0,
+                                color: '#C2410C', fontWeight: 600, fontSize: 13,
+                                cursor: 'pointer', textDecoration: 'underline',
+                            }}
+                        >
+                            Add it from the edit screen.
+                        </button>
+                    </div>
+                </div>
+            )}
 
             <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
                 <Button variant="secondary" size="lg" onClick={() => navigate('/events')}>
@@ -970,10 +999,12 @@ export default function CreateEventPage() {
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState('');
     const [submitted, setSubmitted] = useState(false);
+    const [coverUploadFailed, setCoverUploadFailed] = useState(false);
+    const [createdEventId, setCreatedEventId] = useState(null);
 
     const [createEvent] = useCreateEventMutation();
     const [submitEvent] = useSubmitEventMutation();
-    const [uploadCoverImage] = useUploadCoverImageMutation();
+    const [presignCoverImage] = usePresignCoverImageMutation();
     const [updateEventConfig] = useUpdateEventConfigMutation();
 
     async function createEventSequence(shouldSubmit) {
@@ -1009,16 +1040,25 @@ export default function CreateEventPage() {
             }
 
             const event = await createEvent(payload).unwrap();
+            setCreatedEventId(event.id);
 
             // Cover image is optional. If the user picked one in step 1
-            // we upload it now that the event exists. Treat a failed
-            // upload as non-fatal — the event is still created, the
-            // organiser can retry from the edit screen.
+            // we upload it now that the event exists. Non-fatal — track the
+            // failure so the success screen can surface a retry prompt.
             if (coverFile) {
                 try {
-                    await uploadCoverImage({ eventId: event.id, file: coverFile }).unwrap();
+                    const { uploadUrl } = await presignCoverImage({
+                        eventId: event.id,
+                        contentType: coverFile.type,
+                    }).unwrap();
+                    const res = await fetch(uploadUrl, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': coverFile.type },
+                        body: coverFile,
+                    });
+                    if (!res.ok) throw new Error(`${res.status}`);
                 } catch {
-                    /* swallowed — event creation already succeeded */
+                    setCoverUploadFailed(true);
                 }
             }
 
@@ -1079,7 +1119,12 @@ export default function CreateEventPage() {
                     />
                 )}
                 {step === 4 && (
-                    <SuccessStep submitted={submitted} navigate={navigate} />
+                    <SuccessStep
+                        submitted={submitted}
+                        navigate={navigate}
+                        coverUploadFailed={coverUploadFailed}
+                        eventId={createdEventId}
+                    />
                 )}
             </div>
         </div>

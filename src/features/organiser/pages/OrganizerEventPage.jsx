@@ -4,6 +4,8 @@ import {
     useGetEventTiersQuery,
     useSubmitEventMutation,
     useDeleteEventMutation,
+    useGetEventConfigQuery,
+    useUpdateEventConfigMutation,
 } from '@/features/events/eventsApi';
 import {
     useGetOrganizerEventByIdQuery,
@@ -663,11 +665,22 @@ function AttendeesTab({ bookings, loading }) {
 /* ───────────────────────────── Settings tab ────────────────────── */
 
 function SettingsTab({ event, eventId, navigate }) {
-    const [submitEvent, submitState] = useSubmitEventMutation();
-    const [deleteEvent, deleteState] = useDeleteEventMutation();
+    const [submitEvent, submitState]   = useSubmitEventMutation();
+    const [deleteEvent, deleteState]   = useDeleteEventMutation();
+    const [updateConfig, configState]  = useUpdateEventConfigMutation();
+    const configQuery = useGetEventConfigQuery(eventId);
+
     const [showDeleteDialog, setShowDeleteDialog] = useState(false);
     const [actionError, setActionError] = useState('');
+    const [moduleError, setModuleError] = useState('');
     const isDraft = event.status === 'DRAFT';
+
+    // Config may not exist yet (404) — treat as all-off defaults.
+    const config = configQuery.data ?? {};
+    const programmeOn  = config.programmeEnabled  ?? false;
+    const guestListOn  = config.guestListEnabled  ?? false;
+    const ratingsOn    = config.ratingsEnabled     ?? false;
+    const ticketingOn  = config.ticketingEnabled   ?? true;
 
     async function handleSubmit() {
         setActionError('');
@@ -686,8 +699,48 @@ function SettingsTab({ event, eventId, navigate }) {
         }
     }
 
+    async function toggleModule(key, currentValue) {
+        setModuleError('');
+        try {
+            await updateConfig({ eventId, [key]: !currentValue }).unwrap();
+        } catch (err) {
+            setModuleError(err?.data?.message || 'Could not update setting.');
+        }
+    }
+
+    const modules = [
+        {
+            key: 'programmeEnabled',
+            label: 'Programme / agenda',
+            description: 'Publish a run-of-show — sessions, speakers, and timing — visible on the event page and emailed to attendees.',
+            value: programmeOn,
+            icon: <Icons.calendar size={18} />,
+        },
+        {
+            key: 'guestListEnabled',
+            label: 'Guest list & RSVPs',
+            description: 'Invite guests by email, track RSVPs, and optionally gate ticket bookings to accepted guests only.',
+            value: guestListOn,
+            icon: <Icons.mail size={18} />,
+        },
+        {
+            key: 'ratingsEnabled',
+            label: 'Attendee ratings',
+            description: 'Allow attendees to rate the event after it ends. Ratings are visible on the public event page.',
+            value: ratingsOn,
+            icon: <Icons.bolt size={18} />,
+        },
+        {
+            key: 'ticketingEnabled',
+            label: 'Ticketing',
+            description: 'Enable ticket sales for this event. Turning this off prevents new bookings while keeping existing ones intact.',
+            value: ticketingOn,
+            icon: <Icons.ticket size={18} />,
+        },
+    ];
+
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
             {actionError && (
                 <div role="alert" style={{
                     padding: '10px 16px', background: 'var(--error-bg)',
@@ -697,6 +750,92 @@ function SettingsTab({ event, eventId, navigate }) {
                 </div>
             )}
 
+            {/* Event modules */}
+            <div style={{
+                background: 'white', border: '1px solid var(--border)',
+                borderRadius: 12, overflow: 'hidden',
+            }}>
+                <div style={{
+                    padding: '16px 20px', borderBottom: '1px solid var(--border)',
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                }}>
+                    <div>
+                        <div style={{ fontWeight: 600, color: 'var(--text-1)', fontSize: 15 }}>
+                            Event modules
+                        </div>
+                        <div style={{ fontSize: 13, color: 'var(--text-2)', marginTop: 2 }}>
+                            Turn features on or off — you can change these any time before or after publishing.
+                        </div>
+                    </div>
+                    {configQuery.isLoading && (
+                        <span style={{ fontSize: 12, color: 'var(--text-3)' }}>Loading…</span>
+                    )}
+                </div>
+
+                {moduleError && (
+                    <div role="alert" style={{
+                        margin: '12px 20px 0', padding: '10px 12px',
+                        background: 'var(--error-bg, #FBE9E9)', color: 'var(--error)',
+                        borderRadius: 8, fontSize: 13,
+                    }}>
+                        {moduleError}
+                    </div>
+                )}
+
+                {modules.map((m, i) => (
+                    <div
+                        key={m.key}
+                        style={{
+                            display: 'flex', alignItems: 'center', gap: 16,
+                            padding: '16px 20px',
+                            borderBottom: i < modules.length - 1 ? '1px solid var(--border)' : 0,
+                        }}
+                    >
+                        <div style={{
+                            width: 36, height: 36, borderRadius: 8, flexShrink: 0,
+                            background: m.value ? '#EAF1FE' : 'var(--surface-subtle)',
+                            color: m.value ? 'var(--mp-blue)' : 'var(--text-3)',
+                            display: 'grid', placeItems: 'center',
+                            transition: 'all 0.2s',
+                        }}>
+                            {m.icon}
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontWeight: 600, color: 'var(--text-1)', fontSize: 14 }}>
+                                {m.label}
+                            </div>
+                            <div style={{ fontSize: 13, color: 'var(--text-2)', marginTop: 2 }}>
+                                {m.description}
+                            </div>
+                        </div>
+                        <button
+                            onClick={() => toggleModule(m.key, m.value)}
+                            disabled={configState.isLoading || configQuery.isLoading}
+                            aria-label={`${m.value ? 'Disable' : 'Enable'} ${m.label}`}
+                            style={{
+                                flexShrink: 0,
+                                width: 44, height: 24, borderRadius: 99, border: 0,
+                                background: m.value ? 'var(--mp-blue)' : 'var(--border)',
+                                cursor: configState.isLoading ? 'not-allowed' : 'pointer',
+                                position: 'relative',
+                                transition: 'background 0.2s',
+                                opacity: configState.isLoading ? 0.6 : 1,
+                            }}
+                        >
+                            <span style={{
+                                position: 'absolute', top: 3,
+                                left: m.value ? 23 : 3,
+                                width: 18, height: 18, borderRadius: 99,
+                                background: 'white',
+                                boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                                transition: 'left 0.2s',
+                            }} />
+                        </button>
+                    </div>
+                ))}
+            </div>
+
+            {/* Event details */}
             <SettingCard
                 title="Event details"
                 description="Title, description, dates, venue, cover image."
