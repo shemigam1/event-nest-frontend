@@ -54,8 +54,11 @@ export default function GuestsTab({ eventId }) {
 
     // Same gating pattern as ProgrammeTab — 409 + "not enabled" → enable CTA.
     const errStatus = guests.error?.status;
-    const errMsg    = guests.error?.data?.message ?? '';
-    const notEnabled = guests.isError && errStatus === 409 && /not enabled/i.test(errMsg);
+    const errMsg    = guests.error?.data?.message ?? guests.error?.data?.errors?.[0] ?? '';
+    const notEnabled = guests.isError && (
+        (errStatus === 409 && /not enabled/i.test(errMsg)) ||
+        (errStatus === 404 && /config not found|not found/i.test(errMsg))
+    );
 
     if (notEnabled) {
         return (

@@ -177,6 +177,9 @@ export default function SidebarPanel({ open, onClose }) {
                             <SidebarItem icon={<Icons.list size={18} />} onClick={() => go('/admin/event-edits')}>
                                 Event edit requests
                             </SidebarItem>
+                            <SidebarItem icon={<Icons.shield size={18} />} onClick={() => go('/admin/vendor-verification')}>
+                                Vendor verification
+                            </SidebarItem>
                             <SidebarItem icon={<Icons.mail size={18} />} onClick={() => go('/admin/invite')}>
                                 Invite admin
                             </SidebarItem>
@@ -191,6 +194,12 @@ export default function SidebarPanel({ open, onClose }) {
                             </SidebarItem>
                             <SidebarItem icon={<Icons.scan size={18} />} onClick={() => go('/checkin')}>
                                 Check-in station
+                            </SidebarItem>
+                            <SidebarItem icon={<Icons.search size={18} />} onClick={() => go('/vendors')}>
+                                Vendor marketplace
+                            </SidebarItem>
+                            <SidebarItem icon={<Icons.users size={18} />} onClick={() => go('/vendor/profile')}>
+                                My vendor profile
                             </SidebarItem>
                         </>
                     )}

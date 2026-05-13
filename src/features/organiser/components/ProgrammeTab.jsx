@@ -331,8 +331,14 @@ export default function ProgrammeTab({ eventId, event }) {
     // When it's off, the GET returns 409 with "programme is not enabled
     // for this event". Detect that and offer to flip the flag.
     const errStatus = items.error?.status;
-    const errMsg    = items.error?.data?.message ?? '';
-    const notEnabled = items.isError && errStatus === 409 && /not enabled/i.test(errMsg);
+    const errMsg    = items.error?.data?.message ?? items.error?.data?.errors?.[0] ?? '';
+    // Backend returns 409 when the module is explicitly off, and 404 when
+    // EventConfig doesn't exist yet (event was created before config row existed).
+    // Both states mean the module hasn't been turned on — offer the same enable CTA.
+    const notEnabled = items.isError && (
+        (errStatus === 409 && /not enabled/i.test(errMsg)) ||
+        (errStatus === 404 && /config not found|not found/i.test(errMsg))
+    );
 
     if (notEnabled) {
         return (
