@@ -686,6 +686,7 @@ function SettingsTab({ event, eventId, navigate }) {
     const guestListOn  = config.guestListEnabled  ?? false;
     const ratingsOn    = config.ratingsEnabled     ?? false;
     const ticketingOn  = config.ticketingEnabled   ?? true;
+    const commentsOn   = config.commentsEnabled    ?? true;
 
     async function handleSubmit() {
         setActionError('');
@@ -741,6 +742,13 @@ function SettingsTab({ event, eventId, navigate }) {
             description: 'Enable ticket sales for this event. Turning this off prevents new bookings while keeping existing ones intact.',
             value: ticketingOn,
             icon: <Icons.ticket size={18} />,
+        },
+        {
+            key: 'commentsEnabled',
+            label: 'Discussion',
+            description: 'Allow attendees to post comments and reactions on the event page. Turn off if you want a quieter listing.',
+            value: commentsOn,
+            icon: <Icons.users size={18} />,
         },
     ];
 

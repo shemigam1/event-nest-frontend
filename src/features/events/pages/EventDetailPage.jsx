@@ -15,6 +15,7 @@ import CapacityBar from '@/components/ui/CapacityBar';
 import TopNav from '@/components/ui/TopNav';
 import { StatusBadge } from '@/components/ui/Badge';
 import { Icons } from '@/components/ui/Icon';
+import CommentSection from '@/features/comments/components/CommentSection';
 
 export default function EventDetailPage() {
     const { id } = useParams();
@@ -270,6 +271,17 @@ export default function EventDetailPage() {
                             </div>
                         )}
                     </aside>
+                </div>
+
+                {/* Discussion thread — gated by EventConfig.commentsEnabled
+                    on the backend (default true). Component renders its
+                    own "module off" notice on 409. */}
+                <div style={{ marginTop: 20 }}>
+                    <CommentSection
+                        eventId={id}
+                        eventStatus={e.status}
+                        canModerate={isOwnEvent}
+                    />
                 </div>
             </div>
 
