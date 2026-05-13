@@ -11,7 +11,7 @@ import { Icons } from '@/components/ui/Icon';
 /* Managers panel. Check-in staff is rendered separately on the same tab —
    the OrganizerEventPage stacks <TeamTab /> above the existing
    <CheckInStaffSection /> so each owns its API surface independently. */
-export default function TeamTab({ eventId }) {
+export default function TeamTab({ eventId, isPublished = true }) {
     const managers = useGetEventManagersQuery(eventId);
     const [assignManager, assignState] = useAssignManagerMutation();
     const [removeManager, removeState] = useRemoveManagerMutation();
@@ -67,6 +67,7 @@ export default function TeamTab({ eventId }) {
                     <div style={{ fontWeight: 600, color: 'var(--text-1)' }}>Event managers</div>
                     <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>
                         Managers can edit details, manage tiers, and view bookings. They cannot delete the event.
+                        {!isPublished && ' Publish the event to add managers.'}
                     </div>
                 </div>
                 <span className="mp-num" style={{
@@ -90,6 +91,7 @@ export default function TeamTab({ eventId }) {
                     gap: 12,
                     alignItems: 'flex-end',
                     flexWrap: 'wrap',
+                    opacity: !isPublished ? 0.6 : 1,
                 }}
             >
                 <div style={{ flex: '1 1 280px', minWidth: 240 }}>
@@ -100,6 +102,7 @@ export default function TeamTab({ eventId }) {
                         onChange={(e) => { setEmail(e.target.value); setError(''); }}
                         placeholder="teammate@company.com"
                         icon={<Icons.mail size={18} />}
+                        disabled={!isPublished}
                     />
                 </div>
                 <Button
@@ -107,7 +110,8 @@ export default function TeamTab({ eventId }) {
                     variant="primary"
                     size="md"
                     icon={<Icons.plus size={14} />}
-                    disabled={assignState.isLoading}
+                    disabled={assignState.isLoading || !isPublished}
+                    title={!isPublished ? 'Publish the event before adding managers' : ''}
                 >
                     {assignState.isLoading ? 'Assigning…' : 'Assign'}
                 </Button>
