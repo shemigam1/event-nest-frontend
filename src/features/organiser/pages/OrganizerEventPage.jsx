@@ -17,6 +17,7 @@ import GuestsTab from '../components/GuestsTab';
 import VendorsTab from '../components/VendorsTab';
 import BudgetTab from '../components/BudgetTab';
 import TeamTab from '../components/TeamTab';
+import ContractsTab from '../components/ContractsTab';
 import ActivityFeed from '@/features/activity/ActivityFeed';
 import {
     useListCheckInInvitesQuery,
@@ -132,6 +133,10 @@ export default function OrganizerEventPage() {
                     <VendorsTab eventId={eventId} />
                 )}
 
+                {tab === 'contracts' && (
+                    <ContractsTab eventId={eventId} />
+                )}
+
                 {tab === 'budget' && (
                     <BudgetTab eventId={eventId} />
                 )}
@@ -198,7 +203,8 @@ function Header({ event, totalSold, totalCapacity, checkedIn, checkInRate, tab, 
         { id: 'attendees', label: 'Attendees' },
         { id: 'guests',    label: 'Guests' },
         { id: 'programme', label: 'Programme' },
-        { id: 'vendors',   label: 'Vendors' },
+        { id: 'vendors',    label: 'Vendors' },
+        { id: 'contracts', label: 'Contracts' },
         { id: 'budget',    label: 'Budget' },
         { id: 'team',      label: 'Team' },
         { id: 'settings',  label: 'Settings' },
