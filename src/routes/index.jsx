@@ -23,12 +23,12 @@ import MyApplicationsPage from '../features/vendor/pages/MyApplicationsPage';
 import VendorApplyPage from '../features/vendor/pages/VendorApplyPage';
 import VendorDashboardPage from '../features/vendor/pages/VendorDashboardPage';
 import CheckInPage from '../features/checkin/pages/CheckInPage';
-import StubPaymentPage from '../features/bookings/pages/StubPaymentPage';
 import PaymentResultPage from '../features/bookings/pages/PaymentResultPage';
 import VendorMarketplacePage from '../features/vendor/pages/VendorMarketplacePage';
 import VendorDetailPage from '../features/vendor/pages/VendorDetailPage';
 import VendorProfileSetupPage from '../features/vendor/pages/VendorProfileSetupPage';
 import MessagesPage from '../features/messages/pages/MessagesPage';
+import SettingsPage from '../features/settings/pages/SettingsPage';
 import PrivateRoute from './PrivateRoute';
 import AdminRoute from './AdminRoute';
 import ErrorPage from '../components/ui/ErrorPage';
@@ -49,7 +49,6 @@ const router = createBrowserRouter([
             { path: '/checkin',        element: <CheckInPage /> },
             { path: '/vendors',        element: <VendorMarketplacePage /> },
             { path: '/vendors/:id',    element: <VendorDetailPage /> },
-            { path: '/stub-payment',   element: <StubPaymentPage /> },
             { path: '/payment-result', element: <PaymentResultPage /> },
 
             {
@@ -68,6 +67,7 @@ const router = createBrowserRouter([
                     { path: '/vendor/profile',       element: <VendorProfileSetupPage /> },
                     { path: '/vendor/apply/:eventId', element: <VendorApplyPage /> },
                     { path: '/messages',              element: <MessagesPage /> },
+                    { path: '/settings',              element: <SettingsPage /> },
                 ],
             },
 

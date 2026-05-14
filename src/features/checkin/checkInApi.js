@@ -12,7 +12,10 @@ export const checkinApi = baseApi.injectEndpoints({
             query: ({ eventId, staffToken, qrCode }) => ({
                 url: `/events/${eventId}/checkin`,
                 method: 'POST',
-                body: { staffToken, qrCode },
+                // Send the code as both fields — backend resolves whichever matches.
+                // This lets staff enter either the UUID (from a scanned QR) or the
+                // 8-char shortCode visible below the QR on the ticket.
+                body: { staffToken, qrCode, shortCode: qrCode },
             }),
             invalidatesTags: ['Ticket'],
             transformResponse: (response) => response.data ?? response,

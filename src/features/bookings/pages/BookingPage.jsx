@@ -108,26 +108,8 @@ export default function BookingPage() {
         setErrorMessage('');
         try {
             const result = await createBooking({ eventId, tierId, quantity: qty }).unwrap();
-
-            // Dev: always use the stub payment page for paid bookings so we
-            // don't redirect out to the real Monnify gateway.
-            if (import.meta.env.DEV && total > 0) {
-                const ref =
-                    result.transactionReference ??
-                    result.paymentReference ??
-                    result.bookingReference ??
-                    result.id ??
-                    'stub';
-                navigate(`/stub-payment?ref=${encodeURIComponent(ref)}&amount=${total}`);
-                return;
-            }
-
-            if (result.paymentUrl) {
-                window.location.href = result.paymentUrl;
-            } else {
-                setBooking(result);
-                setStep(3);
-            }
+            setBooking(result);
+            setStep(3);
         } catch (err) {
             setErrorMessage(err?.data?.message || 'Could not complete the booking. Please try again.');
         }
@@ -499,11 +481,6 @@ function ReviewStep({ event, tier, qty, total, submitting, errorMessage, onBack,
                 </div>
             </div>
 
-            {Number(tier.price) > 0 && (
-                <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 14, textAlign: 'center' }}>
-                    You will be redirected to our secure payment page to complete your purchase.
-                </div>
-            )}
 
             {errorMessage && (
                 <div role="alert" style={{

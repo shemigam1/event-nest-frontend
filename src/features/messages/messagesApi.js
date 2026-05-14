@@ -36,6 +36,7 @@ export const messagesApi = baseApi.injectEndpoints({
                 method: 'POST',
             }),
             transformResponse: (res) => res?.data ?? res,
+            invalidatesTags: ['Conversation'],
         }),
     }),
 });

@@ -5,7 +5,7 @@ import { formatEventDate } from '@/utils/dateFormat';
 import Button from '@/components/ui/Button';
 import TopNav from '@/components/ui/TopNav';
 import Modal from '@/components/ui/Modal';
-import QrPattern from '@/components/ui/QrPattern';
+import { QRCode } from 'react-qr-code';
 import TicketCard from '@/components/ui/TicketCard';
 import { Icons } from '@/components/ui/Icon';
 
@@ -126,7 +126,7 @@ function QrModalContent({ ticket, onClose }) {
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
-                gap: 12,
+                gap: 16,
             }}>
                 <div style={{ padding: 14, background: 'var(--surface-subtle)', borderRadius: 12 }}>
                     <QrPattern size={200} seed={ticket.qrCode || ticket.id} />
