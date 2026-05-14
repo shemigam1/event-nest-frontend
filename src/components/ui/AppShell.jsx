@@ -60,7 +60,7 @@ export default function AppShell() {
     // pages all get the full-width layout. The sidebar only appears on the
     // true "app" pages (organiser console, tickets, vendor dashboard, etc.)
     const EXACT_NO_SIDEBAR = new Set([
-        '/', '/login', '/register', '/forgot-password', '/reset-password',
+        '/', '/login', '/register',
         '/events', '/vendors',
     ]);
     const p = location.pathname;
@@ -148,7 +148,6 @@ function Sidebar() {
                 { icon: Icons.signal,   label: 'Event moderation',    path: '/admin/moderation' },
                 { icon: Icons.users,    label: 'Manage users',        path: '/admin/users' },
                 { icon: Icons.list,     label: 'Event edit requests', path: '/admin/event-edits' },
-                { icon: Icons.shield,   label: 'Vendor verification', path: '/admin/vendor-verification' },
                 { icon: Icons.mail,     label: 'Invite admin',        path: '/admin/invite' },
             ];
         }
