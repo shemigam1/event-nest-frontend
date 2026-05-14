@@ -1,5 +1,7 @@
 import { useNavigate } from 'react-router';
+import { useSelector } from 'react-redux';
 import Brand from './Brand';
+import { selectIsAuthenticated } from '@/features/auth/authSlice';
 
 /**
  * Shared top navigation bar.
@@ -10,6 +12,7 @@ import Brand from './Brand';
  */
 export default function TopNav({ variant = 'light', showBrowse = true }) {
     const navigate = useNavigate();
+    const isAuthenticated = useSelector(selectIsAuthenticated);
     const onDark = variant === 'transparent';
 
     const styles = onDark
@@ -63,6 +66,45 @@ export default function TopNav({ variant = 'light', showBrowse = true }) {
                 >
                     Browse events
                 </button>
+            )}
+
+            {!isAuthenticated && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <button
+                        onClick={() => navigate('/login')}
+                        style={{
+                            background: 'none',
+                            border: onDark ? '1px solid rgba(255,255,255,0.22)' : '1px solid var(--border)',
+                            borderRadius: 10,
+                            fontSize: 14,
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            padding: '0 16px',
+                            height: 38,
+                            color: onDark ? 'rgba(255,255,255,0.88)' : 'var(--text-1)',
+                            transition: 'all var(--motion-fast)',
+                        }}
+                    >
+                        Log in
+                    </button>
+                    <button
+                        onClick={() => navigate('/register')}
+                        style={{
+                            background: 'var(--mp-blue)',
+                            border: '1px solid transparent',
+                            borderRadius: 10,
+                            fontSize: 14,
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            padding: '0 16px',
+                            height: 38,
+                            color: '#fff',
+                            transition: 'all var(--motion-fast)',
+                        }}
+                    >
+                        Sign up
+                    </button>
+                </div>
             )}
         </nav>
     );

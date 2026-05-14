@@ -21,14 +21,15 @@ export default function PaymentResultPage() {
 
     useEffect(() => {
         if (!transactionRef) { setStatus('error'); return; }
-        // Dev stub: skip real polling, just show the spinner briefly then resolve.
-        if (stubStatus === 'SUCCESS' || stubStatus === 'FAILED') {
-            timerRef.current = setTimeout(
-                () => setStatus(stubStatus === 'SUCCESS' ? 'paid' : 'failed'),
-                1500,
-            );
+        // Dev stub failure: no need to hit the backend, just show failed UI.
+        if (stubStatus === 'FAILED') {
+            timerRef.current = setTimeout(() => setStatus('failed'), 1500);
             return () => clearTimeout(timerRef.current);
         }
+        // For both real payments and stub SUCCESS we always call verify().
+        // In stub mode the StubMonnifyClient immediately returns PAID for any
+        // ref it saw during initializeTransaction, so this finalises the booking,
+        // issues tickets and enqueues the confirmation email correctly.
         verify();
         return () => clearTimeout(timerRef.current);
     // eslint-disable-next-line react-hooks/exhaustive-deps
