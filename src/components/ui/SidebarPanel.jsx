@@ -81,11 +81,13 @@ export default function SidebarPanel({ open, onClose }) {
                 style={{
                     position: 'fixed',
                     top: 0,
-                    right: 0,
+                    left: 0,
                     bottom: 0,
                     width: 'min(360px, 90vw)',
                     background: 'white',
-                    boxShadow: '-12px 0 32px rgba(2, 16, 45, 0.12)',
+                    // Flip the shadow direction so the depth still falls
+                    // away from the panel edge that's "in" the page.
+                    boxShadow: '12px 0 32px rgba(2, 16, 45, 0.12)',
                     zIndex: 61,
                     display: 'flex',
                     flexDirection: 'column',
@@ -195,9 +197,6 @@ export default function SidebarPanel({ open, onClose }) {
                             <SidebarItem icon={<Icons.message size={18} />} onClick={() => go('/messages')}>
                                 Messages
                             </SidebarItem>
-                            <SidebarItem icon={<Icons.scan size={18} />} onClick={() => go('/checkin')}>
-                                Check-in station
-                            </SidebarItem>
                             {/* Single Vendors entry — marketplace lives at /vendors
                                 and the page itself surfaces the verification /
                                 profile CTA based on the caller's state. */}
@@ -219,8 +218,8 @@ export default function SidebarPanel({ open, onClose }) {
                 without forcing a global CSS edit. */}
             <style>{`
                 @keyframes mp-sidebar-slide-in {
-                    from { transform: translateX(8px); opacity: 0; }
-                    to   { transform: translateX(0);   opacity: 1; }
+                    from { transform: translateX(-8px); opacity: 0; }
+                    to   { transform: translateX(0);    opacity: 1; }
                 }
             `}</style>
         </>

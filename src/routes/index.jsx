@@ -1,4 +1,5 @@
-import { createBrowserRouter, Navigate, Outlet } from 'react-router';
+import { createBrowserRouter, Navigate } from 'react-router';
+import AppShell from '../components/ui/AppShell';
 import LandingPage from '../features/landing/LandingPage';
 import DiscoveryPage from '../features/events/pages/DiscoveryPage';
 import EventDetailPage from '../features/events/pages/EventDetailPage';
@@ -37,9 +38,10 @@ import ErrorPage from '../components/ui/ErrorPage';
 
 const router = createBrowserRouter([
     {
-        // Root wrapper — no path, just provides the global errorElement.
-        // All routes are children so they inherit it automatically.
-        element: <Outlet />,
+        // Root wrapper — provides the global errorElement AND mounts the
+        // AppShell layout (persistent left sidebar for signed-in users,
+        // full-width passthrough for anonymous routes).
+        element: <AppShell />,
         errorElement: <ErrorPage />,
         children: [
             { path: '/',          element: <LandingPage /> },

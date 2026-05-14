@@ -13,7 +13,7 @@ import { baseApi } from '@/services/baseApi';
 import Brand from './Brand';
 import Button from './Button';
 import UserMenu from './UserMenu';
-import SidebarPanel from './SidebarPanel';
+import { useSidebar } from './sidebarContext';
 import { Icons } from './Icon';
 
 /**
@@ -33,9 +33,9 @@ export default function TopNav({ variant = 'light', showBrowse = true }) {
     const email = useSelector(selectAuthEmail);
     const onDark = variant === 'transparent';
     const [menuOpen, setMenuOpen] = useState(false);
-    // Desktop-only right-side drawer. Triggered by the sidebar icon OR by
-    // clicking the avatar pill. Mobile uses the existing menuOpen / slide-down panel.
-    const [sidebarOpen, setSidebarOpen] = useState(false);
+    // Desktop sidebar collapse state lives in AppShell — toggle from here
+    // so the hamburger icon flips the persistent left rail.
+    const { toggle: toggleSidebar } = useSidebar();
 
     const styles = onDark
         ? {
@@ -127,7 +127,7 @@ export default function TopNav({ variant = 'light', showBrowse = true }) {
                             <button
                                 type="button"
                                 aria-label="Open menu"
-                                onClick={() => setSidebarOpen(true)}
+                                onClick={toggleSidebar}
                                 style={{
                                     background: 'transparent',
                                     border: `1px solid ${onDark ? 'rgba(255,255,255,0.20)' : 'var(--border)'}`,
@@ -144,7 +144,7 @@ export default function TopNav({ variant = 'light', showBrowse = true }) {
                             >
                                 <Icons.list size={18} />
                             </button>
-                            <UserMenu onDark={onDark} onOpenSidebar={() => setSidebarOpen(true)} />
+                            <UserMenu onDark={onDark} onOpenSidebar={toggleSidebar} />
                         </>
                     ) : (
                         <>
@@ -186,14 +186,6 @@ export default function TopNav({ variant = 'light', showBrowse = true }) {
                     {menuOpen ? <Icons.x size={20} /> : <Icons.list size={20} />}
                 </button>
             </nav>
-
-            {/* Desktop right-side drawer (replaces the old avatar dropdown) */}
-            {isAuthenticated && (
-                <SidebarPanel
-                    open={sidebarOpen}
-                    onClose={() => setSidebarOpen(false)}
-                />
-            )}
 
             {/* Mobile slide-down panel */}
             {menuOpen && (
