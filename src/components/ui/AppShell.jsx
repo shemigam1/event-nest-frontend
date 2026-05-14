@@ -30,6 +30,7 @@ const STORAGE_KEY = 'mp-sidebar-collapsed';
 
 export default function AppShell() {
     const isAuthenticated = useSelector(selectIsAuthenticated);
+    const location = useLocation();
 
     // Auto-collapse on small viewports. The user can still toggle, and the
     // toggle persists, but the *initial* render on a phone shouldn't take
@@ -54,7 +55,10 @@ export default function AppShell() {
         setCollapsed,
     }), [collapsed]);
 
-    if (!isAuthenticated) {
+    // Landing page always renders full-width — no sidebar even when signed in.
+    const isLandingPage = location.pathname === '/';
+
+    if (!isAuthenticated || isLandingPage) {
         // Anonymous flows (landing, public discovery, login, register…) get
         // no sidebar. Still provide the context so consumer components don't
         // throw if they happen to render on a public page.

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { useSelector } from 'react-redux';
 import {
@@ -106,6 +107,8 @@ export default function EventDetailPage() {
                                 </strong>
                             </p>
                         )}
+
+                        <ShareRow title={e.title} />
 
                         <div className="mp-grid-stack" style={{
                             display: 'grid',
@@ -378,6 +381,101 @@ function DetailSkeleton() {
                 }} />
             </div>
         </div>
+    );
+}
+
+function ShareRow({ title }) {
+    const [copied, setCopied] = useState(false);
+    const url = window.location.href;
+
+    const shareX = () => {
+        window.open(
+            `https://twitter.com/intent/tweet?text=${encodeURIComponent(title)}&url=${encodeURIComponent(url)}`,
+            '_blank', 'noopener,noreferrer',
+        );
+    };
+
+    const shareWhatsApp = () => {
+        window.open(
+            `https://wa.me/?text=${encodeURIComponent(`${title} — ${url}`)}`,
+            '_blank', 'noopener,noreferrer',
+        );
+    };
+
+    const copyLink = async () => {
+        try {
+            await navigator.clipboard.writeText(url);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        } catch {
+            /* clipboard unavailable */
+        }
+    };
+
+    const btnStyle = {
+        display: 'inline-flex', alignItems: 'center', gap: 6,
+        padding: '6px 12px', borderRadius: 8,
+        border: '1px solid var(--border)',
+        background: 'white', cursor: 'pointer',
+        fontSize: 13, fontWeight: 500,
+        color: 'var(--text-2)', fontFamily: 'inherit',
+        transition: 'border-color 0.15s, color 0.15s',
+    };
+
+    return (
+        <div style={{ display: 'flex', gap: 8, marginTop: 16, flexWrap: 'wrap' }}>
+            <button type="button" style={btnStyle} onClick={shareX}
+                onMouseOver={(e) => { e.currentTarget.style.borderColor = '#000'; e.currentTarget.style.color = '#000'; }}
+                onMouseOut={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-2)'; }}
+            >
+                <XIcon />
+                Share on X
+            </button>
+            <button type="button" style={btnStyle} onClick={shareWhatsApp}
+                onMouseOver={(e) => { e.currentTarget.style.borderColor = '#25D366'; e.currentTarget.style.color = '#25D366'; }}
+                onMouseOut={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-2)'; }}
+            >
+                <WhatsAppIcon />
+                WhatsApp
+            </button>
+            <button type="button"
+                style={{
+                    ...btnStyle,
+                    ...(copied ? { borderColor: 'var(--success)', color: 'var(--success)' } : {}),
+                }}
+                onClick={copyLink}
+                onMouseOver={(e) => { if (!copied) { e.currentTarget.style.borderColor = 'var(--mp-blue)'; e.currentTarget.style.color = 'var(--mp-blue)'; } }}
+                onMouseOut={(e) => { if (!copied) { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-2)'; } }}
+            >
+                {copied ? <Icons.check size={14} /> : <LinkIcon />}
+                {copied ? 'Copied!' : 'Copy link'}
+            </button>
+        </div>
+    );
+}
+
+function XIcon() {
+    return (
+        <svg width={14} height={14} viewBox="0 0 24 24" fill="currentColor">
+            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+        </svg>
+    );
+}
+
+function WhatsAppIcon() {
+    return (
+        <svg width={14} height={14} viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 0C5.373 0 0 5.373 0 12c0 2.117.549 4.099 1.508 5.829L.055 23.433a.75.75 0 00.916.916l5.635-1.458A11.945 11.945 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.96 0-3.79-.518-5.371-1.419l-.395-.228-3.883 1.005.994-3.851-.233-.395A9.958 9.958 0 012 12c0-5.514 4.486-10 10-10s10 4.486 10 10-4.486 10-10 10zm5.472-7.618c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.074-.297-.149-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.457.13-.606.134-.133.298-.347.447-.52.149-.174.198-.298.298-.497.099-.198.05-.372-.025-.52-.075-.149-.67-1.612-.917-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.372-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.718 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" />
+        </svg>
+    );
+}
+
+function LinkIcon() {
+    return (
+        <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71" />
+            <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" />
+        </svg>
     );
 }
 
