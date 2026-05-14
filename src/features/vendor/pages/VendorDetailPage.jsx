@@ -7,6 +7,8 @@ import { selectIsAuthenticated } from '@/features/auth/authSlice';
 import TopNav from '@/components/ui/TopNav';
 import Button from '@/components/ui/Button';
 import { Icons } from '@/components/ui/Icon';
+import { useSendInquiryMutation } from '@/features/vendor/inquiriesApi';
+import { useGetOrganizerEventsQuery } from '@/features/organiser/organizerApi';
 
 const SECTION_TABS = [
     { key: 'overview',  label: 'Overview' },
@@ -74,6 +76,7 @@ export default function VendorDetailPage() {
 
     const isAuthenticated = useSelector(selectIsAuthenticated);
     const [createConv, { isLoading: isStartingChat }] = useCreateOrGetConversationMutation();
+    const [inquiryOpen, setInquiryOpen] = useState(false);
 
     const handleContactVendor = async (vendorName, vendorUserId) => {
         if (!isAuthenticated) {
@@ -121,6 +124,7 @@ export default function VendorDetailPage() {
     const [bg, fg] = avatarColor(v.vendorName);
 
     return (
+        <>
         <Shell>
             <button
                 onClick={() => navigate(-1)}
@@ -206,7 +210,21 @@ export default function VendorDetailPage() {
                         )}
                     </div>
 
-                    <div style={{ flexShrink: 0 }}>
+                    <div style={{ flexShrink: 0, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                        <Button
+                            variant="secondary"
+                            size="md"
+                            onClick={() => {
+                                if (!isAuthenticated) {
+                                    navigate('/login', { state: { from: `/vendors/${id}` } });
+                                    return;
+                                }
+                                setInquiryOpen(true);
+                            }}
+                            icon={<Icons.send size={15} />}
+                        >
+                            Send inquiry
+                        </Button>
                         <Button
                             variant="primary"
                             size="md"
@@ -299,6 +317,13 @@ export default function VendorDetailPage() {
             {tab === 'completed' && <CompletedTab items={completed} />}
             {tab === 'reviews'   && <ReviewsTab items={ratedWork} />}
         </Shell>
+        {inquiryOpen && (
+            <InquiryModal
+                vendorId={v.userId ?? id}
+                onDismiss={() => setInquiryOpen(false)}
+            />
+        )}
+        </>
     );
 }
 
@@ -646,6 +671,179 @@ function PageSkeleton() {
                 height: 400, background: 'white', border: '1px solid var(--border)',
                 borderRadius: 12, animation: 'mp-flash 1.6s ease-in-out infinite', opacity: 0.7,
             }} />
+        </div>
+    );
+}
+
+/* ─── Inquiry modal ───────────────────────────────── */
+
+function InquiryModal({ vendorId, onDismiss }) {
+    const navigate = useNavigate();
+    const [sendInquiry, { isLoading }] = useSendInquiryMutation();
+    const { data: events = [], isLoading: eventsLoading } = useGetOrganizerEventsQuery();
+
+    const [eventId,     setEventId]     = useState('');
+    const [message,     setMessage]     = useState('');
+    const [serviceType, setServiceType] = useState('');
+    const [error,       setError]       = useState('');
+
+    async function handleSubmit() {
+        setError('');
+        try {
+            const result = await sendInquiry({
+                eventId,
+                vendorId,
+                message: message.trim(),
+                serviceType: serviceType.trim() || undefined,
+            }).unwrap();
+            if (result?.conversationId) {
+                navigate(`/messages?c=${result.conversationId}`);
+            } else {
+                onDismiss();
+            }
+        } catch (err) {
+            setError(err?.data?.message || 'Could not send inquiry.');
+        }
+    }
+
+    const canSubmit = !eventsLoading && eventId && message.trim().length > 0;
+
+    return (
+        <div
+            role="dialog"
+            aria-label="Send inquiry"
+            onClick={onDismiss}
+            style={{
+                position: 'fixed', inset: 0, zIndex: 1000,
+                background: 'rgba(2,16,45,0.55)',
+                display: 'grid', placeItems: 'center', padding: 20,
+            }}
+        >
+            <div onClick={(e) => e.stopPropagation()} style={{
+                width: '100%', maxWidth: 480, background: 'white',
+                borderRadius: 16, boxShadow: 'var(--shadow-modal)', padding: 28,
+            }}>
+                <h2 className="mp-h3" style={{ margin: 0, color: 'var(--text-1)' }}>
+                    Send inquiry
+                </h2>
+                <p className="body-sm" style={{ margin: '6px 0 20px', color: 'var(--text-2)' }}>
+                    Let this vendor know about your event and what you need.
+                </p>
+
+                {/* Event selector */}
+                <div style={{ marginBottom: 14 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-1)', marginBottom: 6 }}>
+                        For which event?
+                    </div>
+                    {eventsLoading ? (
+                        <div style={{
+                            height: 40, background: 'var(--surface-subtle)',
+                            borderRadius: 8, animation: 'mp-flash 1.6s ease-in-out infinite',
+                        }} />
+                    ) : events.length === 0 ? (
+                        <div style={{
+                            padding: '10px 12px', background: 'var(--surface-subtle)',
+                            borderRadius: 8, fontSize: 13, color: 'var(--text-3)',
+                        }}>
+                            You have no events.{' '}
+                            <button
+                                onClick={() => navigate('/events/new')}
+                                style={{
+                                    color: 'var(--mp-blue)', background: 'none', border: 0,
+                                    cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, padding: 0,
+                                }}
+                            >
+                                Create one first.
+                            </button>
+                        </div>
+                    ) : (
+                        <select
+                            value={eventId}
+                            onChange={(e) => setEventId(e.target.value)}
+                            style={{
+                                width: '100%', boxSizing: 'border-box',
+                                padding: '9px 12px', borderRadius: 8,
+                                border: '1px solid var(--border)',
+                                fontFamily: 'inherit', fontSize: 14,
+                                color: eventId ? 'var(--text-1)' : 'var(--text-3)',
+                                background: 'white', cursor: 'pointer',
+                            }}
+                        >
+                            <option value="">Select an event…</option>
+                            {events.map((ev) => (
+                                <option key={ev.id} value={ev.id}>{ev.title}</option>
+                            ))}
+                        </select>
+                    )}
+                </div>
+
+                {/* Service type */}
+                <div style={{ marginBottom: 14 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-1)', marginBottom: 6 }}>
+                        Service type{' '}
+                        <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>(optional)</span>
+                    </div>
+                    <input
+                        value={serviceType}
+                        onChange={(e) => setServiceType(e.target.value)}
+                        placeholder="e.g. Photography, Catering, AV"
+                        style={{
+                            width: '100%', boxSizing: 'border-box',
+                            padding: '9px 12px', borderRadius: 8,
+                            border: '1px solid var(--border)',
+                            fontFamily: 'inherit', fontSize: 14, color: 'var(--text-1)',
+                        }}
+                        onFocus={(e) => { e.target.style.borderColor = 'var(--mp-blue)'; }}
+                        onBlur={(e) => { e.target.style.borderColor = 'var(--border)'; }}
+                    />
+                </div>
+
+                {/* Message */}
+                <div style={{ marginBottom: 20 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-1)', marginBottom: 6 }}>
+                        Message
+                    </div>
+                    <textarea
+                        value={message}
+                        onChange={(e) => setMessage(e.target.value)}
+                        placeholder="Describe what you need, when the event is, and any specific requirements…"
+                        rows={4}
+                        style={{
+                            width: '100%', boxSizing: 'border-box',
+                            padding: '10px 12px', borderRadius: 8,
+                            border: '1px solid var(--border)',
+                            fontFamily: 'inherit', fontSize: 14, color: 'var(--text-1)',
+                            resize: 'vertical', outline: 'none',
+                        }}
+                        onFocus={(e) => { e.target.style.borderColor = 'var(--mp-blue)'; }}
+                        onBlur={(e) => { e.target.style.borderColor = 'var(--border)'; }}
+                    />
+                </div>
+
+                {error && (
+                    <div role="alert" style={{
+                        marginBottom: 16, padding: '10px 12px',
+                        background: 'var(--error-bg, #FBE9E9)', color: 'var(--error)',
+                        borderRadius: 8, fontSize: 13,
+                    }}>
+                        {error}
+                    </div>
+                )}
+
+                <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+                    <Button variant="ghost" size="md" onClick={onDismiss} disabled={isLoading}>
+                        Cancel
+                    </Button>
+                    <Button
+                        variant="primary" size="md"
+                        onClick={handleSubmit}
+                        disabled={!canSubmit || isLoading}
+                        icon={<Icons.send size={15} />}
+                    >
+                        {isLoading ? 'Sending…' : 'Send inquiry'}
+                    </Button>
+                </div>
+            </div>
         </div>
     );
 }
