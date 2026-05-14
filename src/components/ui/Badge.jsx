@@ -32,7 +32,6 @@ const STATUS_STYLE = {
   DRAFT:            { bg: '#F5F7FA', fg: '#4A5468', label: 'Draft' },
   PENDING_APPROVAL: { bg: '#FEF4E2', fg: '#B8770A', label: 'Pending approval' },
   PUBLISHED:        { bg: '#E6F4EA', fg: '#0F9D58', label: 'Published' },
-  REJECTED:         { bg: '#FBE9E9', fg: '#D62828', label: 'Rejected' },
   CANCELLED:        { bg: '#FBE9E9', fg: '#D62828', label: 'Cancelled' },
   CONFIRMED:        { bg: '#E6F4EA', fg: '#0F9D58', label: 'Confirmed' },
   VALID:            { bg: '#E6F4EA', fg: '#0F9D58', label: 'Valid' },
