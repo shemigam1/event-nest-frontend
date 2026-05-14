@@ -33,6 +33,15 @@ export const bookingsApi = baseApi.injectEndpoints({
             providesTags: ['Booking'],
             transformResponse: (response) => response.data ?? response,
         }),
+
+        verifyPayment: builder.mutation({
+            query: (transactionReference) => ({
+                url: `/payments/monnify/verify/${transactionReference}`,
+                method: 'POST',
+            }),
+            invalidatesTags: ['Booking', 'Ticket'],
+            transformResponse: (response) => response?.data ?? response,
+        }),
     }),
 });
 
@@ -40,4 +49,5 @@ export const {
     useCreateBookingMutation,
     useCancelBookingMutation,
     useGetMyBookingsQuery,
+    useVerifyPaymentMutation,
 } = bookingsApi;

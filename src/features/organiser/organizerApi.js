@@ -23,6 +23,14 @@ export const organizerApi = baseApi.injectEndpoints({
             ],
             transformResponse: (response) => response?.data ?? response ?? [],
         }),
+
+        getEventAnalytics: builder.query({
+            query: (eventId) => `/organizer/events/${eventId}/analytics`,
+            providesTags: (result, error, eventId) => [
+                { type: 'Analytics', id: eventId },
+            ],
+            transformResponse: (response) => response?.data ?? response,
+        }),
     }),
 });
 
@@ -30,4 +38,5 @@ export const {
     useGetOrganizerEventsQuery,
     useGetOrganizerEventByIdQuery,
     useGetEventBookingsQuery,
+    useGetEventAnalyticsQuery,
 } = organizerApi;
