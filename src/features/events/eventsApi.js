@@ -36,6 +36,25 @@ export const eventsApi = baseApi.injectEndpoints({
             query: (id) => ({ url: `/events/${id}`, method: 'DELETE' }),
             invalidatesTags: ['Event'],
         }),
+
+        getEventConfig: builder.query({
+            query: (eventId) => `/events/${eventId}/config`,
+            providesTags: (result, error, eventId) => [{ type: 'EventEdit', id: `config-${eventId}` }],
+            transformResponse: (response) => response?.data ?? response,
+        }),
+
+        updateEventConfig: builder.mutation({
+            query: ({ eventId, ...body }) => ({
+                url: `/events/${eventId}/config`,
+                method: 'PATCH',
+                body,
+            }),
+            invalidatesTags: (result, error, { eventId }) => [
+                { type: 'EventEdit', id: `config-${eventId}` },
+                { type: 'Event', id: eventId },
+            ],
+            transformResponse: (response) => response?.data ?? response,
+        }),
     }),
 });
 
@@ -47,4 +66,6 @@ export const {
     useUpdateEventMutation,
     useSubmitEventMutation,
     useDeleteEventMutation,
+    useGetEventConfigQuery,
+    useUpdateEventConfigMutation,
 } = eventsApi;
