@@ -45,6 +45,8 @@ export const Icons = {
   wallet:    p => <Icon {...p} d={<><rect x="3" y="6" width="18" height="14" rx="2" /><path d="M3 10h18M16 14h2" /></>} />,
   chevronD:  p => <Icon {...p} d="M6 9l6 6 6-6" />,
   chevronR:  p => <Icon {...p} d="M9 6l6 6-6 6" />,
+  message:   p => <Icon {...p} d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />,
+  send:      p => <Icon {...p} d="M22 2L11 13M22 2l-7 20-4-9-9-4z" />,
 };
 
 export default Icon;

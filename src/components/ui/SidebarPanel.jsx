@@ -192,6 +192,9 @@ export default function SidebarPanel({ open, onClose }) {
                             <SidebarItem icon={<Icons.ticket size={18} />} onClick={() => go('/tickets')}>
                                 My tickets
                             </SidebarItem>
+                            <SidebarItem icon={<Icons.message size={18} />} onClick={() => go('/messages')}>
+                                Messages
+                            </SidebarItem>
                             <SidebarItem icon={<Icons.scan size={18} />} onClick={() => go('/checkin')}>
                                 Check-in station
                             </SidebarItem>

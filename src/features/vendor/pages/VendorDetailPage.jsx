@@ -1,6 +1,9 @@
 import { useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
+import { useSelector } from 'react-redux';
 import { useGetVendorProfileQuery } from '@/features/organiser/vendorsApi';
+import { useCreateOrGetConversationMutation } from '@/features/messages/messagesApi';
+import { selectIsAuthenticated } from '@/features/auth/authSlice';
 import TopNav from '@/components/ui/TopNav';
 import Button from '@/components/ui/Button';
 import { Icons } from '@/components/ui/Icon';
@@ -68,6 +71,25 @@ export default function VendorDetailPage() {
     const { id } = useParams();
     const navigate = useNavigate();
     const [tab, setTab] = useState('overview');
+
+    const isAuthenticated = useSelector(selectIsAuthenticated);
+    const [createConv, { isLoading: isStartingChat }] = useCreateOrGetConversationMutation();
+
+    const handleContactVendor = async (vendorName, vendorUserId) => {
+        if (!isAuthenticated) {
+            navigate('/login', { state: { from: `/vendors/${id}` } });
+            return;
+        }
+        try {
+            const conv = await createConv({
+                participantIds: [String(vendorUserId)],
+                title: vendorName,
+            }).unwrap();
+            navigate(`/messages?c=${conv.id}`);
+        } catch {
+            navigate('/messages');
+        }
+    };
 
     const profile = useGetVendorProfileQuery(id);
 
@@ -184,18 +206,17 @@ export default function VendorDetailPage() {
                         )}
                     </div>
 
-                    {v.email && (
-                        <div style={{ flexShrink: 0 }}>
-                            <Button
-                                variant="primary"
-                                size="md"
-                                onClick={() => window.open(`mailto:${v.email}`, '_blank')}
-                                iconRight={<Icons.arrowR size={14} />}
-                            >
-                                Contact vendor
-                            </Button>
-                        </div>
-                    )}
+                    <div style={{ flexShrink: 0 }}>
+                        <Button
+                            variant="primary"
+                            size="md"
+                            onClick={() => handleContactVendor(v.vendorName, v.userId ?? id)}
+                            disabled={isStartingChat}
+                            icon={<Icons.message size={15} />}
+                        >
+                            {isStartingChat ? 'Opening chat…' : 'Message vendor'}
+                        </Button>
+                    </div>
                 </div>
 
                 {/* Stats row */}

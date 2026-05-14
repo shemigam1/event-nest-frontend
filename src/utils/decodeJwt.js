@@ -22,8 +22,11 @@ export function userFromToken(token) {
     if (!claims) return null;
     if (claims.exp && Date.now() >= claims.exp * 1000) return null;
     const sub = claims.sub ?? claims.userId ?? claims.id ?? claims.user_id ?? null;
+    // Extract UUID separately — Spring Boot may put it as a custom claim alongside sub
+    const id = claims.userId ?? claims.id ?? claims.user_id ?? null;
     return {
         sub,
+        id,
         email: claims.email ?? sub ?? null,
         roles: Array.isArray(claims.roles) ? claims.roles : [],
     };

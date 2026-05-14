@@ -253,6 +253,9 @@ export default function TopNav({ variant = 'light', showBrowse = true }) {
                                     <MobileMenuItem onDark={onDark} onClick={() => go('/tickets')}>
                                         My tickets
                                     </MobileMenuItem>
+                                    <MobileMenuItem onDark={onDark} onClick={() => go('/messages')}>
+                                        Messages
+                                    </MobileMenuItem>
                                     <MobileMenuItem onDark={onDark} onClick={() => go('/checkin')}>
                                         Check-in station
                                     </MobileMenuItem>

@@ -30,6 +30,7 @@ import VendorMarketplacePage from '../features/vendor/pages/VendorMarketplacePag
 import VendorDetailPage from '../features/vendor/pages/VendorDetailPage';
 import VendorProfileSetupPage from '../features/vendor/pages/VendorProfileSetupPage';
 import VendorVerificationPage from '../features/admin/pages/VendorVerificationPage';
+import MessagesPage from '../features/messages/pages/MessagesPage';
 import PrivateRoute from './PrivateRoute';
 import AdminRoute from './AdminRoute';
 import ErrorPage from '../components/ui/ErrorPage';
@@ -69,6 +70,7 @@ const router = createBrowserRouter([
                     { path: '/vendor/applications',  element: <MyApplicationsPage /> },
                     { path: '/vendor/profile',       element: <VendorProfileSetupPage /> },
                     { path: '/vendor/apply/:eventId', element: <VendorApplyPage /> },
+                    { path: '/messages',              element: <MessagesPage /> },
                 ],
             },
 
