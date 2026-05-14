@@ -108,12 +108,8 @@ export default function BookingPage() {
         setErrorMessage('');
         try {
             const result = await createBooking({ eventId, tierId, quantity: qty }).unwrap();
-            if (result.paymentUrl) {
-                window.location.href = result.paymentUrl;
-            } else {
-                setBooking(result);
-                setStep(3);
-            }
+            setBooking(result);
+            setStep(3);
         } catch (err) {
             setErrorMessage(err?.data?.message || 'Could not complete the booking. Please try again.');
         }
@@ -485,11 +481,9 @@ function ReviewStep({ event, tier, qty, total, submitting, errorMessage, onBack,
                 </div>
             </div>
 
-            {Number(tier.price) > 0 && (
-                <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 14, textAlign: 'center' }}>
-                    You will be redirected to our secure payment page to complete your purchase.
-                </div>
-            )}
+            <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 14, textAlign: 'center' }}>
+                Payment is simulated for this prototype.
+            </div>
 
             {errorMessage && (
                 <div role="alert" style={{

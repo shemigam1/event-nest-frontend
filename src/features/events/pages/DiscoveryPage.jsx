@@ -123,10 +123,7 @@ function applyFilter(event, filter, query) {
 
     if (filter === 'sellingfast') {
         if (!event.tiers?.length) return true; // no tier data — don't exclude
-        const sold  = event.tiers.reduce(
-            (s, t) => s + (t.sold ?? ((t.totalCapacity ?? 0) - (t.availableCapacity ?? 0))),
-            0,
-        );
+        const sold  = event.tiers.reduce((s, t) => s + (t.sold ?? 0), 0);
         const total = event.tiers.reduce((s, t) => s + (t.total ?? t.totalCapacity ?? 0), 0);
         return total > 0 && sold / total >= 0.6;
     }
