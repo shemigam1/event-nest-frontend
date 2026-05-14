@@ -308,7 +308,7 @@ function OverviewTab({ vendor: v }) {
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 280px', gap: 20, alignItems: 'start' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 {v.profileDescription ? (
-                    <Section title="About">
+                    <Section title="About" padBody>
                         <p style={{ margin: 0, fontSize: 14, color: 'var(--text-2)', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
                             {v.profileDescription}
                         </p>
@@ -539,7 +539,7 @@ function ReviewRow({ item, isLast }) {
 }
 
 /* ─── Utility components ──────────────────────────── */
-function Section({ title, children }) {
+function Section({ title, children, padBody = false }) {
     return (
         <div style={{
             background: 'white', border: '1px solid var(--border)',
@@ -551,7 +551,7 @@ function Section({ title, children }) {
             }}>
                 {title}
             </div>
-            <div>
+            <div style={padBody ? { padding: '16px 20px' } : {}}>
                 {children}
             </div>
         </div>

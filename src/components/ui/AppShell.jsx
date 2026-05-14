@@ -167,47 +167,15 @@ function Sidebar() {
                 overflow: 'hidden',
             }}
         >
-            {/* Header: brand + collapse toggle */}
+            {/* Header: collapse toggle only */}
             <div style={{
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: collapsed ? 'center' : 'space-between',
-                gap: 8,
-                padding: collapsed ? '14px 0' : '14px 14px',
+                justifyContent: 'flex-end',
+                padding: '14px 12px',
                 borderBottom: '1px solid var(--border)',
                 minHeight: 60,
             }}>
-                {!collapsed && (
-                    <button
-                        onClick={() => go('/')}
-                        aria-label="EventNest"
-                        style={{
-                            display: 'inline-flex', alignItems: 'center', gap: 10,
-                            background: 'transparent', border: 0, padding: 0,
-                            cursor: 'pointer', fontFamily: 'inherit',
-                            minWidth: 0,
-                        }}
-                    >
-                        <span style={{
-                            width: 28, height: 28, borderRadius: 8,
-                            background: 'var(--mp-blue)', color: 'white',
-                            display: 'grid', placeItems: 'center',
-                            fontSize: 14, fontWeight: 700,
-                            flexShrink: 0,
-                        }}>
-                            N
-                        </span>
-                        <span style={{
-                            fontSize: 16, fontWeight: 700, color: 'var(--text-1)',
-                            letterSpacing: '-0.02em',
-                            whiteSpace: 'nowrap',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                        }}>
-                            EventNest
-                        </span>
-                    </button>
-                )}
                 <button
                     onClick={toggle}
                     aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
@@ -222,8 +190,6 @@ function Sidebar() {
                     onMouseOver={(e) => { e.currentTarget.style.background = 'var(--surface-subtle)'; }}
                     onMouseOut={(e) => { e.currentTarget.style.background = 'transparent'; }}
                 >
-                    {/* The icon's chevron points "out" — toward where the
-                        panel will move when toggled. */}
                     {collapsed ? <Icons.chevronR size={16} /> : <Icons.chevronL size={16} />}
                 </button>
             </div>

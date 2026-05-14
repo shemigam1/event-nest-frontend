@@ -3,6 +3,7 @@ import {
     useGetEventVendorApplicationsQuery,
     useAcceptVendorApplicationMutation,
     useRejectVendorApplicationMutation,
+    useRateVendorMutation,
     useGetVendorsQuery,
 } from '../vendorsApi';
 import Button from '@/components/ui/Button';
@@ -84,10 +85,13 @@ function ApplicationsPane({ eventId }) {
     const apps = useGetEventVendorApplicationsQuery({ eventId });
     const [accept, acceptState] = useAcceptVendorApplicationMutation();
     const [reject, rejectState] = useRejectVendorApplicationMutation();
+    const [rate, rateState]     = useRateVendorMutation();
 
-    const [filter, setFilter]       = useState('all');
-    const [actionError, setError]   = useState('');
+    const [filter, setFilter]         = useState('all');
+    const [actionError, setError]     = useState('');
     const [pendingReject, setPendingReject] = useState(null);
+    const [pendingRate,   setPendingRate]   = useState(null);
+    const [rateError,     setRateError]    = useState('');
 
     const list    = useMemo(() => apps.data || [], [apps.data]);
     const counts  = useMemo(() => {
@@ -111,6 +115,14 @@ function ApplicationsPane({ eventId }) {
             await reject({ eventId, applicationId: pendingReject.id }).unwrap();
             setPendingReject(null);
         } catch (err) { setError(err?.data?.message || 'Could not reject application.'); }
+    }
+    async function handleRate({ score, comment }) {
+        if (!pendingRate) return;
+        setRateError('');
+        try {
+            await rate({ eventId, applicationId: pendingRate.id, score, comment }).unwrap();
+            setPendingRate(null);
+        } catch (err) { setRateError(err?.data?.message || 'Could not submit rating.'); }
     }
 
     if (apps.isLoading) return <Skeleton />;
@@ -174,6 +186,7 @@ function ApplicationsPane({ eventId }) {
                                 isLast={i === filtered.length - 1}
                                 onAccept={() => handleAccept(a)}
                                 onReject={() => setPendingReject(a)}
+                                onRate={() => setPendingRate(a)}
                                 busy={
                                     (acceptState.isLoading && acceptState.originalArgs?.applicationId === a.id)
                                     || (rejectState.isLoading && pendingReject?.id === a.id)
@@ -199,6 +212,15 @@ function ApplicationsPane({ eventId }) {
                     loading={rejectState.isLoading}
                     onConfirm={handleReject}
                     onDismiss={() => setPendingReject(null)}
+                />
+            )}
+            {pendingRate && (
+                <RateModal
+                    application={pendingRate}
+                    loading={rateState.isLoading}
+                    error={rateError}
+                    onSubmit={handleRate}
+                    onDismiss={() => { setPendingRate(null); setRateError(''); }}
                 />
             )}
         </div>
@@ -421,9 +443,14 @@ function Tile({ label, value, icon, accent }) {
     );
 }
 
-function ApplicationRow({ application, isLast, onAccept, onReject, busy }) {
+function ApplicationRow({ application, isLast, onAccept, onReject, onRate, busy }) {
     const style = STATUS_STYLE[application.status] || STATUS_STYLE.PENDING;
-    const isPending = application.status === 'PENDING';
+    const isPending  = application.status === 'PENDING';
+    const isAccepted = application.status === 'ACCEPTED';
+    const eventEnded = application.eventEndTime
+        ? new Date(application.eventEndTime) < new Date()
+        : false;
+    const canRate = isAccepted && eventEnded;
     const amount = ngn(application.proposedAmount);
     return (
         <div style={{
@@ -475,7 +502,7 @@ function ApplicationRow({ application, isLast, onAccept, onReject, busy }) {
                     <span>· Applied {fmtDate(application.createdAt)}</span>
                 </div>
             </div>
-            <div style={{ display: 'flex', gap: 8, paddingTop: 4 }}>
+            <div style={{ display: 'flex', gap: 8, paddingTop: 4, flexWrap: 'wrap' }}>
                 {isPending ? (
                     <>
                         <Button size="sm" variant="primary" icon={<Icons.check size={13} />} onClick={onAccept} disabled={busy}>
@@ -485,6 +512,10 @@ function ApplicationRow({ application, isLast, onAccept, onReject, busy }) {
                             Reject
                         </Button>
                     </>
+                ) : canRate ? (
+                    <Button size="sm" variant="secondary" icon={<StarIcon size={13} />} onClick={onRate}>
+                        Rate vendor
+                    </Button>
                 ) : (
                     <span style={{ fontSize: 12, color: 'var(--text-3)' }}>—</span>
                 )}
@@ -585,6 +616,115 @@ function ConfirmDialog({ title, body, confirmLabel, loading, onConfirm, onDismis
                     <Button variant="ghost" size="md" onClick={onDismiss} disabled={loading}>Cancel</Button>
                     <Button variant="destructive" size="md" onClick={onConfirm} disabled={loading}>
                         {loading ? 'Working…' : confirmLabel}
+                    </Button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function StarIcon({ size = 16 }) {
+    return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" style={{ flexShrink: 0 }}>
+            <path d="M12 2l2.9 6.3L22 9.3l-5 4.9 1.2 6.8L12 17.8l-6.2 3.2L7 14.2 2 9.3l7.1-1L12 2z" />
+        </svg>
+    );
+}
+
+function RateModal({ application, loading, error, onSubmit, onDismiss }) {
+    const [score, setScore] = useState(0);
+    const [comment, setComment] = useState('');
+
+    return (
+        <div
+            role="dialog"
+            aria-label="Rate vendor"
+            onClick={onDismiss}
+            style={{
+                position: 'fixed', inset: 0, zIndex: 1000,
+                background: 'rgba(2,16,45,0.55)',
+                display: 'grid', placeItems: 'center', padding: 20,
+            }}
+        >
+            <div onClick={(e) => e.stopPropagation()} style={{
+                width: '100%', maxWidth: 440, background: 'white',
+                borderRadius: 16, boxShadow: 'var(--shadow-modal)', padding: 28,
+            }}>
+                <h2 className="mp-h3" style={{ margin: 0, color: 'var(--text-1)' }}>
+                    Rate {application.applicantName}
+                </h2>
+                <p className="body-sm" style={{ margin: '6px 0 20px', color: 'var(--text-2)' }}>
+                    How did the {application.serviceType} service go?
+                </p>
+
+                {/* Star picker */}
+                <div style={{ display: 'flex', gap: 6, marginBottom: 20 }}>
+                    {[1, 2, 3, 4, 5].map((n) => (
+                        <button
+                            key={n}
+                            type="button"
+                            onClick={() => setScore(n)}
+                            aria-label={`${n} star${n !== 1 ? 's' : ''}`}
+                            style={{
+                                width: 44, height: 44, borderRadius: 10,
+                                border: `2px solid ${score >= n ? '#F59E0B' : 'var(--border)'}`,
+                                background: score >= n ? '#FFFBEB' : 'white',
+                                color: score >= n ? '#F59E0B' : 'var(--text-3)',
+                                fontSize: 22, cursor: 'pointer',
+                                display: 'grid', placeItems: 'center',
+                                transition: 'border-color 0.1s, background 0.1s, color 0.1s',
+                            }}
+                        >
+                            ★
+                        </button>
+                    ))}
+                    {score > 0 && (
+                        <span style={{
+                            alignSelf: 'center', marginLeft: 8,
+                            fontSize: 13, color: 'var(--text-2)', fontWeight: 500,
+                        }}>
+                            {['', 'Poor', 'Fair', 'Good', 'Great', 'Excellent'][score]}
+                        </span>
+                    )}
+                </div>
+
+                {/* Comment */}
+                <textarea
+                    value={comment}
+                    onChange={(e) => setComment(e.target.value)}
+                    placeholder="Leave a comment (optional)"
+                    rows={3}
+                    style={{
+                        width: '100%', boxSizing: 'border-box',
+                        padding: '10px 12px', borderRadius: 8,
+                        border: '1px solid var(--border)',
+                        fontFamily: 'inherit', fontSize: 14, color: 'var(--text-1)',
+                        resize: 'vertical', outline: 'none',
+                    }}
+                    onFocus={(e) => { e.target.style.borderColor = 'var(--mp-blue)'; }}
+                    onBlur={(e) => { e.target.style.borderColor = 'var(--border)'; }}
+                />
+
+                {error && (
+                    <div role="alert" style={{
+                        marginTop: 12, padding: '10px 12px',
+                        background: 'var(--error-bg, #FBE9E9)', color: 'var(--error)',
+                        borderRadius: 8, fontSize: 13,
+                    }}>
+                        {error}
+                    </div>
+                )}
+
+                <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 20 }}>
+                    <Button variant="ghost" size="md" onClick={onDismiss} disabled={loading}>
+                        Cancel
+                    </Button>
+                    <Button
+                        variant="primary" size="md"
+                        onClick={() => onSubmit({ score, comment: comment.trim() || undefined })}
+                        disabled={score === 0 || loading}
+                    >
+                        {loading ? 'Submitting…' : 'Submit rating'}
                     </Button>
                 </div>
             </div>
