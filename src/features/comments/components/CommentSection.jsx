@@ -34,7 +34,10 @@ export default function CommentSection({
     const [openReplies, setOpenReplies] = useState(() => new Set());
     const [composeError, setComposeError] = useState('');
 
-    const list = useGetEventCommentsQuery({ eventId, page, size: PAGE_SIZE });
+    const list = useGetEventCommentsQuery(
+        { eventId, page, size: PAGE_SIZE },
+        { skip: !isAuthenticated },
+    );
     const [createComment, createState] = useCreateCommentMutation();
 
     // Single now anchor per render pass so relative timestamps line up.

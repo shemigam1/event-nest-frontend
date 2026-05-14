@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from "react-router";
 import { useDispatch } from "react-redux";
 import { useLoginMutation } from "../authApi";
 import { setCredentials } from "../authSlice";
+import { baseApi } from "@/services/baseApi";
 import { userFromToken } from "@/utils/decodeJwt";
 import AuthLayout from "@/components/ui/AuthLayout";
 import Input from "@/components/ui/Input";
@@ -29,6 +30,7 @@ export default function LoginPage() {
         if (!isFormValid) return;
         try {
             const data = await login(formData).unwrap();
+            dispatch(baseApi.util.resetApiState());
             dispatch(setCredentials(data));
             const tokenUser = userFromToken(data.accessToken);
             const isAdmin   = tokenUser?.roles?.includes('ROLE_ADMIN') ?? false;
