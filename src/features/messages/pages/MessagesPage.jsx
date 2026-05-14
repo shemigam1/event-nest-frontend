@@ -4,7 +4,7 @@ import { useSearchParams } from 'react-router';
 import TopNav from '@/components/ui/TopNav';
 import { Icons } from '@/components/ui/Icon';
 import { selectCurrentUserId, selectCurrentUser } from '@/features/auth/authSlice';
-import { useGetConversationsQuery, useGetConversationMessagesQuery, messagesApi } from '../messagesApi';
+import { useGetConversationsQuery, useGetConversationMessagesQuery, useMarkConversationReadMutation, messagesApi } from '../messagesApi';
 import { stompConnect, stompDisconnect, stompSubscribe, stompSend } from '@/services/stompService';
 
 const TEMP_PREFIX = '__temp__';
@@ -23,6 +23,9 @@ export default function MessagesPage() {
     const [connected, setConnected] = useState(false);
     const [connError, setConnError] = useState('');
     const [sendError, setSendError] = useState('');
+    // { [conversationId]: number } — seeded from backend, updated optimistically via STOMP
+    const [unreadCounts, setUnreadCounts] = useState({});
+    const [markConversationRead] = useMarkConversationReadMutation();
     const bottomRef = useRef(null);
     const textareaRef = useRef(null);
 
@@ -54,6 +57,19 @@ export default function MessagesPage() {
     }, [myId, currentUser, myServerId]);
 
     const { data: conversations = [], isLoading: loadingConvs } = useGetConversationsQuery();
+
+    // Seed unread counts from backend when conversations first load.
+    useEffect(() => {
+        if (!conversations.length) return;
+        setUnreadCounts(prev => {
+            const next = { ...prev };
+            for (const conv of conversations) {
+                if (conv.id in next) continue; // already tracking — don't overwrite live counts
+                next[conv.id] = conv.unreadCount ?? 0;
+            }
+            return next;
+        });
+    }, [conversations]);
 
     // Derive our server-assigned sender ID from conversation participants.
     // Each participant has { email, userId } — we match by email (the JWT sub).
@@ -104,6 +120,14 @@ export default function MessagesPage() {
         };
     }, []);
 
+    // Mark conversation as read when history loads (covers deep-link / initial ?c= param)
+    useEffect(() => {
+        if (!selectedId || !history) return;
+        setUnreadCounts(prev => ({ ...prev, [selectedId]: 0 }));
+        markConversationRead(selectedId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectedId, history]);
+
     // Load history into local state when REST response arrives
     useEffect(() => {
         if (!history) return;
@@ -134,6 +158,23 @@ export default function MessagesPage() {
         return unsub;
     }, [selectedId]);
 
+    // Subscribe to all other conversations to track unread counts
+    useEffect(() => {
+        const unsubs = conversations
+            .filter(conv => conv.id !== selectedId)
+            .map(conv =>
+                stompSubscribe(`/topic/conversation.${conv.id}`, (msg) => {
+                    // Only count messages from others, not our own echoes
+                    if (isMyMessage(msg.senderId)) return;
+                    setUnreadCounts(prev => ({
+                        ...prev,
+                        [conv.id]: (prev[conv.id] ?? 0) + 1,
+                    }));
+                })
+            );
+        return () => unsubs.forEach(u => u?.());
+    }, [conversations, selectedId, isMyMessage]);
+
     // Scroll to newest message
     useEffect(() => {
         bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -145,7 +186,10 @@ export default function MessagesPage() {
         setDraft('');
         setSendError('');
         setMobileView('thread');
-    }, []);
+        // Clear local unread count immediately; tell backend (fire-and-forget)
+        setUnreadCounts(prev => ({ ...prev, [id]: 0 }));
+        markConversationRead(id);
+    }, [markConversationRead]);
 
     const handleBack = () => {
         setMobileView('list');
@@ -243,6 +287,7 @@ export default function MessagesPage() {
                                     conv={conv}
                                     displayName={convDisplayName(conv)}
                                     selected={selectedId === conv.id}
+                                    unreadCount={unreadCounts[conv.id] ?? 0}
                                     onSelect={() => handleSelect(conv.id)}
                                 />
                             ))
@@ -460,7 +505,8 @@ function EmptyThread({ connError }) {
     );
 }
 
-function ConvItem({ conv, displayName, selected, onSelect }) {
+function ConvItem({ conv, displayName, selected, unreadCount, onSelect }) {
+    const hasUnread = unreadCount > 0;
     return (
         <button
             type="button"
@@ -489,13 +535,29 @@ function ConvItem({ conv, displayName, selected, onSelect }) {
             }}>
                 {(displayName ?? 'D')[0].toUpperCase()}
             </span>
-            <div style={{
-                flex: 1, minWidth: 0,
-                fontSize: 14, fontWeight: 600,
-                color: 'var(--text-1)',
-                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-            }}>
-                {displayName}
+            <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{
+                    flex: 1, minWidth: 0,
+                    fontSize: 14, fontWeight: hasUnread ? 700 : 600,
+                    color: 'var(--text-1)',
+                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                }}>
+                    {displayName}
+                </span>
+                {hasUnread && (
+                    <span style={{
+                        minWidth: 18, height: 18,
+                        padding: '0 5px',
+                        borderRadius: 99,
+                        background: 'var(--mp-blue)',
+                        color: 'white',
+                        fontSize: 11, fontWeight: 700,
+                        display: 'grid', placeItems: 'center',
+                        flexShrink: 0,
+                    }}>
+                        {unreadCount > 99 ? '99+' : unreadCount}
+                    </span>
+                )}
             </div>
         </button>
     );

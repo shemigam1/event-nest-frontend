@@ -29,6 +29,14 @@ export const messagesApi = baseApi.injectEndpoints({
             transformResponse: (res) => res.data ?? res,
             invalidatesTags: ['Conversation'],
         }),
+
+        markConversationRead: builder.mutation({
+            query: (conversationId) => ({
+                url: `/chat/conversations/${conversationId}/read`,
+                method: 'POST',
+            }),
+            transformResponse: (res) => res?.data ?? res,
+        }),
     }),
 });
 
@@ -36,4 +44,5 @@ export const {
     useGetConversationsQuery,
     useGetConversationMessagesQuery,
     useCreateOrGetConversationMutation,
+    useMarkConversationReadMutation,
 } = messagesApi;

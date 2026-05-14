@@ -20,10 +20,20 @@ const ACCEPTED = ['image/jpeg', 'image/png'];
  *
  * Validates client-side (type + size) so the user gets immediate feedback;
  * the backend re-validates magic bytes on upload.
+ *
+ * Props:
+ *   currentUrl    — canonical S3 URL (stored in DB). Used as the key, not
+ *                   for display — pass currentPreviewUrl for the displayable URL.
+ *   currentPreviewUrl — presigned GET URL for displaying an existing cover.
+ *                   When the backend event endpoint returns a previewUrl
+ *                   alongside coverImageUrl, pass it here so the image
+ *                   renders without requiring a public bucket policy.
+ *                   Falls back to currentUrl when not provided.
  */
 export default function CoverImageField({
     eventId,
     currentUrl,
+    currentPreviewUrl,
     disabled = false,
     onPickFile,   // deferred mode — called with the validated File
 }) {
@@ -31,7 +41,9 @@ export default function CoverImageField({
     const [presignCover] = usePresignCoverImageMutation();
     const [uploading, setUploading] = useState(false);
     const [localError, setLocalError] = useState('');
-    const [previewUrl, setPreviewUrl] = useState(currentUrl ?? null);
+    const [imgError, setImgError] = useState(false);
+    // Use presigned GET URL for display when available; fall back to plain S3 URL.
+    const [previewUrl, setPreviewUrl] = useState(currentPreviewUrl ?? currentUrl ?? null);
     const isDeferred = typeof onPickFile === 'function';
 
     async function handleFile(file) {
@@ -49,6 +61,7 @@ export default function CoverImageField({
         // Optimistic preview from a local object URL so the user sees the
         // change before the round-trip finishes.
         const localUrl = URL.createObjectURL(file);
+        setImgError(false);
         setPreviewUrl(localUrl);
 
         // Deferred mode — hand the file back; no network call here.
@@ -59,13 +72,16 @@ export default function CoverImageField({
 
         setUploading(true);
         try {
-            // 1. Get presigned upload URL; backend saves publicUrl on the event immediately.
-            const { uploadUrl, publicUrl } = await presignCover({
+            // 1. Get presigned URLs from the backend.
+            //    uploadUrl  — presigned PUT for S3 (credentials embedded).
+            //    publicUrl  — canonical S3 URL saved on the event record.
+            //    previewUrl — presigned GET URL (short TTL) for browser display.
+            const { uploadUrl, publicUrl, previewUrl } = await presignCover({
                 eventId,
                 contentType: file.type,
             }).unwrap();
 
-            // 2. PUT raw bytes directly to S3 (or local-dev endpoint).
+            // 2. PUT raw bytes directly to S3.
             //    No auth header — the signed URL carries all credentials.
             const res = await fetch(uploadUrl, {
                 method: 'PUT',
@@ -75,7 +91,9 @@ export default function CoverImageField({
             if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
 
             URL.revokeObjectURL(localUrl);
-            setPreviewUrl(publicUrl);
+            // Prefer the presigned GET URL for preview; fall back to publicUrl
+            // if the backend hasn't been updated to return previewUrl yet.
+            setPreviewUrl(previewUrl ?? publicUrl);
         } catch (err) {
             setPreviewUrl(currentUrl ?? null);
             URL.revokeObjectURL(localUrl);
@@ -122,14 +140,27 @@ export default function CoverImageField({
                         borderRadius: 8, overflow: 'hidden',
                         background: 'var(--surface-subtle)',
                     }}>
-                        <img
-                            src={previewUrl}
-                            alt="Event cover"
-                            style={{
-                                width: '100%', height: '100%', objectFit: 'cover',
-                                display: 'block',
-                            }}
-                        />
+                        {imgError ? (
+                            <div style={{
+                                width: '100%', height: '100%',
+                                display: 'flex', flexDirection: 'column',
+                                alignItems: 'center', justifyContent: 'center',
+                                gap: 6, color: 'var(--text-3)', fontSize: 13,
+                            }}>
+                                <Icons.plus size={20} style={{ opacity: 0.4, transform: 'rotate(45deg)' }} />
+                                <span>Image saved but cannot be previewed</span>
+                            </div>
+                        ) : (
+                            <img
+                                src={previewUrl}
+                                alt="Event cover"
+                                onError={() => setImgError(true)}
+                                style={{
+                                    width: '100%', height: '100%', objectFit: 'cover',
+                                    display: 'block',
+                                }}
+                            />
+                        )}
                     </div>
                     <div style={{
                         display: 'flex', justifyContent: 'space-between', alignItems: 'center',

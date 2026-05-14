@@ -10,21 +10,42 @@ export default function PaymentResultPage() {
     const [params] = useSearchParams();
     const navigate = useNavigate();
     const transactionRef = params.get('transactionReference') ?? '';
+    // Stub gateway sets ?status=SUCCESS|FAILED in the redirect URL.
+    // In dev we trust it directly — no real Monnify webhook fires to update the DB.
+    const stubStatus = import.meta.env.DEV ? params.get('status') : null;
 
     const [verifyPayment] = useVerifyPaymentMutation();
-    const [status, setStatus] = useState('verifying'); // verifying | paid | failed | error
+    const [status, setStatus] = useState('verifying');
     const [pollCount, setPollCount] = useState(0);
     const timerRef = useRef(null);
 
     useEffect(() => {
-        if (!transactionRef) {
-            setStatus('error');
-            return;
+        if (!transactionRef) { setStatus('error'); return; }
+        // Dev stub: skip real polling, just show the spinner briefly then resolve.
+        if (stubStatus === 'SUCCESS' || stubStatus === 'FAILED') {
+            timerRef.current = setTimeout(
+                () => setStatus(stubStatus === 'SUCCESS' ? 'paid' : 'failed'),
+                1500,
+            );
+            return () => clearTimeout(timerRef.current);
         }
         verify();
         return () => clearTimeout(timerRef.current);
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
+
+    // Auto-redirect once payment resolves — replace history so back button
+    // doesn't return here.
+    useEffect(() => {
+        if (status === 'paid') {
+            timerRef.current = setTimeout(() => navigate('/tickets', { replace: true }), 2000);
+            return () => clearTimeout(timerRef.current);
+        }
+        if (status === 'failed') {
+            timerRef.current = setTimeout(() => navigate('/events', { replace: true }), 2000);
+            return () => clearTimeout(timerRef.current);
+        }
+    }, [status, navigate]);
 
     async function verify() {
         try {
