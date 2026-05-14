@@ -1,0 +1,118 @@
+# CI/CD — build the React SPA + Nginx image and roll it out to EC2.
+#
+# Triggered on every push to main (or manually via workflow_dispatch).
+# Does NOT touch the backend container — only events-nest-frontend is
+# restarted, so backend stays up with zero downtime.
+#
+# Required GitHub secrets (same values as the backend repo):
+#   AWS_ACCESS_KEY_ID
+#   AWS_SECRET_ACCESS_KEY
+#   AWS_ACCOUNT_ID
+#   AWS_REGION             — e.g. eu-north-1
+#   EC2_HOST               — Elastic IP of the EC2 box
+#   EC2_USER               — typically `ubuntu`
+#   EC2_SSH_PRIVATE_KEY    — full contents of ~/.ssh/eventsnest-ec2.pem
+
+name: Deploy Frontend to EC2
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+  ECR_REPOSITORY: events-nest-frontend
+  IMAGE_TAG: ${{ github.run_number }}-${{ github.sha }}
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push frontend image
+        env:
+          ECR_REGISTRY: ${{ steps.ecr-login.outputs.registry }}
+        run: |
+          IMAGE_URI=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker build \
+            --platform linux/amd64 \
+            -f Dockerfile.frontend \
+            -t $IMAGE_URI \
+            .
+          docker push $IMAGE_URI
+          docker tag $IMAGE_URI $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          echo "ECR_REGISTRY=$ECR_REGISTRY" >> $GITHUB_ENV
+          echo "Pushed $IMAGE_URI"
+
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+          envs: ECR_REGISTRY,IMAGE_TAG,AWS_REGION,AWS_ACCOUNT_ID
+          script: |
+            set -euo pipefail
+            cd /home/${{ secrets.EC2_USER }}
+
+            aws ecr get-login-password --region "$AWS_REGION" \
+              | docker login --username AWS --password-stdin \
+                "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com"
+
+            export ECR_REGISTRY IMAGE_TAG
+
+            docker compose -f compose.prod.yaml pull frontend
+            docker compose -f compose.prod.yaml up -d --no-deps --force-recreate frontend
+
+            # Wait up to 60s for the container to become healthy
+            for i in $(seq 1 12); do
+              status=$(docker inspect --format '{{.State.Health.Status}}' events-nest-frontend 2>/dev/null || echo "missing")
+              echo "Health check $i/12: $status"
+              [ "$status" = "healthy" ] && break
+              sleep 5
+            done
+
+            if [ "$status" != "healthy" ]; then
+              echo "::error ::Frontend did not become healthy within 60s"
+              docker compose -f compose.prod.yaml logs --tail=50 frontend
+              exit 1
+            fi
+
+            docker image prune -f
+            echo "Frontend deployed successfully"
+
+      - name: Smoke test
+        if: success()
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+        run: |
+          curl -fsS --retry 5 --retry-delay 3 \
+            "http://$EC2_HOST/health"
+
+      - name: Diagnostic dump on failure
+        if: failure()
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+          script: |
+            docker logs events-nest-frontend --tail=100 || true
+            docker inspect events-nest-frontend --format '{{json .State}}' || true
