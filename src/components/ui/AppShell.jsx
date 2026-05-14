@@ -61,6 +61,7 @@ export default function AppShell() {
     // browsing those pages still get the full shell.
     const ALWAYS_NO_SIDEBAR = new Set(['/', '/login', '/register', '/forgot-password', '/reset-password']);
     const p = location.pathname;
+    const isCheckinRoute = p === '/checkin' || p.startsWith('/checkin/');
     const isPublicBrowsingPage =
         p === '/events' ||
         p === '/vendors' ||
@@ -71,6 +72,7 @@ export default function AppShell() {
 
     const isNoSidebarPage =
         ALWAYS_NO_SIDEBAR.has(p) ||
+        isCheckinRoute ||
         (!isAuthenticated && isPublicBrowsingPage);
 
     if (isNoSidebarPage) {

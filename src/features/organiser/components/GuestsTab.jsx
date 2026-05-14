@@ -5,6 +5,7 @@ import {
     useUpdateGuestStatusMutation,
     useRemoveGuestMutation,
 } from '../guestsApi';
+import { useUpdateEventConfigMutation } from '@/features/events/eventsApi';
 import Button from '@/components/ui/Button';
 import { Icons } from '@/components/ui/Icon';
 
@@ -22,7 +23,22 @@ function fmtDate(iso) {
 }
 
 export default function GuestsTab({ eventId }) {
-    const { data: guests = [], isLoading, isError, refetch } = useGetGuestsQuery(eventId);
+    const { data: guests = [], isLoading, isError, error, refetch } = useGetGuestsQuery(eventId);
+    const [updateConfig, configState] = useUpdateEventConfigMutation();
+    const [enableError, setEnableError] = useState('');
+
+    const isGuestListDisabled = isError &&
+        (error?.data?.message ?? '').toLowerCase().includes('guest list is not enabled');
+
+    async function handleEnableGuestList() {
+        setEnableError('');
+        try {
+            await updateConfig({ eventId, guestListEnabled: true }).unwrap();
+            refetch();
+        } catch (err) {
+            setEnableError(err?.data?.message || 'Could not enable guest list.');
+        }
+    }
     const [showForm, setShowForm] = useState(false);
     const [pendingRemove, setPendingRemove] = useState(null);
     const [removeGuest, removeState] = useRemoveGuestMutation();
@@ -52,6 +68,27 @@ export default function GuestsTab({ eventId }) {
     }
 
     if (isLoading) return <Skeleton />;
+    if (isGuestListDisabled) return (
+        <EmptyCard
+            message="Guest list is not enabled"
+            sub="Enable the guest list to invite guests, track RSVPs, and manage attendance for this event."
+            action={
+                <>
+                    {enableError && (
+                        <p style={{ fontSize: 13, color: 'var(--error)', marginBottom: 8 }}>{enableError}</p>
+                    )}
+                    <Button
+                        variant="primary"
+                        size="md"
+                        onClick={handleEnableGuestList}
+                        disabled={configState.isLoading}
+                    >
+                        {configState.isLoading ? 'Enabling…' : 'Enable guest list'}
+                    </Button>
+                </>
+            }
+        />
+    );
     if (isError) return <ErrorCard message="Could not load guests." onRetry={refetch} />;
 
     return (

@@ -6,7 +6,6 @@ import Button from '@/components/ui/Button';
 import TopNav from '@/components/ui/TopNav';
 import Modal from '@/components/ui/Modal';
 import { QRCode } from 'react-qr-code';
-import QrPattern from '@/components/ui/QrPattern';
 import TicketCard from '@/components/ui/TicketCard';
 import { Icons } from '@/components/ui/Icon';
 
@@ -129,16 +128,19 @@ function QrModalContent({ ticket, onClose }) {
                 alignItems: 'center',
                 gap: 16,
             }}>
-                <div style={{ padding: 14, background: 'var(--surface-subtle)', borderRadius: 12 }}>
-                    <QrPattern size={200} seed={ticket.qrCode || ticket.id} />
+                <div style={{ padding: 14, background: 'white', borderRadius: 12, lineHeight: 0 }}>
+                    <QRCode value={ticket.qrCode || ticket.id} size={200} />
                 </div>
-                <div className="mp-num" style={{
-                    fontSize: 12,
-                    color: 'var(--text-3)',
-                    letterSpacing: '0.06em',
-                }}>
-                    {ticket.qrCode || ticket.id}
-                </div>
+                {ticket.shortCode && (
+                    <div className="mp-num" style={{
+                        fontSize: 13,
+                        fontWeight: 600,
+                        color: 'var(--text-2)',
+                        letterSpacing: '0.08em',
+                    }}>
+                        {ticket.shortCode}
+                    </div>
+                )}
             </div>
         </div>
     );
