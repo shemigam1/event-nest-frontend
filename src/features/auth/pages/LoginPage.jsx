@@ -97,7 +97,13 @@ export default function LoginPage() {
                     {isLoading ? 'Signing in…' : 'Sign in'}
                 </Button>
 
-                <div style={{ textAlign: 'center', fontSize: 14, color: 'var(--text-2)', marginTop: 4 }}>
+                <div style={{ textAlign: 'center', fontSize: 13, color: 'var(--text-3)', marginBottom: 12 }}>
+                    <Link to="/forgot-password" style={{ color: 'var(--mp-blue)', textDecoration: 'none', fontWeight: 500 }}>
+                        Forgot password?
+                    </Link>
+                </div>
+
+                <div style={{ textAlign: 'center', fontSize: 14, color: 'var(--text-2)' }}>
                     No account?{' '}
                     <Link to="/register" style={{ color: 'var(--mp-blue)', fontWeight: 600 }}>
                         Register

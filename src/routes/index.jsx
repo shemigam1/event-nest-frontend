@@ -4,6 +4,8 @@ import DiscoveryPage from '../features/events/pages/DiscoveryPage';
 import EventDetailPage from '../features/events/pages/EventDetailPage';
 import LoginPage from '../features/auth/pages/LoginPage';
 import RegisterPage from '../features/auth/pages/RegisterPage';
+import ForgotPasswordPage from '../features/auth/pages/ForgotPasswordPage';
+import ResetPasswordPage from '../features/auth/pages/ResetPasswordPage';
 import BookingPage from '../features/bookings/pages/BookingPage';
 import DashboardPage from '../features/bookings/pages/DashboardPage';
 import TicketsPage from '../features/tickets/pages/TicketsPage';
@@ -42,6 +44,8 @@ const router = createBrowserRouter([
             { path: '/events/:id', element: <EventDetailPage /> },
             { path: '/login',     element: <LoginPage /> },
             { path: '/register',  element: <RegisterPage /> },
+            { path: '/forgot-password', element: <ForgotPasswordPage /> },
+            { path: '/reset-password',  element: <ResetPasswordPage /> },
             { path: '/checkin',        element: <CheckInPage /> },
             { path: '/vendors',        element: <VendorMarketplacePage /> },
             { path: '/vendors/:id',    element: <VendorDetailPage /> },
