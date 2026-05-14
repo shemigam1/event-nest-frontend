@@ -179,9 +179,6 @@ export default function SidebarPanel({ open, onClose }) {
                             <SidebarItem icon={<Icons.list size={18} />} onClick={() => go('/admin/event-edits')}>
                                 Event edit requests
                             </SidebarItem>
-                            <SidebarItem icon={<Icons.shield size={18} />} onClick={() => go('/admin/vendor-verification')}>
-                                Vendor verification
-                            </SidebarItem>
                             <SidebarItem icon={<Icons.mail size={18} />} onClick={() => go('/admin/invite')}>
                                 Invite admin
                             </SidebarItem>
