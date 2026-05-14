@@ -10,11 +10,11 @@ export default function StubPaymentPage() {
     const amount = params.get('amount');
 
     function pay() {
-        navigate(`/payment-result?transactionReference=${encodeURIComponent(ref)}&status=SUCCESS`);
+        navigate(`/payment-result?transactionReference=${encodeURIComponent(ref)}&status=SUCCESS`, { replace: true });
     }
 
     function cancel() {
-        navigate(`/payment-result?transactionReference=${encodeURIComponent(ref)}&status=FAILED`);
+        navigate(`/payment-result?transactionReference=${encodeURIComponent(ref)}&status=FAILED`, { replace: true });
     }
 
     return (
