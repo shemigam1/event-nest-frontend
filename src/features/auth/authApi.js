@@ -35,10 +35,10 @@ export const authApi = baseApi.injectEndpoints({
             transformResponse: (response) => response.data,
         }),
         resetPassword: builder.mutation({
-            query: ({ token, password, confirmPassword }) => ({
+            query: ({ token, password }) => ({
                 url: '/auth/reset-password',
                 method: 'POST',
-                body: { token, password, confirmPassword },
+                body: { token, newPassword: password },
             }),
             transformResponse: (response) => response.data,
         }),
@@ -48,6 +48,28 @@ export const authApi = baseApi.injectEndpoints({
                 params: { token },
             }),
             transformResponse: (response) => response.data,
+        }),
+        getMe: builder.query({
+            query: () => '/me',
+            transformResponse: (response) => response.data ?? response,
+            providesTags: ['Me'],
+        }),
+        updateProfile: builder.mutation({
+            query: (body) => ({
+                url: '/me',
+                method: 'PATCH',
+                body,
+            }),
+            transformResponse: (response) => response.data ?? response,
+            invalidatesTags: ['Me'],
+        }),
+        changePassword: builder.mutation({
+            query: (body) => ({
+                url: '/me/change-password',
+                method: 'POST',
+                body,
+            }),
+            transformResponse: (response) => response.data ?? response,
         }),
     }),
 });
@@ -59,4 +81,7 @@ export const {
     useForgotPasswordMutation,
     useResetPasswordMutation,
     useValidateResetTokenQuery,
+    useGetMeQuery,
+    useUpdateProfileMutation,
+    useChangePasswordMutation,
 } = authApi;

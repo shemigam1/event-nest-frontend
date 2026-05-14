@@ -212,36 +212,8 @@ describe('BookingPage', () => {
     });
 });
 
-describe('BookingPage — payment redirect', () => {
-    let originalLocation;
-
-    beforeEach(() => {
-        originalLocation = window.location;
-        delete window.location;
-        window.location = { href: '' };
-    });
-
-    afterEach(() => {
-        window.location = originalLocation;
-    });
-
-    test('redirects to paymentUrl when booking returns one', async () => {
-        server.use(
-            http.post('http://localhost:3000/events/evt_001/bookings', () =>
-                HttpResponse.json({
-                    success: true,
-                    data: {
-                        id: 'bk_pay_001',
-                        paymentUrl: 'http://localhost:5173/stub-payment?ref=STUB-abc&amount=75000',
-                        paymentStatus: 'PENDING',
-                        quantity: 1,
-                        totalAmount: 75000,
-                        tickets: [],
-                        createdAt: '2026-05-01T00:00:00',
-                    },
-                }, { status: 201 })
-            )
-        );
+describe('BookingPage — booking confirmation', () => {
+    test('shows success step immediately after confirming a paid booking', async () => {
         renderBooking();
         await screen.findByTestId('tier-t1');
         await userEvent.click(screen.getByRole('button', { name: /continue/i }));
@@ -249,12 +221,11 @@ describe('BookingPage — payment redirect', () => {
         await userEvent.click(await screen.findByRole('button', { name: /confirm booking/i }));
 
         await waitFor(() =>
-            expect(window.location.href).toBe('http://localhost:5173/stub-payment?ref=STUB-abc&amount=75000')
+            expect(screen.getByText(/you're booked/i)).toBeInTheDocument()
         );
-        expect(screen.queryByText(/you're booked/i)).not.toBeInTheDocument();
     });
 
-    test('shows success step when booking has no paymentUrl (free tier)', async () => {
+    test('shows success step immediately for a free tier', async () => {
         renderBooking({ id: 'evt_002' });
         await screen.findByTestId('tier-t3');
         await userEvent.click(screen.getByRole('button', { name: /continue/i }));
@@ -264,27 +235,6 @@ describe('BookingPage — payment redirect', () => {
         await waitFor(() =>
             expect(screen.getByText(/you're booked/i)).toBeInTheDocument()
         );
-        expect(window.location.href).toBe('');
-    });
-
-    test('review step shows payment redirect notice for paid tier', async () => {
-        renderBooking();
-        await screen.findByTestId('tier-t1');
-        await userEvent.click(screen.getByRole('button', { name: /continue/i }));
-        await userEvent.click(await screen.findByRole('button', { name: /review/i }));
-        await screen.findByText(/Almost there/i);
-
-        expect(screen.getByText(/redirected to our secure payment page/i)).toBeInTheDocument();
-    });
-
-    test('review step does NOT show payment notice for free tier', async () => {
-        renderBooking({ id: 'evt_002' });
-        await screen.findByTestId('tier-t3');
-        await userEvent.click(screen.getByRole('button', { name: /continue/i }));
-        await userEvent.click(await screen.findByRole('button', { name: /review/i }));
-        await screen.findByText(/Almost there/i);
-
-        expect(screen.queryByText(/redirected to our secure payment page/i)).not.toBeInTheDocument();
     });
 });
 

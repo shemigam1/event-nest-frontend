@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { useSelector } from 'react-redux';
 import { useGetVendorProfileQuery } from '@/features/organiser/vendorsApi';
-import { useCreateOrGetConversationMutation } from '@/features/messages/messagesApi';
+import { useCreateOrGetConversationMutation, useGetConversationsQuery } from '@/features/messages/messagesApi';
 import { selectIsAuthenticated } from '@/features/auth/authSlice';
 import TopNav from '@/components/ui/TopNav';
 import Button from '@/components/ui/Button';
@@ -76,6 +76,7 @@ export default function VendorDetailPage() {
 
     const isAuthenticated = useSelector(selectIsAuthenticated);
     const [createConv, { isLoading: isStartingChat }] = useCreateOrGetConversationMutation();
+    const { data: existingConversations = [] } = useGetConversationsQuery(undefined, { skip: !isAuthenticated });
     const [inquiryOpen, setInquiryOpen] = useState(false);
 
     const handleContactVendor = async (vendorName, vendorUserId) => {
@@ -83,14 +84,40 @@ export default function VendorDetailPage() {
             navigate('/login', { state: { from: `/vendors/${id}` } });
             return;
         }
+        if (!vendorUserId) {
+            alert('Could not identify the vendor. Please try again.');
+            return;
+        }
+
+        // Check if a 1-on-1 conversation with this vendor already exists.
+        // Participants carry { userId, email, name } — match on userId or id.
+        const vendorIdStr = String(vendorUserId);
+        const existing = existingConversations.find((conv) => {
+            const participants = conv.participants ?? conv.members ?? [];
+            return participants.some(
+                (p) =>
+                    String(p.userId ?? '') === vendorIdStr ||
+                    String(p.id ?? '')     === vendorIdStr
+            );
+        });
+
+        if (existing) {
+            navigate(`/messages?c=${existing.id}`);
+            return;
+        }
+
         try {
             const conv = await createConv({
-                participantIds: [String(vendorUserId)],
-                title: vendorName,
+                participantIds: [vendorIdStr],
             }).unwrap();
-            navigate(`/messages?c=${conv.id}`);
-        } catch {
-            navigate('/messages');
+            if (conv?.id) {
+                navigate(`/messages?c=${conv.id}`);
+            } else {
+                navigate('/messages');
+            }
+        } catch (err) {
+            console.error('Failed to create conversation:', err);
+            alert('Could not start a direct message with this vendor. Please try again.');
         }
     };
 
@@ -228,7 +255,7 @@ export default function VendorDetailPage() {
                         <Button
                             variant="primary"
                             size="md"
-                            onClick={() => handleContactVendor(v.vendorName, v.userId ?? id)}
+                            onClick={() => handleContactVendor(v.vendorName, v.userId || v.id || id)}
                             disabled={isStartingChat}
                             icon={<Icons.message size={15} />}
                         >
@@ -319,7 +346,7 @@ export default function VendorDetailPage() {
         </Shell>
         {inquiryOpen && (
             <InquiryModal
-                vendorId={v.userId ?? id}
+                vendorId={v.userId || v.id || id}
                 onDismiss={() => setInquiryOpen(false)}
             />
         )}

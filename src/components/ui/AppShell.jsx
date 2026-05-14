@@ -264,6 +264,13 @@ function Sidebar() {
                     </div>
                 )}
                 <SidebarLink
+                    icon={<Icons.settings size={18} />}
+                    label="Settings"
+                    active={isActive(location.pathname, '/settings')}
+                    collapsed={collapsed}
+                    onClick={() => go('/settings')}
+                />
+                <SidebarLink
                     icon={<Icons.x size={18} />}
                     label="Sign out"
                     collapsed={collapsed}

@@ -24,7 +24,7 @@ export default function ForgotPasswordPage() {
         if (!isFormValid) return;
         try {
             await forgotPassword(email.trim()).unwrap();
-            setSuccessMessage('Check your email for a password reset link. The link expires in 24 hours.');
+            setSuccessMessage('Check your email for a password reset link. The link expires in 1 hour.');
             setEmail('');
         } catch (err) {
             setErrorMessage(err?.data?.message || 'Could not send reset link. Please try again.');

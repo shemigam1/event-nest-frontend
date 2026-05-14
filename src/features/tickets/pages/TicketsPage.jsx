@@ -5,7 +5,7 @@ import { formatEventDate } from '@/utils/dateFormat';
 import Button from '@/components/ui/Button';
 import TopNav from '@/components/ui/TopNav';
 import Modal from '@/components/ui/Modal';
-import QrPattern from '@/components/ui/QrPattern';
+import { QRCode } from 'react-qr-code';
 import TicketCard from '@/components/ui/TicketCard';
 import { StatusBadge } from '@/components/ui/Badge';
 import { Icons } from '@/components/ui/Icon';
@@ -600,18 +600,45 @@ function QrModalContent({ ticket, onClose }) {
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
-                gap: 12,
+                gap: 16,
             }}>
-                <div style={{ padding: 14, background: 'var(--surface-subtle)', borderRadius: 12 }}>
-                    <QrPattern size={200} seed={ticket.qrCode || ticket.id} />
+                <div style={{ padding: 14, background: 'white', borderRadius: 12, border: '1px solid var(--border)' }}>
+                    <QRCode
+                        value={ticket.qrCode || ticket.id}
+                        size={200}
+                        fgColor="#02102D"
+                        bgColor="#ffffff"
+                    />
                 </div>
-                <div className="mp-num" style={{
-                    fontSize: 12,
-                    color: 'var(--text-3)',
-                    letterSpacing: '0.06em',
-                }}>
-                    {ticket.shortCode || ticket.qrCode || ticket.id}
-                </div>
+
+                {ticket.shortCode && (
+                    <div style={{
+                        width: '100%',
+                        background: 'var(--surface-subtle)',
+                        border: '1px solid var(--border)',
+                        borderRadius: 10,
+                        padding: '12px 16px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: 4,
+                    }}>
+                        <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-3)', letterSpacing: '0.08em' }}>
+                            SHORT CODE
+                        </div>
+                        <div className="mp-num" style={{
+                            fontSize: 22,
+                            fontWeight: 700,
+                            color: 'var(--text-1)',
+                            letterSpacing: '0.12em',
+                        }}>
+                            {ticket.shortCode}
+                        </div>
+                        <div style={{ fontSize: 11, color: 'var(--text-3)' }}>
+                            Use this code for manual check-in
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );
