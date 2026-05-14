@@ -6,6 +6,7 @@ import Button from '@/components/ui/Button';
 import TopNav from '@/components/ui/TopNav';
 import Modal from '@/components/ui/Modal';
 import { QRCode } from 'react-qr-code';
+import QrPattern from '@/components/ui/QrPattern';
 import TicketCard from '@/components/ui/TicketCard';
 import { Icons } from '@/components/ui/Icon';
 

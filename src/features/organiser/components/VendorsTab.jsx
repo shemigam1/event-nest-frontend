@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router';
 import {
     useGetEventVendorApplicationsQuery,
     useAcceptVendorApplicationMutation,
@@ -233,6 +234,7 @@ function ApplicationsPane({ eventId }) {
    backend). When a chat module lands we'll surface a "Message vendor"
    action here. */
 function MarketplacePane() {
+    const navigate = useNavigate();
     const [search, setSearch] = useState('');
     const [category, setCategory] = useState('all');
 
@@ -263,8 +265,7 @@ function MarketplacePane() {
     }, [rawVendors, search]);
 
     function viewVendor(v) {
-        // Public profile page handles loading state + 404.
-        window.location.assign(`/vendors/${v.vendorId}`);
+        navigate(`/vendors/${v.vendorId}`);
     }
 
     return (

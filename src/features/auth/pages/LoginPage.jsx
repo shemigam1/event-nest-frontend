@@ -61,16 +61,23 @@ export default function LoginPage() {
                     autoComplete="email"
                 />
 
-                <Input
-                    label="Password"
-                    name="password"
-                    type="password"
-                    value={formData.password}
-                    onChange={handleChange}
-                    placeholder="••••••••"
-                    icon={<Icons.lock size={18} />}
-                    autoComplete="current-password"
-                />
+                <div>
+                    <Input
+                        label="Password"
+                        name="password"
+                        type="password"
+                        value={formData.password}
+                        onChange={handleChange}
+                        placeholder="••••••••"
+                        icon={<Icons.lock size={18} />}
+                        autoComplete="current-password"
+                    />
+                    <div style={{ textAlign: 'right', marginTop: 6 }}>
+                        <Link to="/forgot-password" style={{ fontSize: 13, color: 'var(--mp-blue)', fontWeight: 500 }}>
+                            Forgot password?
+                        </Link>
+                    </div>
+                </div>
 
                 {errorMessage && (
                     <div role="alert" style={{
