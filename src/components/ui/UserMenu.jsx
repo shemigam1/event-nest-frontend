@@ -5,7 +5,13 @@ import { logout, selectAuthEmail, selectCurrentUser, selectIsAdmin, selectIsChec
 import { baseApi } from '@/services/baseApi';
 import { Icons } from './Icon';
 
-export default function UserMenu({ onDark = false }) {
+/**
+ * When {@code onOpenSidebar} is provided (desktop only — passed from
+ * TopNav), clicking the avatar opens the right-side drawer instead of the
+ * inline dropdown. The inline dropdown stays as a fallback for any context
+ * that doesn't pass the prop.
+ */
+export default function UserMenu({ onDark = false, onOpenSidebar }) {
     const dispatch = useDispatch();
     const navigate = useNavigate();
     const user = useSelector(selectCurrentUser);
@@ -38,12 +44,20 @@ export default function UserMenu({ onDark = false }) {
         navigate('/');
     };
 
+    const handleAvatarClick = () => {
+        if (onOpenSidebar) {
+            onOpenSidebar();
+        } else {
+            setOpen((o) => !o);
+        }
+    };
+
     return (
         <div ref={ref} style={{ position: 'relative' }}>
             <button
-                onClick={() => setOpen((o) => !o)}
-                aria-haspopup="menu"
-                aria-expanded={open}
+                onClick={handleAvatarClick}
+                aria-haspopup={onOpenSidebar ? 'dialog' : 'menu'}
+                aria-expanded={onOpenSidebar ? undefined : open}
                 style={{
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -124,17 +138,39 @@ export default function UserMenu({ onDark = false }) {
                         </>
                     ) : (
                         <>
-                            <MenuItem icon={<Icons.calendar size={16} />} onClick={() => go('/dashboard')}>
+                            {/*
+                              "My events" now points at /organiser (the
+                              former Organiser Console). The old /dashboard
+                              entry is dropped — login lands users on the
+                              public events browse, and the sidebar gives
+                              them quick access to the rest.
+                            */}
+                            <MenuItem icon={<Icons.calendar size={16} />} onClick={() => go('/organiser')}>
                                 My events
                             </MenuItem>
                             <MenuItem icon={<Icons.ticket size={16} />} onClick={() => go('/tickets')}>
                                 My tickets
                             </MenuItem>
-                            <MenuItem icon={<Icons.spark size={16} />} onClick={() => go('/organiser')}>
-                                Organiser console
-                            </MenuItem>
                             <MenuItem icon={<Icons.scan size={16} />} onClick={() => go('/checkin')}>
                                 Check-in station
+                            </MenuItem>
+
+                            <div style={{ height: 1, background: 'var(--border)', margin: '6px 4px' }} />
+                            <div style={{
+                                padding: '6px 12px 4px',
+                                fontSize: 11,
+                                fontWeight: 600,
+                                color: 'var(--text-3)',
+                                letterSpacing: 0.4,
+                                textTransform: 'uppercase',
+                            }}>
+                                For vendors
+                            </div>
+                            <MenuItem icon={<Icons.spark size={16} />} onClick={() => go('/vendor/opportunities')}>
+                                Find work
+                            </MenuItem>
+                            <MenuItem icon={<Icons.inbox size={16} />} onClick={() => go('/vendor/applications')}>
+                                My applications
                             </MenuItem>
                         </>
                     )}

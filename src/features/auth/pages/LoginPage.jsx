@@ -32,7 +32,9 @@ export default function LoginPage() {
             dispatch(setCredentials(data));
             const tokenUser = userFromToken(data.accessToken);
             const isAdmin   = tokenUser?.roles?.includes('ROLE_ADMIN') ?? false;
-            const defaultDest = isAdmin ? '/admin/moderation' : '/dashboard';
+            // Default landing is the public events browse — the user can
+            // jump into their own events via the sidebar / "My events".
+            const defaultDest = isAdmin ? '/admin/moderation' : '/events';
             const destination = location.state?.from ?? defaultDest;
             navigate(destination, { replace: true });
         } catch {
@@ -95,7 +97,13 @@ export default function LoginPage() {
                     {isLoading ? 'Signing in…' : 'Sign in'}
                 </Button>
 
-                <div style={{ textAlign: 'center', fontSize: 14, color: 'var(--text-2)', marginTop: 4 }}>
+                <div style={{ textAlign: 'center', fontSize: 13, color: 'var(--text-3)', marginBottom: 12 }}>
+                    <Link to="/forgot-password" style={{ color: 'var(--mp-blue)', textDecoration: 'none', fontWeight: 500 }}>
+                        Forgot password?
+                    </Link>
+                </div>
+
+                <div style={{ textAlign: 'center', fontSize: 14, color: 'var(--text-2)' }}>
                     No account?{' '}
                     <Link to="/register" style={{ color: 'var(--mp-blue)', fontWeight: 600 }}>
                         Register

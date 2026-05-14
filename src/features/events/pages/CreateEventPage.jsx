@@ -4,7 +4,13 @@ import TopNav from '@/components/ui/TopNav';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import { Icons } from '@/components/ui/Icon';
-import { useCreateEventMutation, useSubmitEventMutation } from '../eventsApi';
+import {
+    useCreateEventMutation,
+    useSubmitEventMutation,
+    usePresignCoverImageMutation,
+    useUpdateEventConfigMutation,
+} from '../eventsApi';
+import CoverImageField from '../components/CoverImageField';
 
 /* ── Helpers ─────────────────────────────────────── */
 function newTier() {
@@ -117,10 +123,149 @@ function StepIndicator({ currentStep }) {
     );
 }
 
+/* ── Radio card primitive ────────────────────────── */
+function RadioCard({ active, title, body, icon, onClick }) {
+    return (
+        <button
+            type="button"
+            role="radio"
+            aria-checked={active}
+            onClick={onClick}
+            style={{
+                display: 'block',
+                width: '100%',
+                textAlign: 'left',
+                padding: 14,
+                borderRadius: 12,
+                background: active ? 'var(--mp-blue-50, #EAF1FE)' : 'white',
+                border: `1.5px solid ${active ? 'var(--mp-blue)' : 'var(--border)'}`,
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+                transition: 'background 0.15s, border-color 0.15s',
+            }}
+        >
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                <span style={{
+                    width: 32, height: 32, borderRadius: 8,
+                    background: active ? 'var(--mp-blue)' : 'var(--surface-subtle)',
+                    color: active ? 'white' : 'var(--text-2)',
+                    display: 'grid', placeItems: 'center',
+                    flexShrink: 0,
+                }}>
+                    {icon}
+                </span>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                    <div style={{
+                        fontWeight: 600,
+                        color: active ? 'var(--mp-blue)' : 'var(--text-1)',
+                        fontSize: 14,
+                    }}>
+                        {title}
+                    </div>
+                    <div style={{
+                        fontSize: 12,
+                        color: 'var(--text-2)',
+                        marginTop: 2,
+                        lineHeight: 1.45,
+                    }}>
+                        {body}
+                    </div>
+                </div>
+                <span style={{
+                    width: 18, height: 18, borderRadius: 99,
+                    border: `2px solid ${active ? 'var(--mp-blue)' : 'var(--border)'}`,
+                    background: active ? 'var(--mp-blue)' : 'white',
+                    display: 'grid', placeItems: 'center',
+                    flexShrink: 0,
+                    marginTop: 7,
+                }}>
+                    {active && <span style={{ width: 6, height: 6, borderRadius: 99, background: 'white' }} />}
+                </span>
+            </div>
+        </button>
+    );
+}
+
+/* ── Event access section ────────────────────────── */
+function AccessSection({ visibility, admission, onChange }) {
+    return (
+        <div>
+            <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-1)', marginBottom: 10 }}>
+                Visibility
+            </div>
+            <div className="mp-date-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <RadioCard
+                    active={visibility === 'PUBLIC'}
+                    title="Public"
+                    body="Listed on the browse page. Anyone with the link can view and book."
+                    icon={<Icons.users size={16} />}
+                    onClick={() => onChange({ visibility: 'PUBLIC' })}
+                />
+                <RadioCard
+                    active={visibility === 'PRIVATE'}
+                    title="Private"
+                    body="Hidden from browse. Reachable only by direct link or invite."
+                    icon={<Icons.lock size={16} />}
+                    onClick={() => onChange({ visibility: 'PRIVATE' })}
+                />
+            </div>
+
+            <div style={{
+                fontSize: 14, fontWeight: 500, color: 'var(--text-1)',
+                margin: '18px 0 10px',
+            }}>
+                Admission
+            </div>
+            <div className="mp-date-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <RadioCard
+                    active={admission === 'TICKETS'}
+                    title="Open ticket sales"
+                    body="Attendees book themselves from the event page — free or paid."
+                    icon={<Icons.ticket size={16} />}
+                    onClick={() => onChange({ admission: 'TICKETS' })}
+                />
+                <RadioCard
+                    active={admission === 'GUESTS'}
+                    title="Guest list invitations"
+                    body="You invite people by email. They RSVP, then book a seat."
+                    icon={<Icons.mail size={16} />}
+                    onClick={() => onChange({ admission: 'GUESTS' })}
+                />
+            </div>
+
+            {visibility === 'PRIVATE' && admission === 'TICKETS' && (
+                <div style={{
+                    marginTop: 12,
+                    padding: '10px 12px',
+                    background: 'var(--surface-subtle)',
+                    borderRadius: 8,
+                    fontSize: 12,
+                    color: 'var(--text-2)',
+                    display: 'flex',
+                    gap: 8,
+                    alignItems: 'flex-start',
+                }}>
+                    <Icons.alert size={14} style={{ color: 'var(--text-3)', flexShrink: 0, marginTop: 1 }} />
+                    <span>
+                        Private + open tickets means the event isn&apos;t listed, but anyone
+                        with the link can book. Add a guest list later if you want to
+                        gate bookings to approved RSVPs only.
+                    </span>
+                </div>
+            )}
+        </div>
+    );
+}
+
 /* ── Step 1: Event basics ────────────────────────── */
-function BasicsStep({ data, onChange, onNext }) {
+function BasicsStep({ data, onChange, coverFile, onCoverFileChange, onNext }) {
     const [errors, setErrors] = useState({});
     const today = new Date().toISOString().split('T')[0];
+    // Local object URL so the field can preview the picked file before
+    // the event exists. We don't revoke this on unmount because the same
+    // File object lives in the parent state and may need to be previewed
+    // again if the user navigates back to this step.
+    const coverPreviewUrl = coverFile ? URL.createObjectURL(coverFile) : null;
 
     function handle(field) {
         return (e) => onChange({ ...data, [field]: e.target.value });
@@ -185,6 +330,17 @@ function BasicsStep({ data, onChange, onNext }) {
                     error={errors.venue}
                     icon={<Icons.pin size={16} />}
                     aria-label="Venue"
+                />
+
+                <CoverImageField
+                    onPickFile={onCoverFileChange}
+                    currentUrl={coverPreviewUrl}
+                />
+
+                <AccessSection
+                    visibility={data.visibility}
+                    admission={data.admission}
+                    onChange={(patch) => onChange({ ...data, ...patch })}
                 />
 
                 <div className="mp-date-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
@@ -600,6 +756,18 @@ function ReviewStep({ basics, tiers, onBack, onSaveDraft, onSubmitForApproval, s
                         <Icons.calendar size={15} style={{ color: 'var(--text-3)', flexShrink: 0 }} />
                         {start} → {end}
                     </div>
+                    <div style={{ display: 'flex', gap: 10, alignItems: 'center', fontSize: 14, color: 'var(--text-2)' }}>
+                        <Icons.lock size={15} style={{ color: 'var(--text-3)', flexShrink: 0 }} />
+                        {basics.visibility === 'PRIVATE' ? 'Private — invite-only' : 'Public — listed on browse'}
+                    </div>
+                    <div style={{ display: 'flex', gap: 10, alignItems: 'center', fontSize: 14, color: 'var(--text-2)' }}>
+                        {basics.admission === 'GUESTS'
+                            ? <Icons.mail size={15} style={{ color: 'var(--text-3)', flexShrink: 0 }} />
+                            : <Icons.ticket size={15} style={{ color: 'var(--text-3)', flexShrink: 0 }} />}
+                        {basics.admission === 'GUESTS'
+                            ? 'Guest list invitations — RSVP required to book'
+                            : 'Open ticket sales — attendees book themselves'}
+                    </div>
                 </div>
             </div>
 
@@ -737,7 +905,7 @@ function ReviewStep({ basics, tiers, onBack, onSaveDraft, onSubmitForApproval, s
 }
 
 /* ── Step 4: Success ─────────────────────────────── */
-function SuccessStep({ submitted, navigate }) {
+function SuccessStep({ submitted, navigate, coverUploadFailed, eventId }) {
     return (
         <div data-testid="step-success" style={{ textAlign: 'center', padding: '40px 0' }}>
             <div style={{
@@ -764,6 +932,35 @@ function SuccessStep({ submitted, navigate }) {
                 }
             </p>
 
+            {coverUploadFailed && (
+                <div role="alert" style={{
+                    display: 'flex', alignItems: 'flex-start', gap: 10,
+                    maxWidth: 420, margin: '0 auto 28px',
+                    padding: '12px 14px',
+                    background: '#FFF7ED',
+                    border: '1px solid #FDBA74',
+                    borderRadius: 10,
+                    textAlign: 'left',
+                }}>
+                    <Icons.alert size={16} style={{ color: '#C2410C', flexShrink: 0, marginTop: 1 }} />
+                    <div style={{ fontSize: 13, color: '#7C2D12' }}>
+                        <strong>Cover image not uploaded.</strong> The rest of your event was saved
+                        successfully.{' '}
+                        <button
+                            type="button"
+                            onClick={() => navigate(`/events/${eventId}/edit`)}
+                            style={{
+                                background: 'none', border: 'none', padding: 0,
+                                color: '#C2410C', fontWeight: 600, fontSize: 13,
+                                cursor: 'pointer', textDecoration: 'underline',
+                            }}
+                        >
+                            Add it from the edit screen.
+                        </button>
+                    </div>
+                </div>
+            )}
+
             <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
                 <Button variant="secondary" size="lg" onClick={() => navigate('/events')}>
                     Browse events
@@ -788,14 +985,27 @@ export default function CreateEventPage() {
         startTime: '',
         endDate: '',
         endTime: '',
+        // Visibility maps directly to backend EventVisibility (PUBLIC/PRIVATE).
+        // Admission is a frontend-only construct that, when set to GUESTS,
+        // makes the submit step PATCH the event config to enable the guest
+        // list module — there's no single backend field for "admission mode."
+        visibility: 'PUBLIC',
+        admission: 'TICKETS',
     });
     const [tiers, setTiers] = useState([]);
+    // Optional cover image held client-side until the event exists.
+    // Uploaded after createEvent returns the new event id.
+    const [coverFile, setCoverFile] = useState(null);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState('');
     const [submitted, setSubmitted] = useState(false);
+    const [coverUploadFailed, setCoverUploadFailed] = useState(false);
+    const [createdEventId, setCreatedEventId] = useState(null);
 
     const [createEvent] = useCreateEventMutation();
     const [submitEvent] = useSubmitEventMutation();
+    const [presignCoverImage] = usePresignCoverImageMutation();
+    const [updateEventConfig] = useUpdateEventConfigMutation();
 
     async function createEventSequence(shouldSubmit) {
         setSubmitting(true);
@@ -822,6 +1032,7 @@ export default function CreateEventPage() {
                 venue: basics.venue.trim(),
                 startTime: toISO(basics.startDate, basics.startTime),
                 endTime: toISO(basics.endDate, basics.endTime),
+                visibility: basics.visibility,
                 tiers: validTiers,
             };
             if (basics.description.trim()) {
@@ -829,6 +1040,42 @@ export default function CreateEventPage() {
             }
 
             const event = await createEvent(payload).unwrap();
+            setCreatedEventId(event.id);
+
+            // Cover image is optional. If the user picked one in step 1
+            // we upload it now that the event exists. Non-fatal — track the
+            // failure so the success screen can surface a retry prompt.
+            if (coverFile) {
+                try {
+                    const { uploadUrl } = await presignCoverImage({
+                        eventId: event.id,
+                        contentType: coverFile.type,
+                    }).unwrap();
+                    const res = await fetch(uploadUrl, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': coverFile.type },
+                        body: coverFile,
+                    });
+                    if (!res.ok) throw new Error(`${res.status}`);
+                } catch {
+                    setCoverUploadFailed(true);
+                }
+            }
+
+            // Guest-list mode is a frontend-side aggregation: backend defaults
+            // guestListEnabled=false on new events, so we flip it here. Same
+            // soft-fail rule as cover image — if this fails the event already
+            // exists, organiser can enable it later from the Guests tab.
+            if (basics.admission === 'GUESTS') {
+                try {
+                    await updateEventConfig({
+                        eventId: event.id,
+                        guestListEnabled: true,
+                    }).unwrap();
+                } catch {
+                    /* swallowed */
+                }
+            }
 
             if (shouldSubmit) {
                 await submitEvent(event.id).unwrap();
@@ -849,7 +1096,13 @@ export default function CreateEventPage() {
             <div style={{ maxWidth: 680, margin: '0 auto', padding: '40px 24px 80px' }}>
                 {step < 4 && <StepIndicator currentStep={step} />}
                 {step === 1 && (
-                    <BasicsStep data={basics} onChange={setBasics} onNext={() => setStep(2)} />
+                    <BasicsStep
+                        data={basics}
+                        onChange={setBasics}
+                        coverFile={coverFile}
+                        onCoverFileChange={setCoverFile}
+                        onNext={() => setStep(2)}
+                    />
                 )}
                 {step === 2 && (
                     <TiersStep tiers={tiers} onTiersChange={setTiers} onNext={() => setStep(3)} onBack={() => setStep(1)} />
@@ -866,7 +1119,12 @@ export default function CreateEventPage() {
                     />
                 )}
                 {step === 4 && (
-                    <SuccessStep submitted={submitted} navigate={navigate} />
+                    <SuccessStep
+                        submitted={submitted}
+                        navigate={navigate}
+                        coverUploadFailed={coverUploadFailed}
+                        eventId={createdEventId}
+                    />
                 )}
             </div>
         </div>

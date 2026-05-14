@@ -4,6 +4,8 @@ import DiscoveryPage from '../features/events/pages/DiscoveryPage';
 import EventDetailPage from '../features/events/pages/EventDetailPage';
 import LoginPage from '../features/auth/pages/LoginPage';
 import RegisterPage from '../features/auth/pages/RegisterPage';
+import ForgotPasswordPage from '../features/auth/pages/ForgotPasswordPage';
+import ResetPasswordPage from '../features/auth/pages/ResetPasswordPage';
 import BookingPage from '../features/bookings/pages/BookingPage';
 import DashboardPage from '../features/bookings/pages/DashboardPage';
 import TicketsPage from '../features/tickets/pages/TicketsPage';
@@ -17,7 +19,15 @@ import EventEditsPage from '../features/admin/pages/EventEditsPage';
 import AdminEventDetailPage from '../features/admin/pages/AdminEventDetailPage';
 import OrganizerConsolePage from '../features/organiser/pages/OrganizerConsolePage';
 import OrganizerEventPage from '../features/organiser/pages/OrganizerEventPage';
+import VendorOpportunitiesPage from '../features/vendor/pages/VendorOpportunitiesPage';
+import MyApplicationsPage from '../features/vendor/pages/MyApplicationsPage';
 import CheckInPage from '../features/checkin/pages/CheckInPage';
+import StubPaymentPage from '../features/bookings/pages/StubPaymentPage';
+import PaymentResultPage from '../features/bookings/pages/PaymentResultPage';
+import VendorMarketplacePage from '../features/vendor/pages/VendorMarketplacePage';
+import VendorDetailPage from '../features/vendor/pages/VendorDetailPage';
+import VendorProfileSetupPage from '../features/vendor/pages/VendorProfileSetupPage';
+import VendorVerificationPage from '../features/admin/pages/VendorVerificationPage';
 import PrivateRoute from './PrivateRoute';
 import AdminRoute from './AdminRoute';
 import ErrorPage from '../components/ui/ErrorPage';
@@ -34,7 +44,13 @@ const router = createBrowserRouter([
             { path: '/events/:id', element: <EventDetailPage /> },
             { path: '/login',     element: <LoginPage /> },
             { path: '/register',  element: <RegisterPage /> },
-            { path: '/checkin',   element: <CheckInPage /> },
+            { path: '/forgot-password', element: <ForgotPasswordPage /> },
+            { path: '/reset-password',  element: <ResetPasswordPage /> },
+            { path: '/checkin',        element: <CheckInPage /> },
+            { path: '/vendors',        element: <VendorMarketplacePage /> },
+            { path: '/vendors/:id',    element: <VendorDetailPage /> },
+            { path: '/stub-payment',   element: <StubPaymentPage /> },
+            { path: '/payment-result', element: <PaymentResultPage /> },
 
             {
                 element: <PrivateRoute />,
@@ -46,6 +62,9 @@ const router = createBrowserRouter([
                     { path: '/dashboard',         element: <DashboardPage /> },
                     { path: '/organiser',         element: <OrganizerConsolePage /> },
                     { path: '/organiser/events/:id', element: <OrganizerEventPage /> },
+                    { path: '/vendor/opportunities', element: <VendorOpportunitiesPage /> },
+                    { path: '/vendor/applications', element: <MyApplicationsPage /> },
+                    { path: '/vendor/profile',      element: <VendorProfileSetupPage /> },
                 ],
             },
 
@@ -58,7 +77,8 @@ const router = createBrowserRouter([
                     { path: '/admin/users/:id/events',   element: <AdminUserEventsPage /> },
                     { path: '/admin/invite',             element: <InviteAdminPage /> },
                     { path: '/admin/event-edits',        element: <EventEditsPage /> },
-                    { path: '/admin/events/:id',         element: <AdminEventDetailPage /> },
+                    { path: '/admin/events/:id',             element: <AdminEventDetailPage /> },
+                    { path: '/admin/vendor-verification',    element: <VendorVerificationPage /> },
                 ],
             },
 
