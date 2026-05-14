@@ -55,10 +55,23 @@ export default function AppShell() {
         setCollapsed,
     }), [collapsed]);
 
-    // Landing page always renders full-width — no sidebar even when signed in.
-    const isLandingPage = location.pathname === '/';
+    // These routes always render full-width — no sidebar even when signed in.
+    // Auth pages, the marketing landing page, and public discovery/browsing
+    // pages all get the full-width layout. The sidebar only appears on the
+    // true "app" pages (organiser console, tickets, vendor dashboard, etc.)
+    const EXACT_NO_SIDEBAR = new Set([
+        '/', '/login', '/register', '/forgot-password', '/reset-password',
+        '/events', '/vendors',
+    ]);
+    const p = location.pathname;
+    const isNoSidebarPage =
+        EXACT_NO_SIDEBAR.has(p) ||
+        // /events/:id  — public event detail, but NOT /events/new or /events/:id/edit|book
+        (/^\/events\/[^/]+$/.test(p) && p !== '/events/new') ||
+        // /vendors/:id — public vendor profile
+        /^\/vendors\/[^/]+$/.test(p);
 
-    if (!isAuthenticated || isLandingPage) {
+    if (!isAuthenticated || isNoSidebarPage) {
         // Anonymous flows (landing, public discovery, login, register…) get
         // no sidebar. Still provide the context so consumer components don't
         // throw if they happen to render on a public page.
