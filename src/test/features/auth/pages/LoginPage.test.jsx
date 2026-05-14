@@ -18,13 +18,13 @@ describe('LoginPage', () => {
         expect(screen.getByRole('button', { name: /sign in/i })).not.toBeDisabled();
     });
 
-    test('navigates to events browse on successful login', async () => {
+    test('navigates to dashboard on successful login', async () => {
         renderWithProviders(<LoginPage />);
         await userEvent.type(screen.getByPlaceholderText(/you@company\.com/i), 'a@b.com');
         await userEvent.type(screen.getByLabelText(/password/i), 'password123');
         await userEvent.click(screen.getByRole('button', { name: /sign in/i }));
         await waitFor(() =>
-            expect(screen.getByTestId('location')).toHaveTextContent('/events')
+            expect(screen.getByTestId('location')).toHaveTextContent('/dashboard')
         );
     });
 

@@ -737,9 +737,4 @@ export const server = setupServer(
     http.delete(`${BASE_URL}/events/:eventId/checkin/invites/:inviteId`, () =>
         HttpResponse.json({ success: true, message: 'Check-in invite revoked' })
     ),
-
-    // Verify payment (fallback; individual tests override as needed)
-    http.post(`${BASE_URL}/payments/monnify/verify/:transactionReference`, () =>
-        HttpResponse.json({ success: true, data: { status: 'PAID' } })
-    ),
 );

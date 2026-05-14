@@ -7,7 +7,6 @@ import {
 } from '../eventsApi';
 import { useGetOrganizerEventByIdQuery } from '@/features/organiser/organizerApi';
 import { useCreateTierMutation, useUpdateTierMutation, useDeleteTierMutation } from '../tiersApi';
-import CoverImageField from '../components/CoverImageField';
 import TopNav from '@/components/ui/TopNav';
 import Button from '@/components/ui/Button';
 import { StatusBadge } from '@/components/ui/Badge';
@@ -516,13 +515,6 @@ export default function EditEventPage() {
                             }}
                         />
                     </div>
-
-                    {/* Cover image — optional; uploads independently of the
-                        rest of the form via the /cover-image endpoint. */}
-                    <CoverImageField
-                        eventId={event.id}
-                        currentUrl={event.coverImageUrl}
-                    />
 
                     {/* Dates (draft only) */}
                     {isDraft && (
