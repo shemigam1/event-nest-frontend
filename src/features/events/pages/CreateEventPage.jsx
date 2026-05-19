@@ -4,7 +4,8 @@ import TopNav from '@/components/ui/TopNav';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import { Icons } from '@/components/ui/Icon';
-import { useCreateEventMutation, useSubmitEventMutation } from '../eventsApi';
+import { useCreateEventMutation, useSubmitEventMutation, usePresignCoverImageMutation } from '../eventsApi';
+import CoverImageField from '../components/CoverImageField';
 
 /* ── Helpers ─────────────────────────────────────── */
 function newTier() {
@@ -26,6 +27,7 @@ function toISO(date, time) {
 function validateBasics(b) {
     const errs = {};
     if (!b.title.trim()) errs.title = 'Title is required';
+    if (!b.bannerFile) errs.bannerFile = 'A cover image is required';
     if (!b.venue.trim()) errs.venue = 'Venue is required';
     if (!b.startDate) errs.startDate = 'Required';
     if (!b.startTime) errs.startTime = 'Required';
@@ -117,6 +119,42 @@ function StepIndicator({ currentStep }) {
     );
 }
 
+/* ── Shared toggle-card style ────────────────────── */
+function ToggleCard({ selected, onClick, icon, label, desc }) {
+    return (
+        <button
+            type="button"
+            aria-pressed={selected}
+            onClick={onClick}
+            style={{
+                flex: 1,
+                padding: '12px 14px',
+                borderRadius: 10,
+                border: `1.5px solid ${selected ? 'var(--mp-blue)' : 'var(--border)'}`,
+                background: selected ? '#eff6ff' : 'white',
+                color: selected ? 'var(--mp-blue)' : 'var(--text-2)',
+                textAlign: 'left',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: 10,
+                transition: 'border-color 0.15s, background 0.15s',
+            }}
+        >
+            <span style={{ marginTop: 2, flexShrink: 0 }}>{icon}</span>
+            <span>
+                <span style={{ display: 'block', fontWeight: 600, fontSize: 14 }}>{label}</span>
+                <span style={{
+                    display: 'block', fontSize: 12, marginTop: 2,
+                    color: selected ? 'var(--mp-blue)' : 'var(--text-3)',
+                }}>
+                    {desc}
+                </span>
+            </span>
+        </button>
+    );
+}
+
 /* ── Step 1: Event basics ────────────────────────── */
 function BasicsStep({ data, onChange, onNext }) {
     const [errors, setErrors] = useState({});
@@ -133,6 +171,18 @@ function BasicsStep({ data, onChange, onNext }) {
         onNext();
     }
 
+    const inputStyle = (hasErr) => ({
+        width: '100%',
+        height: 44,
+        padding: '0 14px',
+        background: 'white',
+        border: `1px solid ${hasErr ? 'var(--error)' : 'var(--border)'}`,
+        borderRadius: 12,
+        fontSize: 16,
+        color: 'var(--text-1)',
+        boxSizing: 'border-box',
+    });
+
     return (
         <form onSubmit={submit} noValidate data-testid="step-basics">
             <h1 className="mp-h1" style={{ margin: '0 0 6px', color: 'var(--text-1)' }}>
@@ -143,6 +193,8 @@ function BasicsStep({ data, onChange, onNext }) {
             </p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+                {/* Title */}
                 <Input
                     label="Event title"
                     placeholder="e.g. Moniepoint Merchant Summit 2026"
@@ -152,6 +204,28 @@ function BasicsStep({ data, onChange, onNext }) {
                     aria-label="Event title"
                 />
 
+                {/* Cover image — required */}
+                <div>
+                    <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-1)', marginBottom: 6 }}>
+                        Cover image
+                        <span style={{ marginLeft: 6, fontSize: 12, fontWeight: 400, color: 'var(--error)' }}>
+                            Required
+                        </span>
+                    </div>
+                    <CoverImageField
+                        onPickFile={(file) => {
+                            onChange({ ...data, bannerFile: file });
+                            setErrors((prev) => { const { bannerFile: _, ...rest } = prev; return rest; });
+                        }}
+                    />
+                    {errors.bannerFile && (
+                        <p role="alert" style={{ margin: '6px 0 0', fontSize: 13, color: 'var(--error)' }}>
+                            {errors.bannerFile}
+                        </p>
+                    )}
+                </div>
+
+                {/* Description */}
                 <label style={{ display: 'block' }}>
                     <span style={{ display: 'block', fontSize: 14, fontWeight: 500, color: 'var(--text-1)', marginBottom: 6 }}>
                         Description <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>(optional)</span>
@@ -177,6 +251,7 @@ function BasicsStep({ data, onChange, onNext }) {
                     />
                 </label>
 
+                {/* Venue */}
                 <Input
                     label="Venue"
                     placeholder="e.g. Eko Convention Centre, Lagos"
@@ -187,110 +262,84 @@ function BasicsStep({ data, onChange, onNext }) {
                     aria-label="Venue"
                 />
 
+                {/* Dates */}
                 <div className="mp-date-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                     <div>
                         <label style={{ display: 'block', fontSize: 14, fontWeight: 500, color: 'var(--text-1)', marginBottom: 6 }}>
                             Start date
                         </label>
-                        <input
-                            type="date"
-                            value={data.startDate}
-                            onChange={handle('startDate')}
-                            min={today}
-                            aria-label="Start date"
-                            style={{
-                                width: '100%',
-                                height: 44,
-                                padding: '0 14px',
-                                background: 'white',
-                                border: `1px solid ${errors.startDate ? 'var(--error)' : 'var(--border)'}`,
-                                borderRadius: 12,
-                                fontSize: 16,
-                                color: 'var(--text-1)',
-                                boxSizing: 'border-box',
-                            }}
-                        />
-                        {errors.startDate && (
-                            <span style={{ display: 'block', fontSize: 12, color: 'var(--error)', marginTop: 4 }}>{errors.startDate}</span>
-                        )}
+                        <input type="date" value={data.startDate} onChange={handle('startDate')} min={today} aria-label="Start date" style={inputStyle(errors.startDate)} />
+                        {errors.startDate && <span style={{ display: 'block', fontSize: 12, color: 'var(--error)', marginTop: 4 }}>{errors.startDate}</span>}
                     </div>
                     <div>
                         <label style={{ display: 'block', fontSize: 14, fontWeight: 500, color: 'var(--text-1)', marginBottom: 6 }}>
                             Start time
                         </label>
-                        <input
-                            type="time"
-                            value={data.startTime}
-                            onChange={handle('startTime')}
-                            aria-label="Start time"
-                            style={{
-                                width: '100%',
-                                height: 44,
-                                padding: '0 14px',
-                                background: 'white',
-                                border: `1px solid ${errors.startTime ? 'var(--error)' : 'var(--border)'}`,
-                                borderRadius: 12,
-                                fontSize: 16,
-                                color: 'var(--text-1)',
-                                boxSizing: 'border-box',
-                            }}
-                        />
-                        {errors.startTime && (
-                            <span style={{ display: 'block', fontSize: 12, color: 'var(--error)', marginTop: 4 }}>{errors.startTime}</span>
-                        )}
+                        <input type="time" value={data.startTime} onChange={handle('startTime')} aria-label="Start time" style={inputStyle(errors.startTime)} />
+                        {errors.startTime && <span style={{ display: 'block', fontSize: 12, color: 'var(--error)', marginTop: 4 }}>{errors.startTime}</span>}
                     </div>
                     <div>
                         <label style={{ display: 'block', fontSize: 14, fontWeight: 500, color: 'var(--text-1)', marginBottom: 6 }}>
                             End date
                         </label>
-                        <input
-                            type="date"
-                            value={data.endDate}
-                            onChange={handle('endDate')}
-                            min={data.startDate || today}
-                            aria-label="End date"
-                            style={{
-                                width: '100%',
-                                height: 44,
-                                padding: '0 14px',
-                                background: 'white',
-                                border: `1px solid ${errors.endDate ? 'var(--error)' : 'var(--border)'}`,
-                                borderRadius: 12,
-                                fontSize: 16,
-                                color: 'var(--text-1)',
-                                boxSizing: 'border-box',
-                            }}
-                        />
-                        {errors.endDate && (
-                            <span style={{ display: 'block', fontSize: 12, color: 'var(--error)', marginTop: 4 }}>{errors.endDate}</span>
-                        )}
+                        <input type="date" value={data.endDate} onChange={handle('endDate')} min={data.startDate || today} aria-label="End date" style={inputStyle(errors.endDate)} />
+                        {errors.endDate && <span style={{ display: 'block', fontSize: 12, color: 'var(--error)', marginTop: 4 }}>{errors.endDate}</span>}
                     </div>
                     <div>
                         <label style={{ display: 'block', fontSize: 14, fontWeight: 500, color: 'var(--text-1)', marginBottom: 6 }}>
                             End time
                         </label>
-                        <input
-                            type="time"
-                            value={data.endTime}
-                            onChange={handle('endTime')}
-                            aria-label="End time"
-                            style={{
-                                width: '100%',
-                                height: 44,
-                                padding: '0 14px',
-                                background: 'white',
-                                border: `1px solid ${errors.endTime ? 'var(--error)' : 'var(--border)'}`,
-                                borderRadius: 12,
-                                fontSize: 16,
-                                color: 'var(--text-1)',
-                                boxSizing: 'border-box',
-                            }}
-                        />
-                        {errors.endTime && (
-                            <span style={{ display: 'block', fontSize: 12, color: 'var(--error)', marginTop: 4 }}>{errors.endTime}</span>
-                        )}
+                        <input type="time" value={data.endTime} onChange={handle('endTime')} aria-label="End time" style={inputStyle(errors.endTime)} />
+                        {errors.endTime && <span style={{ display: 'block', fontSize: 12, color: 'var(--error)', marginTop: 4 }}>{errors.endTime}</span>}
                     </div>
                 </div>
+
+                {/* Visibility */}
+                <div>
+                    <span style={{ display: 'block', fontSize: 14, fontWeight: 500, color: 'var(--text-1)', marginBottom: 8 }}>
+                        Visibility
+                    </span>
+                    <div style={{ display: 'flex', gap: 10 }}>
+                        <ToggleCard
+                            selected={data.visibility === 'PUBLIC'}
+                            onClick={() => onChange({ ...data, visibility: 'PUBLIC' })}
+                            icon={<Icons.users size={15} />}
+                            label="Public"
+                            desc="Anyone can discover and register"
+                        />
+                        <ToggleCard
+                            selected={data.visibility === 'PRIVATE'}
+                            onClick={() => onChange({ ...data, visibility: 'PRIVATE' })}
+                            icon={<Icons.lock size={15} />}
+                            label="Private"
+                            desc="Invite-only — not listed publicly"
+                        />
+                    </div>
+                </div>
+
+                {/* Pricing */}
+                <div>
+                    <span style={{ display: 'block', fontSize: 14, fontWeight: 500, color: 'var(--text-1)', marginBottom: 8 }}>
+                        Pricing
+                    </span>
+                    <div style={{ display: 'flex', gap: 10 }}>
+                        <ToggleCard
+                            selected={data.isFree === true}
+                            onClick={() => onChange({ ...data, isFree: true })}
+                            icon={<Icons.check size={15} />}
+                            label="Free"
+                            desc="No ticket cost for attendees"
+                        />
+                        <ToggleCard
+                            selected={data.isFree === false}
+                            onClick={() => onChange({ ...data, isFree: false })}
+                            icon={<Icons.wallet size={15} />}
+                            label="Paid"
+                            desc="Set ticket prices in the next step"
+                        />
+                    </div>
+                </div>
+
             </div>
 
             <div style={{ marginTop: 32, display: 'flex', justifyContent: 'flex-end' }}>
@@ -544,6 +593,7 @@ function TiersStep({ tiers, onTiersChange, onNext, onBack }) {
 
 /* ── Step 3: Review ──────────────────────────────── */
 function ReviewStep({ basics, tiers, onBack, onSaveDraft, onSubmitForApproval, submitting, error }) {
+    const bannerPreview = basics.bannerFile ? URL.createObjectURL(basics.bannerFile) : null;
     const start = basics.startDate && basics.startTime
         ? new Date(`${basics.startDate}T${basics.startTime}`).toLocaleString('en-GB', {
             weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
@@ -579,26 +629,61 @@ function ReviewStep({ basics, tiers, onBack, onSaveDraft, onSubmitForApproval, s
                 background: 'white',
                 border: '1px solid var(--border)',
                 borderRadius: 12,
-                padding: 24,
+                overflow: 'hidden',
                 marginBottom: 16,
                 boxShadow: 'var(--shadow-card)',
             }}>
-                <h3 className="mp-h3" style={{ margin: '0 0 16px', color: 'var(--text-1)' }}>
-                    {basics.title || 'Untitled event'}
-                </h3>
-                {basics.description && (
-                    <p className="body-sm" style={{ margin: '0 0 12px', color: 'var(--text-2)' }}>
-                        {basics.description}
-                    </p>
-                )}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    <div style={{ display: 'flex', gap: 10, alignItems: 'center', fontSize: 14, color: 'var(--text-2)' }}>
-                        <Icons.pin size={15} style={{ color: 'var(--text-3)', flexShrink: 0 }} />
-                        {basics.venue || '—'}
+                {bannerPreview && (
+                    <div style={{ aspectRatio: '16 / 6', overflow: 'hidden', background: 'var(--surface-subtle)' }}>
+                        <img
+                            src={bannerPreview}
+                            alt="Event cover"
+                            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                        />
                     </div>
-                    <div style={{ display: 'flex', gap: 10, alignItems: 'center', fontSize: 14, color: 'var(--text-2)' }}>
-                        <Icons.calendar size={15} style={{ color: 'var(--text-3)', flexShrink: 0 }} />
-                        {start} → {end}
+                )}
+                <div style={{ padding: 24 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
+                        <h3 className="mp-h3" style={{ margin: 0, color: 'var(--text-1)', flex: 1 }}>
+                            {basics.title || 'Untitled event'}
+                        </h3>
+                        {/* Visibility badge */}
+                        <span style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 4,
+                            fontSize: 12, fontWeight: 600, padding: '3px 10px', borderRadius: 99,
+                            background: basics.visibility === 'PRIVATE' ? 'var(--surface-subtle)' : '#eff6ff',
+                            color: basics.visibility === 'PRIVATE' ? 'var(--text-2)' : 'var(--mp-blue)',
+                            border: '1px solid var(--border)',
+                        }}>
+                            {basics.visibility === 'PRIVATE'
+                                ? <><Icons.lock size={11} /> Private</>
+                                : <><Icons.users size={11} /> Public</>}
+                        </span>
+                        {/* Pricing badge */}
+                        <span style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 4,
+                            fontSize: 12, fontWeight: 600, padding: '3px 10px', borderRadius: 99,
+                            background: basics.isFree ? '#f0fdf4' : '#fff7ed',
+                            color: basics.isFree ? '#16a34a' : '#ea580c',
+                            border: '1px solid var(--border)',
+                        }}>
+                            {basics.isFree ? <><Icons.check size={11} /> Free</> : <><Icons.wallet size={11} /> Paid</>}
+                        </span>
+                    </div>
+                    {basics.description && (
+                        <p className="body-sm" style={{ margin: '0 0 12px', color: 'var(--text-2)' }}>
+                            {basics.description}
+                        </p>
+                    )}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        <div style={{ display: 'flex', gap: 10, alignItems: 'center', fontSize: 14, color: 'var(--text-2)' }}>
+                            <Icons.pin size={15} style={{ color: 'var(--text-3)', flexShrink: 0 }} />
+                            {basics.venue || '—'}
+                        </div>
+                        <div style={{ display: 'flex', gap: 10, alignItems: 'center', fontSize: 14, color: 'var(--text-2)' }}>
+                            <Icons.calendar size={15} style={{ color: 'var(--text-3)', flexShrink: 0 }} />
+                            {start} → {end}
+                        </div>
                     </div>
                 </div>
             </div>
@@ -788,6 +873,9 @@ export default function CreateEventPage() {
         startTime: '',
         endDate: '',
         endTime: '',
+        bannerFile: null,
+        visibility: 'PUBLIC',
+        isFree: true,
     });
     const [tiers, setTiers] = useState([]);
     const [submitting, setSubmitting] = useState(false);
@@ -796,6 +884,7 @@ export default function CreateEventPage() {
 
     const [createEvent] = useCreateEventMutation();
     const [submitEvent] = useSubmitEventMutation();
+    const [presignCover] = usePresignCoverImageMutation();
 
     async function createEventSequence(shouldSubmit) {
         setSubmitting(true);
@@ -823,12 +912,27 @@ export default function CreateEventPage() {
                 startTime: toISO(basics.startDate, basics.startTime),
                 endTime: toISO(basics.endDate, basics.endTime),
                 tiers: validTiers,
+                visibility: basics.visibility,
+                isFree: basics.isFree,
             };
             if (basics.description.trim()) {
                 payload.description = basics.description.trim();
             }
 
             const event = await createEvent(payload).unwrap();
+
+            // Upload cover image now that we have an event id.
+            if (basics.bannerFile) {
+                const { uploadUrl } = await presignCover({
+                    eventId: event.id,
+                    contentType: basics.bannerFile.type,
+                }).unwrap();
+                await fetch(uploadUrl, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': basics.bannerFile.type },
+                    body: basics.bannerFile,
+                });
+            }
 
             if (shouldSubmit) {
                 await submitEvent(event.id).unwrap();

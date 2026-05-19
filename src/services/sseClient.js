@@ -53,7 +53,7 @@ const TAG_INVALIDATIONS = {
 export function connectSse({ baseUrl, token, dispatch, onEvent }) {
     const ctrl = new AbortController();
 
-    fetchEventSource(`${baseUrl}/sse`, {
+    fetchEventSource(`${baseUrl}/notifications/stream`, {
         signal: ctrl.signal,
         headers: { Authorization: `Bearer ${token}` },
         // Keep the connection alive even when the tab is backgrounded —

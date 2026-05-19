@@ -9,6 +9,7 @@ import {
     selectCurrentUser,
     selectAuthEmail,
 } from '@/features/auth/authSlice';
+import { useGetMyNotificationsQuery, useMarkNotificationAsReadMutation } from '@/features/notifications/notificationsApi';
 import { Icons } from './Icon';
 import { SidebarContext, useSidebar } from './sidebarContext';
 
@@ -116,11 +117,17 @@ function Sidebar() {
     const navigate = useNavigate();
     const dispatch = useDispatch();
     const location = useLocation();
+    const [notifOpen, setNotifOpen] = useState(false);
 
     const isAdmin        = useSelector(selectIsAdmin);
     const isCheckinStaff = useSelector(selectIsCheckinStaff);
     const user           = useSelector(selectCurrentUser);
     const email          = useSelector(selectAuthEmail);
+
+    const { data: notifData } = useGetMyNotificationsQuery(undefined, { pollingInterval: 30_000 });
+    const [markRead] = useMarkNotificationAsReadMutation();
+    const notifications = notifData ?? [];
+    const unreadCount = notifications.filter((n) => !n.read).length;
 
     const displayName = (() => {
         const first = user?.firstName?.trim() || '';
@@ -166,6 +173,7 @@ function Sidebar() {
     const width = collapsed ? COLLAPSED_WIDTH : EXPANDED_WIDTH;
 
     return (
+        <>
         <aside
             aria-label="Primary navigation"
             style={{
@@ -279,6 +287,12 @@ function Sidebar() {
                         <Avatar initial={initial} />
                     </div>
                 )}
+                <NotifBell
+                    unread={unreadCount}
+                    collapsed={collapsed}
+                    open={notifOpen}
+                    onToggle={() => setNotifOpen((v) => !v)}
+                />
                 <SidebarLink
                     icon={<Icons.settings size={18} />}
                     label="Settings"
@@ -295,6 +309,16 @@ function Sidebar() {
                 />
             </div>
         </aside>
+
+        {notifOpen && (
+            <NotifPanel
+                notifications={notifications}
+                onClose={() => setNotifOpen(false)}
+                onMarkRead={markRead}
+                sidebarWidth={collapsed ? COLLAPSED_WIDTH : EXPANDED_WIDTH}
+            />
+        )}
+        </>
     );
 }
 
@@ -391,6 +415,184 @@ function Avatar({ initial }) {
         }}>
             {initial}
         </span>
+    );
+}
+
+function NotifBell({ unread, collapsed, open, onToggle }) {
+    return (
+        <button
+            onClick={onToggle}
+            title="Notifications"
+            aria-label={`Notifications${unread > 0 ? ` (${unread} unread)` : ''}`}
+            style={{
+                position: 'relative',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 12,
+                padding: collapsed ? '10px 0' : '10px 12px',
+                justifyContent: collapsed ? 'center' : 'flex-start',
+                width: '100%',
+                borderRadius: 8,
+                border: 0,
+                background: open ? 'var(--surface-subtle)' : 'transparent',
+                color: 'var(--text-1)',
+                fontFamily: 'inherit',
+                fontSize: 14,
+                fontWeight: 500,
+                cursor: 'pointer',
+                textAlign: 'left',
+                minWidth: 0,
+            }}
+            onMouseOver={(e) => { if (!open) e.currentTarget.style.background = 'var(--surface-subtle)'; }}
+            onMouseOut={(e) => { if (!open) e.currentTarget.style.background = 'transparent'; }}
+        >
+            <span style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', position: 'relative' }}>
+                <Icons.bell size={18} />
+                {unread > 0 && (
+                    <span style={{
+                        position: 'absolute',
+                        top: -4, right: -4,
+                        minWidth: 16, height: 16,
+                        borderRadius: 99,
+                        background: 'var(--error, #E53E3E)',
+                        color: 'white',
+                        fontSize: 10,
+                        fontWeight: 700,
+                        display: 'grid',
+                        placeItems: 'center',
+                        padding: '0 3px',
+                        lineHeight: 1,
+                    }}>
+                        {unread > 99 ? '99+' : unread}
+                    </span>
+                )}
+            </span>
+            {!collapsed && <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Notifications</span>}
+        </button>
+    );
+}
+
+function NotifPanel({ notifications, onClose, onMarkRead, sidebarWidth }) {
+    useEffect(() => {
+        const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+        document.addEventListener('keydown', onKey);
+        return () => document.removeEventListener('keydown', onKey);
+    }, [onClose]);
+
+    function handleClick(n) {
+        if (!n.read) onMarkRead(n.id);
+        onClose();
+    }
+
+    return (
+        <>
+            <div
+                aria-hidden="true"
+                onClick={onClose}
+                style={{
+                    position: 'fixed', inset: 0,
+                    background: 'rgba(2,16,45,0.25)',
+                    zIndex: 58,
+                }}
+            />
+            <aside
+                role="dialog"
+                aria-label="Notifications"
+                style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: sidebarWidth,
+                    bottom: 0,
+                    width: 'min(360px, calc(100vw - 64px))',
+                    background: 'var(--surface-elevated, white)',
+                    borderRight: '1px solid var(--border)',
+                    boxShadow: '8px 0 24px rgba(2,16,45,0.1)',
+                    zIndex: 59,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    animation: 'mp-notif-slide-in 160ms ease-out',
+                }}
+            >
+                <div style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '16px 20px', borderBottom: '1px solid var(--border)',
+                }}>
+                    <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-1)' }}>Notifications</div>
+                    <button
+                        type="button"
+                        aria-label="Close"
+                        onClick={onClose}
+                        style={{
+                            background: 'transparent', border: 0, padding: 6,
+                            borderRadius: 6, cursor: 'pointer', color: 'var(--text-2)',
+                            display: 'inline-flex',
+                        }}
+                    >
+                        <Icons.x size={16} />
+                    </button>
+                </div>
+
+                <div style={{ flex: 1, overflowY: 'auto' }}>
+                    {notifications.length === 0 ? (
+                        <div style={{
+                            padding: 32, textAlign: 'center',
+                            color: 'var(--text-3)', fontSize: 14,
+                        }}>
+                            No notifications yet
+                        </div>
+                    ) : (
+                        notifications.map((n) => (
+                            <button
+                                key={n.id}
+                                type="button"
+                                onClick={() => handleClick(n)}
+                                style={{
+                                    display: 'block', width: '100%', textAlign: 'left',
+                                    padding: '14px 20px', border: 0, borderBottom: '1px solid var(--border)',
+                                    background: n.read ? 'transparent' : 'var(--mp-blue-50, #EAF1FE)',
+                                    cursor: 'pointer',
+                                }}
+                                onMouseOver={(e) => e.currentTarget.style.background = 'var(--surface-subtle)'}
+                                onMouseOut={(e) => e.currentTarget.style.background = n.read ? 'transparent' : 'var(--mp-blue-50, #EAF1FE)'}
+                            >
+                                <div style={{
+                                    fontSize: 13, fontWeight: n.read ? 400 : 600,
+                                    color: 'var(--text-1)', marginBottom: 3,
+                                    display: 'flex', alignItems: 'center', gap: 8,
+                                }}>
+                                    {!n.read && (
+                                        <span style={{
+                                            width: 7, height: 7, borderRadius: 99,
+                                            background: 'var(--mp-blue)', flexShrink: 0,
+                                        }} />
+                                    )}
+                                    {n.title ?? n.message}
+                                </div>
+                                {n.title && n.message && (
+                                    <div style={{ fontSize: 12, color: 'var(--text-2)', marginLeft: n.read ? 0 : 15 }}>
+                                        {n.message}
+                                    </div>
+                                )}
+                                {n.createdAt && (
+                                    <div style={{
+                                        fontSize: 11, color: 'var(--text-3)', marginTop: 4,
+                                        marginLeft: n.read ? 0 : 15,
+                                    }}>
+                                        {new Date(n.createdAt).toLocaleString()}
+                                    </div>
+                                )}
+                            </button>
+                        ))
+                    )}
+                </div>
+            </aside>
+            <style>{`
+                @keyframes mp-notif-slide-in {
+                    from { transform: translateX(-8px); opacity: 0; }
+                    to   { transform: translateX(0);    opacity: 1; }
+                }
+            `}</style>
+        </>
     );
 }
 

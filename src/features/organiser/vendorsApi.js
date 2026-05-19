@@ -9,7 +9,7 @@ export const vendorsApi = baseApi.injectEndpoints({
                 params: serviceType ? { serviceType } : undefined,
             }),
             providesTags: ['Vendor'],
-            transformResponse: (r) => r?.data ?? r ?? [],
+            transformResponse: (r) => { const d = r?.data ?? r; return Array.isArray(d) ? d : (d?.content ?? []); },
         }),
 
         getMyVendorVerification: builder.query({
@@ -26,7 +26,7 @@ export const vendorsApi = baseApi.injectEndpoints({
             providesTags: (result, error, { eventId }) => [
                 { type: 'VendorApplication', id: eventId },
             ],
-            transformResponse: (r) => r?.data ?? r ?? [],
+            transformResponse: (r) => { const d = r?.data ?? r; return Array.isArray(d) ? d : (d?.content ?? []); },
         }),
 
         acceptVendorApplication: builder.mutation({
@@ -67,7 +67,7 @@ export const vendorsApi = baseApi.injectEndpoints({
         getMyVendorApplications: builder.query({
             query: () => '/vendor-applications/mine',
             providesTags: ['VendorApplicationMine'],
-            transformResponse: (r) => r?.data ?? r ?? [],
+            transformResponse: (r) => { const d = r?.data ?? r; return Array.isArray(d) ? d : (d?.content ?? []); },
         }),
 
         applyAsVendor: builder.mutation({

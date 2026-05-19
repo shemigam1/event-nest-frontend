@@ -16,6 +16,12 @@ export const baseApi = createApi({
             return headers;
         },
     }),
-    tagTypes: ['User', 'Event', 'Booking', 'Ticket', 'Analytics', 'Notification', 'CheckInInvite', 'EventEdit', 'Comment', 'Conversation', 'ConversationMessages'],
+    tagTypes: [
+        'User', 'Event', 'Booking', 'Ticket', 'Analytics', 'Notification',
+        'CheckInInvite', 'EventEdit', 'Comment', 'Conversation', 'ConversationMessages',
+        'Guest', 'Manager', 'Budget', 'Programme', 'Contract', 'Escrow',
+        'VendorApplication', 'VendorApplicationMine', 'VendorVerification',
+        'InquiryReceived', 'Inquiry', 'ContractMine',
+    ],
     endpoints: () => ({}),
 });

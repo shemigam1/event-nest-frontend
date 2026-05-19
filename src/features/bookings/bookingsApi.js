@@ -31,7 +31,10 @@ export const bookingsApi = baseApi.injectEndpoints({
         getMyBookings: builder.query({
             query: () => '/me/bookings',
             providesTags: ['Booking'],
-            transformResponse: (response) => response.data ?? response,
+            transformResponse: (response) => {
+                const d = response.data ?? response;
+                return Array.isArray(d) ? d : (d?.content ?? []);
+            },
         }),
 
         verifyPayment: builder.mutation({

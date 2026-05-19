@@ -5,7 +5,10 @@ export const eventsApi = baseApi.injectEndpoints({
         getPublishedEvents: builder.query({
             query: () => '/events',
             providesTags: ['Event'],
-            transformResponse: (response) => response.data ?? response,
+            transformResponse: (response) => {
+                const d = response.data ?? response;
+                return Array.isArray(d) ? d : (d?.content ?? []);
+            },
         }),
         getEventById: builder.query({
             query: (id) => `/events/${id}`,
@@ -15,7 +18,10 @@ export const eventsApi = baseApi.injectEndpoints({
         getEventTiers: builder.query({
             query: (eventId) => `/events/${eventId}/tiers`,
             providesTags: (result, error, eventId) => [{ type: 'Event', id: `${eventId}-tiers` }],
-            transformResponse: (response) => response.data ?? response,
+            transformResponse: (response) => {
+                const d = response.data ?? response;
+                return Array.isArray(d) ? d : (d?.content ?? []);
+            },
         }),
         createEvent: builder.mutation({
             query: (body) => ({ url: '/events', method: 'POST', body }),
@@ -31,6 +37,14 @@ export const eventsApi = baseApi.injectEndpoints({
             query: (id) => ({ url: `/events/${id}/submit`, method: 'PATCH' }),
             invalidatesTags: (result, error, id) => [{ type: 'Event', id }],
             transformResponse: (response) => response.data ?? response,
+        }),
+        presignCoverImage: builder.mutation({
+            query: ({ eventId, contentType }) => ({
+                url: `/events/${eventId}/cover-image/presign`,
+                method: 'POST',
+                body: { contentType },
+            }),
+            transformResponse: (response) => response?.data ?? response,
         }),
         deleteEvent: builder.mutation({
             query: (id) => ({ url: `/events/${id}`, method: 'DELETE' }),
@@ -68,4 +82,5 @@ export const {
     useDeleteEventMutation,
     useGetEventConfigQuery,
     useUpdateEventConfigMutation,
+    usePresignCoverImageMutation,
 } = eventsApi;

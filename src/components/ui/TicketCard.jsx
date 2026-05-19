@@ -55,6 +55,25 @@ export default function TicketCard({ ticket, eventStartTime, venue, onShowQr }) 
                     <Field label="Where" value={resolvedVenue ?? '—'} />
                     <Field label="Tier" value={ticket.tierName ?? '—'} />
                 </div>
+
+                {(ticket.shortCode || ticket.qrCode) && (
+                    <div style={{
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        gap: 18,
+                        rowGap: 10,
+                        marginTop: 14,
+                        paddingTop: 14,
+                        borderTop: '1px dashed var(--border)',
+                    }}>
+                        {ticket.shortCode && (
+                            <CodeField label="Short code" value={ticket.shortCode} />
+                        )}
+                        {ticket.qrCode && (
+                            <CodeField label="Long code" value={ticket.qrCode} />
+                        )}
+                    </div>
+                )}
             </div>
 
             <div style={{
@@ -103,6 +122,29 @@ function Field({ label, value }) {
         <div>
             <div style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 2 }}>{label}</div>
             <div style={{ fontSize: 14, color: 'var(--text-1)', fontWeight: 500 }}>{value}</div>
+        </div>
+    );
+}
+
+function CodeField({ label, value }) {
+    return (
+        <div>
+            <div style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 4 }}>{label}</div>
+            <code style={{
+                display: 'inline-block',
+                fontSize: 12,
+                fontFamily: 'ui-monospace, "Cascadia Code", "Fira Code", monospace',
+                fontWeight: 600,
+                letterSpacing: '0.04em',
+                color: 'var(--text-1)',
+                background: 'var(--surface-subtle)',
+                border: '1px solid var(--border)',
+                borderRadius: 6,
+                padding: '2px 8px',
+                wordBreak: 'break-all',
+            }}>
+                {value}
+            </code>
         </div>
     );
 }

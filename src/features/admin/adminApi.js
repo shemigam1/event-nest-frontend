@@ -5,7 +5,7 @@ export const adminApi = baseApi.injectEndpoints({
         getAdminEvents: builder.query({
             query: (status = 'PENDING_APPROVAL') => `/admin/events?status=${status}`,
             providesTags: ['Event'],
-            transformResponse: (r) => r.data ?? r,
+            transformResponse: (r) => { const d = r.data ?? r; return Array.isArray(d) ? d : (d?.content ?? []); },
         }),
         approveEvent: builder.mutation({
             query: (id) => ({ url: `/admin/events/${id}/approve`, method: 'PATCH' }),
@@ -29,7 +29,7 @@ export const adminApi = baseApi.injectEndpoints({
         getAdminUsers: builder.query({
             query: () => '/admin/users',
             providesTags: ['User'],
-            transformResponse: (r) => r.data ?? r,
+            transformResponse: (r) => { const d = r.data ?? r; return Array.isArray(d) ? d : (d?.content ?? []); },
         }),
         updateUserStatus: builder.mutation({
             query: ({ id, enabled }) => ({
@@ -73,7 +73,7 @@ export const adminApi = baseApi.injectEndpoints({
         getEventsByOrganiser: builder.query({
             query: (organiserId) => `/admin/events?organiserId=${organiserId}`,
             providesTags: ['Event'],
-            transformResponse: (r) => r.data ?? r,
+            transformResponse: (r) => { const d = r.data ?? r; return Array.isArray(d) ? d : (d?.content ?? []); },
         }),
         getAnalytics: builder.query({
             query: () => '/admin/analytics',
@@ -83,7 +83,7 @@ export const adminApi = baseApi.injectEndpoints({
         getEventEdits: builder.query({
             query: (status) => status ? `/admin/event-edits?status=${status}` : '/admin/event-edits',
             providesTags: ['EventEdit'],
-            transformResponse: (r) => r.data ?? r,
+            transformResponse: (r) => { const d = r.data ?? r; return Array.isArray(d) ? d : (d?.content ?? []); },
         }),
         approveEventEdit: builder.mutation({
             query: (id) => ({ url: `/admin/event-edits/${id}/approve`, method: 'PATCH' }),

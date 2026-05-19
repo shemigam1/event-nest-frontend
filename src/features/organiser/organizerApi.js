@@ -5,7 +5,10 @@ export const organizerApi = baseApi.injectEndpoints({
         getOrganizerEvents: builder.query({
             query: () => '/organizer/events',
             providesTags: ['Event'],
-            transformResponse: (response) => response.data ?? response,
+            transformResponse: (response) => {
+                const d = response.data ?? response;
+                return Array.isArray(d) ? d : (d?.content ?? []);
+            },
         }),
         getOrganizerEventById: builder.query({
             query: (id) => `/organizer/events/${id}`,

@@ -8,7 +8,8 @@ import QrPattern from '../../components/ui/QrPattern';
 import TopNav from '../../components/ui/TopNav';
 import { StatusBadge } from '../../components/ui/Badge';
 import { Icons } from '../../components/ui/Icon';
-import { SAMPLE_EVENTS } from '../../data/sampleEvents';
+import { useGetPublishedEventsQuery } from '../events/eventsApi';
+import { formatEventDate } from '../../utils/dateFormat';
 
 /* ── Tile used in the organiser preview card ── */
 function Tile({ label, value, sub }) {
@@ -160,6 +161,12 @@ function Pillar({ icon, title, body }) {
 export default function LandingPage() {
   const navigate = useNavigate();
   const [audience, setAudience] = useState('attendee');
+  const { data: rawEvents } = useGetPublishedEventsQuery();
+  const featuredEvents = (rawEvents ?? []).slice(0, 3).map(e => ({
+    ...e,
+    dateLabel: formatEventDate(e.startTime),
+    tiers: e.tiers ?? [],
+  }));
 
   const config = audience === 'attendee' ? {
     eyebrow: 'For people who actually want their seat',
@@ -450,13 +457,23 @@ export default function LandingPage() {
             gridTemplateColumns: 'repeat(3, 1fr)',
             gap: 20,
           }}>
-            {SAMPLE_EVENTS.slice(0, 3).map(event => (
-              <EventCard
-                key={event.id}
-                event={event}
-                onClick={() => navigate(`/events/${event.id}`)}
-              />
-            ))}
+            {featuredEvents.length > 0
+              ? featuredEvents.map(event => (
+                  <EventCard
+                    key={event.id}
+                    event={event}
+                    onClick={() => navigate(`/events/${event.id}`)}
+                  />
+                ))
+              : Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} style={{
+                    height: 220, borderRadius: 12,
+                    background: 'var(--surface-page)',
+                    border: '1px solid var(--border)',
+                    animation: 'mp-flash 1.6s ease-in-out infinite',
+                  }}/>
+                ))
+            }
           </div>
         </div>
       </section>

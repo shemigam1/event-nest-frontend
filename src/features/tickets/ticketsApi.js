@@ -5,7 +5,10 @@ export const ticketsApi = baseApi.injectEndpoints({
         getMyTickets: builder.query({
             query: () => '/me/tickets',
             providesTags: ['Ticket'],
-            transformResponse: (response) => response.data ?? response,
+            transformResponse: (response) => {
+                const d = response.data ?? response;
+                return Array.isArray(d) ? d : (d?.content ?? []);
+            },
         }),
     }),
 });

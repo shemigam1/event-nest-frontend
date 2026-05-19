@@ -18,6 +18,9 @@ import VendorsTab from '../components/VendorsTab';
 import BudgetTab from '../components/BudgetTab';
 import TeamTab from '../components/TeamTab';
 import ContractsTab from '../components/ContractsTab';
+import CommentsTab from '../components/CommentsTab';
+import RatingsTab from '../components/RatingsTab';
+import ContributionPoolsTab from '../components/ContributionPoolsTab';
 import ActivityFeed from '@/features/activity/ActivityFeed';
 import {
     useListCheckInInvitesQuery,
@@ -148,6 +151,18 @@ export default function OrganizerEventPage() {
                     </>
                 )}
 
+                {tab === 'comments' && (
+                    <CommentsTab eventId={eventId} isOrganiser />
+                )}
+
+                {tab === 'ratings' && (
+                    <RatingsTab />
+                )}
+
+                {tab === 'contributions' && (
+                    <ContributionPoolsTab />
+                )}
+
                 {tab === 'settings' && (
                     <SettingsTab event={event} eventId={eventId} navigate={navigate} />
                 )}
@@ -203,11 +218,14 @@ function Header({ event, totalSold, totalCapacity, checkedIn, checkInRate, tab, 
         { id: 'attendees', label: 'Attendees' },
         { id: 'guests',    label: 'Guests' },
         { id: 'programme', label: 'Programme' },
-        { id: 'vendors',    label: 'Vendors' },
-        { id: 'contracts', label: 'Contracts' },
-        { id: 'budget',    label: 'Budget' },
-        { id: 'team',      label: 'Team' },
-        { id: 'settings',  label: 'Settings' },
+        { id: 'vendors',       label: 'Vendors' },
+        { id: 'contracts',     label: 'Contracts' },
+        { id: 'budget',        label: 'Budget' },
+        { id: 'team',          label: 'Team' },
+        { id: 'comments',      label: 'Comments' },
+        { id: 'ratings',       label: 'Ratings' },
+        { id: 'contributions', label: 'Contributions' },
+        { id: 'settings',      label: 'Settings' },
     ];
     return (
         <div style={{ background: 'white', borderBottom: '1px solid var(--border)' }}>

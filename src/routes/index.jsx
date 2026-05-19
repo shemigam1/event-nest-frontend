@@ -1,4 +1,9 @@
-import { createBrowserRouter, Navigate } from 'react-router';
+import { createBrowserRouter, Navigate, useParams } from 'react-router';
+
+function ConversationRedirect() {
+    const { conversationId } = useParams();
+    return <Navigate to={`/messages?c=${conversationId}`} replace />;
+}
 import AppShell from '../components/ui/AppShell';
 import LandingPage from '../features/landing/LandingPage';
 import DiscoveryPage from '../features/events/pages/DiscoveryPage';
@@ -18,6 +23,7 @@ import AdminUserEventsPage from '../features/admin/pages/AdminUserEventsPage';
 import InviteAdminPage from '../features/admin/pages/InviteAdminPage';
 import EventEditsPage from '../features/admin/pages/EventEditsPage';
 import AdminEventDetailPage from '../features/admin/pages/AdminEventDetailPage';
+import AdminEscrowPage from '../features/admin/pages/AdminEscrowPage';
 import OrganizerConsolePage from '../features/organiser/pages/OrganizerConsolePage';
 import OrganizerEventPage from '../features/organiser/pages/OrganizerEventPage';
 import VendorOpportunitiesPage from '../features/vendor/pages/VendorOpportunitiesPage';
@@ -29,6 +35,7 @@ import PaymentResultPage from '../features/bookings/pages/PaymentResultPage';
 import VendorMarketplacePage from '../features/vendor/pages/VendorMarketplacePage';
 import VendorDetailPage from '../features/vendor/pages/VendorDetailPage';
 import VendorProfileSetupPage from '../features/vendor/pages/VendorProfileSetupPage';
+import VendorSignupPage from '../features/vendor/pages/VendorSignupPage';
 import MessagesPage from '../features/messages/pages/MessagesPage';
 import SettingsPage from '../features/settings/pages/SettingsPage';
 import PrivateRoute from './PrivateRoute';
@@ -54,6 +61,7 @@ const router = createBrowserRouter([
             { path: '/vendors',        element: <VendorMarketplacePage /> },
             { path: '/vendors/:id',    element: <VendorDetailPage /> },
             { path: '/payment-result', element: <PaymentResultPage /> },
+            { path: '/vendor/signup',  element: <VendorSignupPage /> },
 
             {
                 element: <PrivateRoute />,
@@ -70,7 +78,8 @@ const router = createBrowserRouter([
                     { path: '/vendor/applications',  element: <MyApplicationsPage /> },
                     { path: '/vendor/profile',       element: <VendorProfileSetupPage /> },
                     { path: '/vendor/apply/:eventId', element: <VendorApplyPage /> },
-                    { path: '/messages',              element: <MessagesPage /> },
+                    { path: '/messages',                  element: <MessagesPage /> },
+                    { path: '/messages/:conversationId',  element: <ConversationRedirect /> },
                     { path: '/settings',              element: <SettingsPage /> },
                 ],
             },
@@ -85,6 +94,7 @@ const router = createBrowserRouter([
                     { path: '/admin/invite',             element: <InviteAdminPage /> },
                     { path: '/admin/event-edits',        element: <EventEditsPage /> },
                     { path: '/admin/events/:id',             element: <AdminEventDetailPage /> },
+                    { path: '/admin/escrow',                 element: <AdminEscrowPage /> },
                 ],
             },
 

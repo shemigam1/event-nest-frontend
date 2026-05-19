@@ -3,6 +3,10 @@
 @import "tailwindcss";
 
 /* EventNest — Moniepoint brand tokens */
+/* =====================================================
+   Google Fonts already imported at top of file
+   ===================================================== */
+
 :root {
   color-scheme: light;
   --mp-blue: #0357EE;
@@ -70,6 +74,54 @@
   --font-display: "Instrument Serif", "Iowan Old Style", "Apple Garamond", Georgia, serif;
 }
 
+/* === Dark mode === */
+[data-theme="dark"] {
+  color-scheme: dark;
+  --mp-blue: #4D8BFF;
+  --mp-blue-700: #6FA0FF;
+  --mp-blue-200: #25407A;
+  --mp-blue-100: #182E5A;
+  --mp-blue-50:  #0F1E3D;
+  --mp-navy: #000814;
+  --mp-navy-90: rgba(0,8,20,0.90);
+  --mp-navy-70: rgba(0,8,20,0.70);
+
+  --mp-coral: #FF7A52;
+  --mp-coral-600: #FF8E6B;
+  --mp-coral-100: #3A1E14;
+  --mp-coral-50:  #2A140C;
+
+  --text-1: #F4F6FB;
+  --text-2: #A8B0C2;
+  --text-3: #6B7388;
+  --text-on-blue:  #FFFFFF;
+  --text-on-navy:  #FFFFFF;
+  --text-on-coral: #1A0A04;
+
+  --surface-page:     #0A1124;
+  --surface-subtle:   #0F1830;
+  --surface-elevated: #161F3A;
+  --surface-dark:     #000814;
+  --surface-hero:     #1A1424;
+
+  --border: #232C46;
+  --border-strong: #2E3858;
+  --border-focus: #4D8BFF;
+
+  --success: #2DBA77;
+  --success-bg: #0E2B1E;
+  --warning: #E8B248;
+  --warning-bg: #2E2412;
+  --error:   #FF6B6B;
+  --error-bg: #2E1414;
+  --danger:  #FF6B6B;
+  --danger-bg: #2E1414;
+
+  --shadow-card: 0 1px 2px rgba(0,0,0,0.5);
+  --shadow-elevated: 0 4px 14px rgba(0,0,0,0.55);
+  --shadow-modal: 0 24px 48px rgba(0,0,0,0.7);
+}
+
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; }
 body {
@@ -90,11 +142,11 @@ a:hover { text-decoration: underline; }
   font-variant-numeric: tabular-nums;
 }
 
-.mp-h-display { font-size: 48px; line-height: 56px; font-weight: 700; letter-spacing: -0.02em; }
-.mp-h1 { font-size: 36px; line-height: 44px; font-weight: 700; letter-spacing: -0.02em; }
-.mp-h2 { font-size: 28px; line-height: 36px; font-weight: 600; letter-spacing: -0.01em; }
-.mp-h3 { font-size: 22px; line-height: 30px; font-weight: 600; }
-.mp-h4 { font-size: 18px; line-height: 26px; font-weight: 600; }
+.mp-h-display, .h-display { font-size: 48px; line-height: 56px; font-weight: 700; letter-spacing: -0.02em; }
+.mp-h1, .h-1 { font-size: 36px; line-height: 44px; font-weight: 700; letter-spacing: -0.02em; }
+.mp-h2, .h-2 { font-size: 28px; line-height: 36px; font-weight: 600; letter-spacing: -0.01em; }
+.mp-h3, .h-3 { font-size: 22px; line-height: 30px; font-weight: 600; }
+.mp-h4, .h-4 { font-size: 18px; line-height: 26px; font-weight: 600; }
 .body-lg { font-size: 18px; line-height: 28px; }
 .body    { font-size: 16px; line-height: 24px; }
 .body-sm { font-size: 14px; line-height: 20px; }
@@ -356,6 +408,31 @@ a:hover { text-decoration: underline; }
   font-style: italic;
   color: var(--mp-blue);
   font-weight: 400;
+}
+[data-theme="dark"] .mp-display-em { color: #7AAEFF; }
+
+/* App navigation bar */
+.mp-appnav {
+  background: var(--surface-elevated);
+  border-bottom: 1px solid var(--border);
+  padding: 0 24px;
+  height: 64px;
+  display: flex; align-items: center; gap: 24px;
+  position: sticky; top: 0; z-index: 50;
+}
+.mp-appnav-link {
+  background: transparent; border: 0;
+  color: var(--text-2); font-weight: 500; font-size: 15px;
+  padding: 8px 0; position: relative;
+  transition: color var(--motion-fast);
+}
+.mp-appnav-link:hover { color: var(--text-1); }
+.mp-appnav-link[data-active="true"] {
+  color: var(--mp-blue); font-weight: 600;
+}
+.mp-appnav-link[data-active="true"]::after {
+  content: ''; position: absolute; left: 0; right: 0; bottom: -22px;
+  height: 2px; background: var(--mp-blue);
 }
 
 .mp-live-dot {
