@@ -9,9 +9,45 @@ import {
     selectCurrentUser,
     selectAuthEmail,
 } from '@/features/auth/authSlice';
-import { useGetMyNotificationsQuery, useMarkNotificationAsReadMutation } from '@/features/notifications/notificationsApi';
+import { useGetMyNotificationsQuery, useGetUnreadNotificationCountQuery, useMarkNotificationAsReadMutation } from '@/features/notifications/notificationsApi';
+import { useGetWorkspacesQuery } from '@/features/organiser/organizerApi';
 import { Icons } from './Icon';
 import { SidebarContext, useSidebar } from './sidebarContext';
+
+const WORKSPACE_NAV = {
+    ORGANISER: [
+        { icon: Icons.calendar, label: 'My events',         path: '/organiser' },
+        { icon: Icons.users,    label: 'Vendor marketplace', path: '/vendors' },
+        { icon: Icons.message,  label: 'Messages',           path: '/messages' },
+    ],
+    MANAGER: [
+        { icon: Icons.calendar, label: 'My events',         path: '/organiser' },
+        { icon: Icons.users,    label: 'Vendor marketplace', path: '/vendors' },
+        { icon: Icons.message,  label: 'Messages',           path: '/messages' },
+    ],
+    VENDOR: [
+        { icon: Icons.signal,   label: 'Dashboard',     path: '/vendor' },
+        { icon: Icons.calendar, label: 'Opportunities', path: '/vendor/opportunities' },
+        { icon: Icons.list,     label: 'Applications',  path: '/vendor/applications' },
+        { icon: Icons.users,    label: 'My profile',    path: '/vendor/profile' },
+        { icon: Icons.message,  label: 'Messages',      path: '/messages' },
+    ],
+    ATTENDEE: [
+        { icon: Icons.signal,   label: 'Dashboard',    path: '/dashboard' },
+        { icon: Icons.ticket,   label: 'My tickets',   path: '/tickets' },
+        { icon: Icons.calendar, label: 'Browse events', path: '/events' },
+        { icon: Icons.message,  label: 'Messages',     path: '/messages' },
+    ],
+};
+
+const WORKSPACE_PRIORITY = ['ORGANISER', 'MANAGER', 'VENDOR', 'ATTENDEE'];
+
+function pickDefaultWorkspace(roles = []) {
+    for (const role of WORKSPACE_PRIORITY) {
+        if (roles.includes(role)) return role;
+    }
+    return null;
+}
 
 // useSidebar is used inside the Sidebar child component below.
 
@@ -124,10 +160,17 @@ function Sidebar() {
     const user           = useSelector(selectCurrentUser);
     const email          = useSelector(selectAuthEmail);
 
-    const { data: notifData } = useGetMyNotificationsQuery(undefined, { pollingInterval: 30_000 });
+    const { data: notifData } = useGetMyNotificationsQuery(undefined, { pollingInterval: 60_000 });
+    const { data: unreadCount = 0 } = useGetUnreadNotificationCountQuery(undefined, { pollingInterval: 30_000 });
     const [markRead] = useMarkNotificationAsReadMutation();
     const notifications = notifData ?? [];
-    const unreadCount = notifications.filter((n) => !n.read).length;
+
+    const { data: workspaces = [] } = useGetWorkspacesQuery(undefined, {
+        skip: isAdmin || (isCheckinStaff && !isAdmin),
+    });
+    const [activeWorkspace, setActiveWorkspace] = useState(null);
+
+    const resolvedWorkspace = activeWorkspace ?? pickDefaultWorkspace(workspaces);
 
     const displayName = (() => {
         const first = user?.firstName?.trim() || '';
@@ -144,31 +187,29 @@ function Sidebar() {
         navigate('/login', { replace: true });
     }
 
-    // Role-keyed nav lists. Mirrors what SidebarPanel exposed but stripped
-    // of the drawer-specific affordances. Admins and check-in-only users
-    // see purpose-built lists; everyone else gets the standard organiser /
-    // attendee / vendor surface.
     const items = (() => {
         if (isCheckinStaff && !isAdmin) {
-            return [
-                { icon: Icons.scan,     label: 'Check-in station', path: '/checkin' },
-            ];
+            return [{ icon: Icons.scan, label: 'Check-in station', path: '/checkin' }];
         }
         if (isAdmin) {
             return [
-                { icon: Icons.signal,   label: 'Event moderation',    path: '/admin/moderation' },
-                { icon: Icons.users,    label: 'Manage users',        path: '/admin/users' },
-                { icon: Icons.list,     label: 'Event edit requests', path: '/admin/event-edits' },
-                { icon: Icons.mail,     label: 'Invite admin',        path: '/admin/invite' },
+                { icon: Icons.signal, label: 'Event moderation',    path: '/admin/moderation' },
+                { icon: Icons.users,  label: 'Manage users',        path: '/admin/users' },
+                { icon: Icons.list,   label: 'Event edit requests', path: '/admin/event-edits' },
+                { icon: Icons.mail,   label: 'Invite admin',        path: '/admin/invite' },
             ];
         }
-        return [
+        return WORKSPACE_NAV[resolvedWorkspace] ?? [
             { icon: Icons.calendar, label: 'My events',  path: '/organiser' },
             { icon: Icons.ticket,   label: 'My tickets', path: '/tickets' },
             { icon: Icons.message,  label: 'Messages',   path: '/messages' },
             { icon: Icons.users,    label: 'Vendors',    path: '/vendors' },
         ];
     })();
+
+    // Only show workspace switcher for users who have multiple roles
+    const switchableWorkspaces = WORKSPACE_PRIORITY.filter((r) => workspaces.includes(r));
+    const showSwitcher = !isAdmin && !isCheckinStaff && switchableWorkspaces.length > 1;
 
     const width = collapsed ? COLLAPSED_WIDTH : EXPANDED_WIDTH;
 
@@ -218,8 +259,41 @@ function Sidebar() {
                 </button>
             </div>
 
-            {/* Quick "Create event" CTA — hidden for check-in-only roles. */}
-            {!(isCheckinStaff && !isAdmin) && !isAdmin && (
+            {/* Workspace switcher — shown when user has multiple event roles */}
+            {showSwitcher && !collapsed && (
+                <div style={{
+                    padding: '8px 12px',
+                    borderBottom: '1px solid var(--border)',
+                    display: 'flex',
+                    gap: 4,
+                }}>
+                    {switchableWorkspaces.map((role) => (
+                        <button
+                            key={role}
+                            onClick={() => setActiveWorkspace(role)}
+                            style={{
+                                flex: 1,
+                                padding: '5px 4px',
+                                borderRadius: 6,
+                                border: '1px solid',
+                                borderColor: resolvedWorkspace === role ? 'var(--mp-blue)' : 'var(--border)',
+                                background: resolvedWorkspace === role ? 'var(--mp-blue-50, #EAF1FE)' : 'transparent',
+                                color: resolvedWorkspace === role ? 'var(--mp-blue)' : 'var(--text-2)',
+                                fontSize: 11,
+                                fontWeight: 600,
+                                cursor: 'pointer',
+                                textTransform: 'capitalize',
+                                letterSpacing: '0.02em',
+                            }}
+                        >
+                            {role.charAt(0) + role.slice(1).toLowerCase()}
+                        </button>
+                    ))}
+                </div>
+            )}
+
+            {/* Quick "Create event" CTA — only relevant for organiser workspace */}
+            {!(isCheckinStaff && !isAdmin) && !isAdmin && resolvedWorkspace !== 'ATTENDEE' && resolvedWorkspace !== 'VENDOR' && (
                 <div style={{ padding: collapsed ? '10px 8px' : '10px 12px' }}>
                     <CreateButton collapsed={collapsed} onClick={() => go('/events/new')} />
                 </div>

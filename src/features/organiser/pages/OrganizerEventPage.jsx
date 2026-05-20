@@ -26,7 +26,7 @@ import {
     useListCheckInInvitesQuery,
     useCreateCheckInInviteMutation,
     useRevokeCheckInInviteMutation,
-} from '@/features/checkin/checkInApi';
+} from '@/features/checkin/checkinApi';
 import TopNav from '@/components/ui/TopNav';
 import Button from '@/components/ui/Button';
 import CapacityBar from '@/components/ui/CapacityBar';
@@ -47,7 +47,7 @@ import { formatEventDate } from '@/utils/dateFormat';
 export default function OrganizerEventPage() {
     const { id: eventId } = useParams();
     const navigate = useNavigate();
-    const [tab, setTab] = useState('attendees');
+    const [tab, setTab] = useState('team');
 
     const eventQuery = useGetOrganizerEventByIdQuery(eventId);
     const tiersQuery = useGetEventTiersQuery(eventId);
@@ -277,7 +277,7 @@ function Header({ event, totalSold, totalCapacity, checkedIn, checkInRate, tab, 
                 <div style={{ display: 'flex', gap: 0, marginTop: 24, overflowX: 'auto' }}>
                     {tabs.map(t => {
                         const active = tab === t.id;
-                        const isDisabled = !isLive && t.id !== 'settings';
+                        const isDisabled = !isLive && t.id === 'attendees';
                         return (
                             <button
                                 key={t.id}
@@ -285,7 +285,7 @@ function Header({ event, totalSold, totalCapacity, checkedIn, checkInRate, tab, 
                                 role="tab"
                                 aria-selected={active}
                                 disabled={isDisabled}
-                                title={isDisabled ? 'Publish the event to access this tab' : ''}
+                                title={isDisabled ? 'Attendee data appears after the first booking' : ''}
                                 style={{
                                     background: 'transparent', border: 0,
                                     padding: '12px 18px', whiteSpace: 'nowrap',
@@ -339,7 +339,7 @@ function DashboardTab({
         let bk = 0;
         let rv = 0;
         for (const b of bookings) {
-            if (b.status !== 'CONFIRMED') continue;
+            if (b.paymentStatus !== 'PAID') continue;
             const t = new Date(b.createdAt).getTime();
             if (t >= hourAgo && t <= nowMs) {
                 bk += b.quantity ?? 0;
@@ -636,7 +636,7 @@ function AttendeesTab({ bookings, loading }) {
                     day: 'numeric', month: 'short', year: 'numeric',
                 });
                 const isLast = i === bookings.length - 1;
-                const isCancelled = booking.status === 'CANCELLED';
+                const isCancelled = booking.paymentStatus === 'REFUNDED';
                 return (
                     <div
                         key={booking.id}
@@ -670,7 +670,7 @@ function AttendeesTab({ bookings, loading }) {
                         <div className="mp-num" style={{
                             fontSize: 14, fontWeight: 600, color: 'var(--text-1)',
                         }}>
-                            {booking.totalAmount === 0 ? 'Free' : `₦${booking.totalAmount.toLocaleString()}`}
+                            {booking.totalAmount === 0 ? 'Free' : formatMoney(booking.totalAmount)}
                         </div>
                         <div style={{
                             display: 'flex', flexDirection: 'column', gap: 2, alignItems: 'flex-end',
@@ -680,7 +680,7 @@ function AttendeesTab({ bookings, loading }) {
                                 background: isCancelled ? 'var(--surface-subtle)' : 'var(--success-bg)',
                                 color: isCancelled ? 'var(--text-3)' : 'var(--success)',
                             }}>
-                                {booking.status}
+                                {booking.paymentStatus}
                             </span>
                             <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{date}</span>
                         </div>
@@ -1364,11 +1364,11 @@ function PageSkeleton() {
 /**
  * Compact money formatter — mirrors the design (e.g. ₦11,900K, ₦1.2M).
  */
-function formatMoney(amount) {
-    if (amount == null) return '₦0';
-    const n = Number(amount);
-    if (n === 0) return '₦0';
-    if (n >= 1_000_000) return `₦${(n / 1_000_000).toFixed(1)}M`;
-    if (n >= 1_000) return `₦${Math.round(n / 1_000)}K`;
-    return `₦${n.toLocaleString()}`;
+function formatMoney(kobo) {
+    if (kobo == null) return '₦0';
+    const naira = Number(kobo) / 100;
+    if (naira === 0) return '₦0';
+    if (naira >= 1_000_000) return `₦${(naira / 1_000_000).toFixed(1)}M`;
+    if (naira >= 1_000) return `₦${Math.round(naira / 1_000)}K`;
+    return `₦${naira.toLocaleString()}`;
 }

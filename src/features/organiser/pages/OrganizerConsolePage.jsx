@@ -9,12 +9,15 @@ import Button from '@/components/ui/Button';
 import { StatusBadge } from '@/components/ui/Badge';
 import { Icons } from '@/components/ui/Icon';
 import { formatEventDate } from '@/utils/dateFormat';
+import { formatNaira, formatNairaCompact } from '@/utils/currency';
 
 const FILTERS = [
-    { id: 'ALL', label: 'All' },
-    { id: 'DRAFT', label: 'Draft' },
+    { id: 'ALL',              label: 'All' },
+    { id: 'DRAFT',            label: 'Draft' },
     { id: 'PENDING_APPROVAL', label: 'Pending' },
-    { id: 'PUBLISHED', label: 'Published' },
+    { id: 'PUBLISHED',        label: 'Published' },
+    { id: 'REJECTED',         label: 'Rejected' },
+    { id: 'CANCELLED',        label: 'Cancelled' },
 ];
 
 /* ── Stat tile ───────────────────────────────────── */
@@ -131,7 +134,7 @@ function EventRow({ event, isLast, onView, onSubmit, onDelete, submitting }) {
 
                 <div style={{ textAlign: 'right' }}>
                     <div className="mp-num" style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-1)' }}>
-                        {revenue === 0 ? '—' : `₦${revenue.toLocaleString()}`}
+                        {revenue === 0 ? '—' : formatNairaCompact(revenue)}
                     </div>
                     <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>revenue</div>
                 </div>
@@ -184,14 +187,15 @@ export default function OrganizerConsolePage() {
 
     const { data: events = [], isLoading, isError, error, refetch } = useGetOrganizerEventsQuery();
 
-    const isAuthError = isError && (error?.status === 401 || error?.status === 403);
+    const isUnauthorized = isError && error?.status === 401;
+    const isForbidden    = isError && error?.status === 403;
 
     useEffect(() => {
-        if (isAuthError) {
+        if (isUnauthorized) {
             dispatch(logout());
             navigate('/login', { replace: true });
         }
-    }, [isAuthError, dispatch, navigate]);
+    }, [isUnauthorized, dispatch, navigate]);
     const [submitEvent, submitState] = useSubmitEventMutation();
     const [deleteEvent, deleteState] = useDeleteEventMutation();
 
@@ -248,7 +252,7 @@ export default function OrganizerConsolePage() {
                     <StatTile label="Tickets sold" value={isLoading ? '—' : totalSold.toLocaleString()} icon={<Icons.ticket size={16} />} />
                     <StatTile
                         label="Total revenue"
-                        value={isLoading ? '—' : totalRevenue === 0 ? '₦0' : `₦${totalRevenue.toLocaleString()}`}
+                        value={isLoading ? '—' : formatNaira(totalRevenue, { zeroLabel: '₦0' })}
                         icon={<Icons.wallet size={16} />}
                         sub={pending > 0 ? `${pending} event${pending > 1 ? 's' : ''} pending approval` : null}
                     />
@@ -285,7 +289,20 @@ export default function OrganizerConsolePage() {
                 {/* Events list */}
                 {isLoading && <Skeleton />}
 
-                {isError && !isAuthError && (
+                {isForbidden && (
+                    <div style={{ padding: 56, textAlign: 'center' }}>
+                        <Icons.lock size={32} style={{ color: 'var(--text-3)' }} />
+                        <p className="mp-h4" style={{ margin: '12px 0 4px', color: 'var(--text-1)' }}>Organiser access required</p>
+                        <p className="body-sm" style={{ color: 'var(--text-2)', margin: '0 0 20px' }}>
+                            Create your first event to unlock the organiser console.
+                        </p>
+                        <Button variant="primary" size="sm" icon={<Icons.plus size={14} />} onClick={() => navigate('/events/new')}>
+                            Create event
+                        </Button>
+                    </div>
+                )}
+
+                {isError && !isUnauthorized && !isForbidden && (
                     <div style={{ padding: 40, textAlign: 'center' }}>
                         <Icons.alert size={28} style={{ color: 'var(--error)' }} />
                         <p className="body-sm" style={{ marginTop: 8, color: 'var(--text-2)' }}>Could not load your events.</p>

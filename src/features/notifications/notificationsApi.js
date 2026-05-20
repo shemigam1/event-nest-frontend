@@ -11,6 +11,14 @@ export const notificationsApi = baseApi.injectEndpoints({
                 return Array.isArray(d) ? d : (d?.content ?? []);
             },
         }),
+        getUnreadNotificationCount: builder.query({
+            query: () => '/me/notifications/unread-count',
+            providesTags: ['Notification'],
+            transformResponse: (response) => {
+                if (typeof response === 'number') return response;
+                return Number(response?.data ?? response ?? 0) || 0;
+            },
+        }),
         markNotificationAsRead: builder.mutation({
             query: (id) => ({
                 url: `/me/notifications/${id}/read`,
@@ -24,5 +32,6 @@ export const notificationsApi = baseApi.injectEndpoints({
 
 export const {
     useGetMyNotificationsQuery,
+    useGetUnreadNotificationCountQuery,
     useMarkNotificationAsReadMutation,
 } = notificationsApi;

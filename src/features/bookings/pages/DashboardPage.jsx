@@ -10,6 +10,7 @@ import Button from '@/components/ui/Button';
 import TopNav from '@/components/ui/TopNav';
 import { StatusBadge } from '@/components/ui/Badge';
 import { Icons } from '@/components/ui/Icon';
+import { formatNaira } from '@/utils/currency';
 
 /* ── Stats tile ─────────────────────────────────── */
 function StatTile({ label, value, icon, sub, testId }) {
@@ -55,7 +56,7 @@ function BookingRow({ booking, isLast, onCancel, cancelling }) {
     const day = String(d.getDate());
     const confirmedAt = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 
-    const isCancellable = booking.status === 'CONFIRMED';
+    const isCancellable = booking.paymentStatus === 'PAID';
 
     return (
         <div
@@ -95,7 +96,7 @@ function BookingRow({ booking, isLast, onCancel, cancelling }) {
             </div>
 
             {/* Status */}
-            <StatusBadge status={booking.status} />
+            <StatusBadge status={booking.paymentStatus} />
 
             {/* Actions */}
             <div style={{ display: 'flex', gap: 8 }}>
@@ -188,8 +189,8 @@ export default function DashboardPage() {
     const [pendingCancel, setPendingCancel] = useState(null);
     const [cancelError, setCancelError] = useState('');
 
-    const confirmed = bookings.filter((b) => b.status === 'CONFIRMED');
-    const cancelled = bookings.filter((b) => b.status === 'CANCELLED');
+    const confirmed = bookings.filter((b) => b.paymentStatus === 'PAID');
+    const cancelled = bookings.filter((b) => b.paymentStatus === 'REFUNDED');
     const totalTickets = confirmed.reduce((s, b) => s + (b.quantity ?? 0), 0);
 
     async function handleConfirmCancel() {

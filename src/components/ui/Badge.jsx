@@ -37,6 +37,12 @@ const STATUS_STYLE = {
   VALID:            { bg: '#E6F4EA', fg: '#0F9D58', label: 'Valid' },
   USED:             { bg: '#F5F7FA', fg: '#4A5468', label: 'Used' },
   REFUNDED:         { bg: '#FBE9E9', fg: '#D62828', label: 'Refunded' },
+  // Booking payment statuses
+  PAID:             { bg: '#E6F4EA', fg: '#0F9D58', label: 'Paid' },
+  PENDING_PAYMENT:  { bg: '#FEF4E2', fg: '#B8770A', label: 'Pending payment' },
+  FAILED:           { bg: '#FBE9E9', fg: '#D62828', label: 'Payment failed' },
+  // Ticket statuses
+  PENDING_CLAIM:    { bg: '#FEF4E2', fg: '#B8770A', label: 'Pending claim' },
 };
 
 export function StatusBadge({ status, size = 'md', icon }) {

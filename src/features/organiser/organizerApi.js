@@ -3,7 +3,7 @@ import { baseApi } from '@/services/baseApi';
 export const organizerApi = baseApi.injectEndpoints({
     endpoints: (builder) => ({
         getOrganizerEvents: builder.query({
-            query: () => '/organizer/events',
+            query: () => '/me/organiser/events',
             providesTags: ['Event'],
             transformResponse: (response) => {
                 const d = response.data ?? response;
@@ -34,6 +34,15 @@ export const organizerApi = baseApi.injectEndpoints({
             ],
             transformResponse: (response) => response?.data ?? response,
         }),
+
+        getWorkspaces: builder.query({
+            query: () => '/me/workspaces',
+            providesTags: ['User'],
+            transformResponse: (response) => {
+                const d = response?.data ?? response;
+                return Array.isArray(d) ? d : (d ? Object.values(d) : []);
+            },
+        }),
     }),
 });
 
@@ -42,4 +51,5 @@ export const {
     useGetOrganizerEventByIdQuery,
     useGetEventBookingsQuery,
     useGetEventAnalyticsQuery,
+    useGetWorkspacesQuery,
 } = organizerApi;

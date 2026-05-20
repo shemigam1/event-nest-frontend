@@ -7,6 +7,7 @@ import {
 } from '../eventsApi';
 import { selectIsAuthenticated, selectCurrentUserId } from '@/features/auth/authSlice';
 import { formatEventDate } from '@/utils/dateFormat';
+import { formatNaira } from '@/utils/currency';
 import Button from '@/components/ui/Button';
 import CapacityBar from '@/components/ui/CapacityBar';
 import TopNav from '@/components/ui/TopNav';
@@ -338,7 +339,7 @@ function TierRow({ tier }) {
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
                 <span style={{ fontWeight: 600, color: 'var(--text-1)' }}>{tier.name}</span>
                 <span className="mp-num" style={{ fontWeight: 600, color: 'var(--text-1)' }}>
-                    {Number(tier.price) === 0 ? 'Free' : `₦${Number(tier.price).toLocaleString()}`}
+                    {Number(tier.price) === 0 ? 'Free' : formatNaira(tier.price)}
                 </span>
             </div>
             <div style={{ fontSize: 12, color: 'var(--text-3)' }}>

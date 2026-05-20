@@ -8,6 +8,7 @@ import {
 import { useCreateBookingMutation } from '../bookingsApi';
 import { selectCurrentUserId } from '@/features/auth/authSlice';
 import { formatEventDate } from '@/utils/dateFormat';
+import { formatNaira } from '@/utils/currency';
 import Button from '@/components/ui/Button';
 import TopNav from '@/components/ui/TopNav';
 import { Icons } from '@/components/ui/Icon';
@@ -326,7 +327,7 @@ function TierStep({ eventTitle, tiers, tierId, onSelect, onContinue }) {
                                 </div>
                             </div>
                             <div className="mp-num" style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-1)' }}>
-                                {Number(t.price) === 0 ? 'Free' : `₦${Number(t.price).toLocaleString()}`}
+                                {Number(t.price) === 0 ? 'Free' : formatNaira(t.price)}
                             </div>
                         </button>
                     );
@@ -416,7 +417,7 @@ function QuantityStep({ tier, qty, cap, total, onDec, onInc, onBack, onContinue 
             }}>
                 <span style={{ fontSize: 14, color: 'var(--text-2)' }}>{qty} × {tier.name}</span>
                 <span className="mp-num" style={{ fontWeight: 700, fontSize: 18, color: 'var(--text-1)' }}>
-                    {Number(tier.price) === 0 ? 'Free' : `₦${total.toLocaleString()}`}
+                    {Number(tier.price) === 0 ? 'Free' : formatNaira(total)}
                 </span>
             </div>
 
@@ -476,7 +477,7 @@ function ReviewStep({ event, tier, qty, total, submitting, errorMessage, onBack,
                     <span className="mp-num" data-testid="total-amount" style={{
                         fontWeight: 700, fontSize: 22, color: 'var(--text-1)',
                     }}>
-                        {Number(tier.price) === 0 ? 'Free' : `₦${total.toLocaleString()}`}
+                        {Number(tier.price) === 0 ? 'Free' : formatNaira(total)}
                     </span>
                 </div>
             </div>

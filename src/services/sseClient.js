@@ -30,6 +30,7 @@ const TAG_INVALIDATIONS = {
         'Booking',
         'Ticket',
         'Analytics',
+        'Notification',
         ...(p?.eventId ? [
             { type: 'Event', id: p.eventId },
             { type: 'Event', id: `${p.eventId}-tiers` },
@@ -37,13 +38,16 @@ const TAG_INVALIDATIONS = {
     ],
     'event.approved': (p) => [
         'Event',
+        'Notification',
         ...(p?.eventId ? [{ type: 'Event', id: p.eventId }] : []),
     ],
     'event.rejected': (p) => [
         'Event',
+        'Notification',
         ...(p?.eventId ? [{ type: 'Event', id: p.eventId }] : []),
     ],
     'ticket.checked-in': () => ['Ticket', 'Analytics'],
+    'notification.created': () => ['Notification'],
 };
 
 /**
