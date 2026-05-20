@@ -128,7 +128,7 @@ function QrModalContent({ ticket, onClose }) {
                 alignItems: 'center',
                 gap: 16,
             }}>
-                <div style={{ padding: 14, background: 'white', borderRadius: 12, lineHeight: 0 }}>
+                <div style={{ padding: 14, background: 'var(--surface-subtle)', borderRadius: 12, lineHeight: 0 }}>
                     <QRCode value={ticket.qrCode || ticket.id} size={200} />
                 </div>
                 {ticket.shortCode && (

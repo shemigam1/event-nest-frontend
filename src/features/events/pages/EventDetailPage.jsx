@@ -94,7 +94,7 @@ export default function EventDetailPage() {
                             <StatusBadge status={e.status} />
                         </div>
 
-                        <h1 className="mp-h1" style={{ margin: 0, color: 'var(--text-1)' }}>
+                        <h1 className="mp-h1" style={{ margin: 0, color: 'var(--text-1)', textWrap: 'balance' }}>
                             {e.title}
                         </h1>
 
@@ -123,7 +123,7 @@ export default function EventDetailPage() {
 
                         <div style={{ marginTop: 32, paddingTop: 24, borderTop: '1px solid var(--border)' }}>
                             <h3 className="mp-h4" style={{ margin: 0, color: 'var(--text-1)' }}>About this event</h3>
-                            <p className="body" style={{ marginTop: 12, color: 'var(--text-2)', whiteSpace: 'pre-wrap' }}>
+                            <p className="body" style={{ marginTop: 12, color: 'var(--text-2)', whiteSpace: 'pre-wrap', textWrap: 'pretty' }}>
                                 {e.description || 'Details to be announced.'}
                             </p>
                         </div>

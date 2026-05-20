@@ -150,7 +150,7 @@ function Pillar({ icon, title, body }) {
         {icon}
       </div>
       <h3 className="mp-h3" style={{ margin: 0, color: 'var(--text-1)' }}>{title}</h3>
-      <p className="body" style={{ marginTop: 8, color: 'var(--text-2)' }}>{body}</p>
+      <p className="body" style={{ marginTop: 8, color: 'var(--text-2)', textWrap: 'pretty' }}>{body}</p>
     </div>
   );
 }
@@ -325,6 +325,7 @@ export default function LandingPage() {
               <h1 className="mp-h-display mp-display" style={{
                 margin: 0,
                 color: 'white',
+                textWrap: 'balance',
               }}>
                 {config.headline}
               </h1>
@@ -333,6 +334,7 @@ export default function LandingPage() {
                 marginTop: 16,
                 color: 'rgba(255,255,255,0.78)',
                 maxWidth: 540,
+                textWrap: 'pretty',
               }}>
                 {config.body}
               </p>
@@ -406,7 +408,7 @@ export default function LandingPage() {
           }}>
             {config.pillarsEyebrow}
           </span>
-          <h2 className="mp-h1 mp-display" style={{ margin: '8px 0 0', color: 'var(--text-1)' }}>
+          <h2 className="mp-h1 mp-display" style={{ margin: '8px 0 0', color: 'var(--text-1)', textWrap: 'balance' }}>
             {config.pillarsHeadline}
           </h2>
         </div>

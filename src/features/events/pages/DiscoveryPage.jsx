@@ -192,7 +192,7 @@ export default function DiscoveryPage() {
                 ) : isLoading ? (
                     <div className="mp-events-grid" style={{
                         display: 'grid',
-                        gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+                        gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
                         gap: 20,
                     }}>
                         {Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)}
@@ -202,7 +202,7 @@ export default function DiscoveryPage() {
                 ) : (
                     <div className="mp-events-grid" style={{
                         display: 'grid',
-                        gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+                        gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
                         gap: 20,
                     }}>
                         {filtered.map(event => (
