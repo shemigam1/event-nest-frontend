@@ -1,7 +1,22 @@
 import { baseApi } from '@/services/baseApi';
 
+/* ────────────────────────────────────────────────────────────────────────────
+   Vendor INQUIRY API slice — the organiser-initiated direction (PRD §3.16
+   Flow B). When an organiser opens an inquiry, the backend auto-creates a
+   VENDOR_INQUIRY conversation and adds the vendor as a participant. From that
+   point on, the inquiry IS the conversation — there's no separate inquiry
+   inbox API. Vendors see inquiries via the regular chat list filtered to
+   `type === 'VENDOR_INQUIRY'` (see messagesApi.getConversations).
+
+   Previously this slice exposed getEventInquiries / getReceivedInquiries /
+   closeInquiry, all of which 404'd. They were never implemented on the
+   backend (VendorInquiryController only exposes POST and POST /confirm) and
+   are removed here to keep the API surface honest.
+   ──────────────────────────────────────────────────────────────────────── */
 export const inquiriesApi = baseApi.injectEndpoints({
     endpoints: (builder) => ({
+
+        /** Organiser/manager opens a direct vendor inquiry — auto-creates a VENDOR_INQUIRY conversation. */
         sendInquiry: builder.mutation({
             query: ({ eventId, vendorId, message, serviceType }) => ({
                 url: `/events/${eventId}/vendor-inquiries`,
@@ -10,30 +25,22 @@ export const inquiriesApi = baseApi.injectEndpoints({
             }),
             invalidatesTags: (result, error, { eventId }) => [
                 { type: 'Inquiry', id: eventId },
+                'Conversation',
             ],
             transformResponse: (r) => r?.data ?? r,
         }),
 
-        getEventInquiries: builder.query({
-            query: (eventId) => `/events/${eventId}/vendor-inquiries`,
-            providesTags: (result, error, eventId) => [
-                { type: 'Inquiry', id: eventId },
-            ],
-            transformResponse: (r) => r?.data ?? r ?? [],
-        }),
-
-        getReceivedInquiries: builder.query({
-            query: () => '/vendor-inquiries/received',
-            providesTags: ['InquiryReceived'],
-            transformResponse: (r) => r?.data ?? r ?? [],
-        }),
-
-        closeInquiry: builder.mutation({
-            query: (inquiryId) => ({
-                url: `/vendor-inquiries/${inquiryId}/close`,
-                method: 'PATCH',
+        /**
+         * After chat negotiation, organiser formally confirms the vendor for the
+         * event — this is what creates the VENDOR EventMembership and opens the
+         * contract drafting path.
+         */
+        confirmInquiry: builder.mutation({
+            query: ({ eventId, conversationId }) => ({
+                url: `/events/${eventId}/vendor-inquiries/${conversationId}/confirm`,
+                method: 'POST',
             }),
-            invalidatesTags: ['InquiryReceived'],
+            invalidatesTags: ['Conversation', 'Inquiry', 'Contract'],
             transformResponse: (r) => r?.data ?? r,
         }),
     }),
@@ -41,7 +48,5 @@ export const inquiriesApi = baseApi.injectEndpoints({
 
 export const {
     useSendInquiryMutation,
-    useGetEventInquiriesQuery,
-    useGetReceivedInquiriesQuery,
-    useCloseInquiryMutation,
+    useConfirmInquiryMutation,
 } = inquiriesApi;

@@ -10,7 +10,12 @@ import { formatEventDate } from '@/utils/dateFormat';
 import TopNav from '@/components/ui/TopNav';
 import Button from '@/components/ui/Button';
 import { Icons } from '@/components/ui/Icon';
-import { useGetReceivedInquiriesQuery, useCloseInquiryMutation } from '@/features/vendor/inquiriesApi';
+// TODO(Phase F — Messages/chat): The "Received inquiries" panel previously read from
+// `useGetReceivedInquiriesQuery` and `useCloseInquiryMutation`. Both endpoints were
+// frontend-only and 404'd against the backend (VendorInquiryController only exposes
+// POST + POST /confirm). Real inquiries surface as VENDOR_INQUIRY conversations and
+// will be re-introduced when the messages/chat surface is built out. The dashboard
+// panel + ReceivedInquiryRow renderer are temporarily disabled below.
 
 /* Landing page for vendor activity. Everything important at a glance:
    verification status + tiles + upcoming gigs + recent application
@@ -74,22 +79,8 @@ export default function VendorDashboardPage() {
 
     const apps         = useGetMyVendorApplicationsQuery();
     const verification = useGetMyVendorVerificationQuery();
-    const inquiriesQ   = useGetReceivedInquiriesQuery();
-    const [closeInquiry, closeState] = useCloseInquiryMutation();
 
     const [nowMs]        = useState(() => Date.now());
-    const [inquiryError, setInquiryError] = useState('');
-
-    const receivedInquiries = inquiriesQ.data || [];
-
-    async function handleCloseInquiry(inquiryId) {
-        setInquiryError('');
-        try {
-            await closeInquiry(inquiryId).unwrap();
-        } catch (err) {
-            setInquiryError(err?.data?.message || 'Could not close inquiry.');
-        }
-    }
 
     const list = useMemo(() => apps.data || [], [apps.data]);
 
@@ -300,45 +291,10 @@ export default function VendorDashboardPage() {
                                 )}
                             </div>
                         )}
-                        <div style={{ marginTop: 24 }}>
-                            <SectionHeader title="Received inquiries" count={receivedInquiries.length} />
-                            {inquiryError && (
-                                <div role="alert" style={{
-                                    marginBottom: 10, padding: '10px 14px',
-                                    background: 'var(--error-bg, #FBE9E9)', color: 'var(--error)',
-                                    borderRadius: 8, fontSize: 13,
-                                }}>
-                                    {inquiryError}
-                                </div>
-                            )}
-                            {inquiriesQ.isLoading ? (
-                                <ListSkeleton rows={2} />
-                            ) : receivedInquiries.length === 0 ? (
-                                <EmptyCard
-                                    icon={<Icons.inbox size={20} />}
-                                    title="No inquiries yet"
-                                    body="When organisers reach out about your services, their messages will appear here."
-                                />
-                            ) : (
-                                <div style={{
-                                    background: 'white',
-                                    border: '1px solid var(--border)',
-                                    borderRadius: 12,
-                                    overflow: 'hidden',
-                                }}>
-                                    {receivedInquiries.map((inq, i) => (
-                                        <ReceivedInquiryRow
-                                            key={inq.id}
-                                            inquiry={inq}
-                                            isLast={i === receivedInquiries.length - 1}
-                                            onViewChat={(convId) => navigate(`/messages?c=${convId}`)}
-                                            onClose={handleCloseInquiry}
-                                            closeLoading={closeState.isLoading && closeState.originalArgs === inq.id}
-                                        />
-                                    ))}
-                                </div>
-                            )}
-                        </div>
+                        {/* "Received inquiries" panel temporarily disabled — see file-top
+                            TODO(Phase F). Inquiries surface as VENDOR_INQUIRY conversations
+                            and need the messages/chat module to be wired before they can
+                            be re-rendered here meaningfully. */}
                     </div>
 
                     {/* Right: recent activity */}
@@ -415,72 +371,6 @@ export default function VendorDashboardPage() {
                             />
                         </div>
                     </div>
-                </div>
-            </div>
-        </div>
-    );
-}
-
-/* ─── Received inquiry row ───────────────────────── */
-
-function ReceivedInquiryRow({ inquiry, isLast, onViewChat, onClose, closeLoading }) {
-    const isOpen = inquiry.status === 'OPEN';
-    const statusStyle = isOpen
-        ? { bg: '#EAF1FE', fg: 'var(--mp-blue)', label: 'Open' }
-        : { bg: 'var(--surface-subtle)', fg: 'var(--text-3)', label: 'Closed' };
-
-    return (
-        <div style={{
-            padding: '16px 20px',
-            borderBottom: isLast ? 0 : '1px solid var(--border)',
-        }}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-                <div style={{ minWidth: 0, flex: 1 }}>
-                    <div style={{
-                        display: 'flex', alignItems: 'center', gap: 8,
-                        marginBottom: 4, flexWrap: 'wrap',
-                    }}>
-                        <span style={{ fontWeight: 600, fontSize: 14, color: 'var(--text-1)' }}>
-                            {inquiry.organizerName}
-                        </span>
-                        <span style={{
-                            padding: '2px 8px', borderRadius: 99, fontSize: 11, fontWeight: 600,
-                            background: statusStyle.bg, color: statusStyle.fg,
-                        }}>
-                            {statusStyle.label}
-                        </span>
-                        {inquiry.serviceType && (
-                            <span style={{
-                                padding: '2px 8px', borderRadius: 6, fontSize: 11,
-                                background: 'var(--surface-subtle)', color: 'var(--text-2)', fontWeight: 600,
-                            }}>
-                                {inquiry.serviceType}
-                            </span>
-                        )}
-                    </div>
-                    <div style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 6 }}>
-                        Re: {inquiry.eventTitle}
-                    </div>
-                    <p style={{
-                        margin: 0, fontSize: 13, color: 'var(--text-2)', lineHeight: 1.5,
-                        display: '-webkit-box', WebkitLineClamp: 2,
-                        WebkitBoxOrient: 'vertical', overflow: 'hidden',
-                    }}>
-                        {inquiry.message}
-                    </p>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flexShrink: 0 }}>
-                    {inquiry.conversationId && (
-                        <Button size="sm" variant="primary" icon={<Icons.message size={13} />}
-                            onClick={() => onViewChat(inquiry.conversationId)}>
-                            View chat
-                        </Button>
-                    )}
-                    {isOpen && (
-                        <Button size="sm" variant="ghost" onClick={() => onClose(inquiry.id)} disabled={closeLoading}>
-                            Close
-                        </Button>
-                    )}
                 </div>
             </div>
         </div>

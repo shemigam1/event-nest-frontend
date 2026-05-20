@@ -65,7 +65,9 @@ export const vendorsApi = baseApi.injectEndpoints({
         }),
 
         getMyVendorApplications: builder.query({
-            query: () => '/vendor-applications/mine',
+            // Backend route is /api/v1/me/vendor-applications (VendorApplicationController).
+            // The previous /vendor-applications/mine was a frontend-only convention that 404'd.
+            query: () => '/me/vendor-applications',
             providesTags: ['VendorApplicationMine'],
             transformResponse: (r) => { const d = r?.data ?? r; return Array.isArray(d) ? d : (d?.content ?? []); },
         }),
