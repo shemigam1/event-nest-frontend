@@ -22,6 +22,8 @@ export const baseApi = createApi({
         'Guest', 'Manager', 'Budget', 'Programme', 'Contract', 'Escrow',
         'VendorApplication', 'VendorApplicationMine', 'VendorVerification',
         'InquiryReceived', 'Inquiry', 'ContractMine',
+        'ContributionPool', 'Contribution',
+        'RatingForm', 'RatingResponses',
     ],
     endpoints: () => ({}),
 });

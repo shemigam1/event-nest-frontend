@@ -156,11 +156,11 @@ export default function OrganizerEventPage() {
                 )}
 
                 {tab === 'ratings' && (
-                    <RatingsTab />
+                    <RatingsTab eventId={eventId} />
                 )}
 
                 {tab === 'contributions' && (
-                    <ContributionPoolsTab />
+                    <ContributionPoolsTab eventId={eventId} />
                 )}
 
                 {tab === 'settings' && (
