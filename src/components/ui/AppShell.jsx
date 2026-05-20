@@ -8,11 +8,13 @@ import {
     selectIsCheckinStaff,
     selectCurrentUser,
     selectAuthEmail,
+    selectActiveWorkspace,
 } from '@/features/auth/authSlice';
 import { useGetMyNotificationsQuery, useGetUnreadNotificationCountQuery, useMarkNotificationAsReadMutation } from '@/features/notifications/notificationsApi';
 import { useGetWorkspacesQuery } from '@/features/organiser/organizerApi';
 import { Icons } from './Icon';
 import { SidebarContext, useSidebar } from './sidebarContext';
+import TopBar from './TopBar';
 
 const WORKSPACE_NAV = {
     ORGANISER: [
@@ -135,8 +137,13 @@ export default function AppShell() {
                     flex: 1,
                     minWidth: 0, // critical — without this, flex children with
                                   // long content blow past the viewport width
+                    display: 'flex',
+                    flexDirection: 'column',
                 }}>
-                    <Outlet />
+                    <TopBar />
+                    <div style={{ flex: 1, minHeight: 0 }}>
+                        <Outlet />
+                    </div>
                 </main>
             </div>
         </SidebarContext.Provider>
@@ -168,9 +175,14 @@ function Sidebar() {
     const { data: workspaces = [] } = useGetWorkspacesQuery(undefined, {
         skip: isAdmin || (isCheckinStaff && !isAdmin),
     });
-    const [activeWorkspace, setActiveWorkspace] = useState(null);
-
-    const resolvedWorkspace = activeWorkspace ?? pickDefaultWorkspace(workspaces);
+    // Active workspace is now selected via the TopBar avatar dropdown and stored
+    // in Redux (persisted to localStorage). Fall back to the first available role
+    // so the sidebar still highlights something before the user explicitly picks.
+    const reduxActiveWorkspace = useSelector(selectActiveWorkspace);
+    const resolvedWorkspace =
+        (reduxActiveWorkspace && workspaces.includes(reduxActiveWorkspace))
+            ? reduxActiveWorkspace
+            : pickDefaultWorkspace(workspaces);
 
     const displayName = (() => {
         const first = user?.firstName?.trim() || '';
@@ -207,10 +219,6 @@ function Sidebar() {
             { icon: Icons.users,    label: 'Vendors',    path: '/vendors' },
         ];
     })();
-
-    // Only show workspace switcher for users who have multiple roles
-    const switchableWorkspaces = WORKSPACE_PRIORITY.filter((r) => workspaces.includes(r));
-    const showSwitcher = !isAdmin && !isCheckinStaff && switchableWorkspaces.length > 1;
 
     const width = collapsed ? COLLAPSED_WIDTH : EXPANDED_WIDTH;
 
@@ -260,38 +268,7 @@ function Sidebar() {
                 </button>
             </div>
 
-            {/* Workspace switcher — shown when user has multiple event roles */}
-            {showSwitcher && !collapsed && (
-                <div style={{
-                    padding: '8px 12px',
-                    borderBottom: '1px solid var(--border)',
-                    display: 'flex',
-                    gap: 4,
-                }}>
-                    {switchableWorkspaces.map((role) => (
-                        <button
-                            key={role}
-                            onClick={() => setActiveWorkspace(role)}
-                            style={{
-                                flex: 1,
-                                padding: '5px 4px',
-                                borderRadius: 6,
-                                border: '1px solid',
-                                borderColor: resolvedWorkspace === role ? 'var(--mp-blue)' : 'var(--border)',
-                                background: resolvedWorkspace === role ? 'var(--mp-blue-50, #EAF1FE)' : 'transparent',
-                                color: resolvedWorkspace === role ? 'var(--mp-blue)' : 'var(--text-2)',
-                                fontSize: 11,
-                                fontWeight: 600,
-                                cursor: 'pointer',
-                                textTransform: 'capitalize',
-                                letterSpacing: '0.02em',
-                            }}
-                        >
-                            {role.charAt(0) + role.slice(1).toLowerCase()}
-                        </button>
-                    ))}
-                </div>
-            )}
+            {/* Workspace switcher moved to the TopBar avatar dropdown. */}
 
             {/* Quick "Create event" CTA — only relevant for organiser workspace */}
             {!(isCheckinStaff && !isAdmin) && !isAdmin && resolvedWorkspace !== 'ATTENDEE' && resolvedWorkspace !== 'VENDOR' && (

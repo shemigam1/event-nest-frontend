@@ -1,6 +1,9 @@
 import { createSlice } from "@reduxjs/toolkit";
 import { userFromToken } from "@/utils/decodeJwt";
 
+const WORKSPACE_KEY = 'activeWorkspace';
+const ALLOWED_WORKSPACES = new Set(['ATTENDEE', 'ORGANISER', 'MANAGER', 'VENDOR']);
+
 const storedToken = localStorage.getItem('accessToken');
 const storedProfile = (() => {
     const raw = localStorage.getItem('userProfile');
@@ -8,6 +11,10 @@ const storedProfile = (() => {
     try { return JSON.parse(raw); } catch { return null; }
 })();
 const tokenUser = userFromToken(storedToken);
+const storedWorkspace = (() => {
+    const raw = localStorage.getItem(WORKSPACE_KEY);
+    return raw && ALLOWED_WORKSPACES.has(raw) ? raw : null;
+})();
 
 const initialState = {
     user: storedProfile,
@@ -15,6 +22,9 @@ const initialState = {
     token: tokenUser ? storedToken : null,
     refreshToken: tokenUser ? localStorage.getItem('refreshToken') : null,
     isAuthenticated: Boolean(tokenUser),
+    // The workspace the user is currently looking at (Attendee / Organiser / Manager / Vendor).
+    // Drives the sidebar nav and is toggled from the new TopBar avatar dropdown.
+    activeWorkspace: tokenUser ? storedWorkspace : null,
 };
 
 if (!tokenUser && storedToken) {
@@ -41,9 +51,11 @@ const authSlice = createSlice({
             state.token = null;
             state.refreshToken = null;
             state.isAuthenticated = false;
+            state.activeWorkspace = null;
             localStorage.removeItem('accessToken');
             localStorage.removeItem('refreshToken');
             localStorage.removeItem('userProfile');
+            localStorage.removeItem(WORKSPACE_KEY);
         },
         setUser: (state, action) => {
             state.user = action.payload;
@@ -53,10 +65,17 @@ const authSlice = createSlice({
                 localStorage.removeItem('userProfile');
             }
         },
+        setActiveWorkspace: (state, action) => {
+            const next = action.payload;
+            if (next && !ALLOWED_WORKSPACES.has(next)) return;
+            state.activeWorkspace = next ?? null;
+            if (next) localStorage.setItem(WORKSPACE_KEY, next);
+            else localStorage.removeItem(WORKSPACE_KEY);
+        },
     },
 });
 
-export const { setCredentials, logout, setUser } = authSlice.actions;
+export const { setCredentials, logout, setUser, setActiveWorkspace } = authSlice.actions;
 
 export const selectCurrentUser = (state) => state.auth.user;
 export const selectCurrentUserId = (state) => state.auth.tokenUser?.sub ?? state.auth.user?.id ?? null;
@@ -67,5 +86,6 @@ export const selectIsAdmin = (state) =>
     state.auth.tokenUser?.roles?.includes('ROLE_ADMIN') ?? false;
 export const selectIsCheckinStaff = (state) =>
     state.auth.tokenUser?.roles?.includes('ROLE_CHECKIN_STAFF') ?? false;
+export const selectActiveWorkspace = (state) => state.auth.activeWorkspace;
 
 export default authSlice.reducer;

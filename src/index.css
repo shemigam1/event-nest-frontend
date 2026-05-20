@@ -2,6 +2,77 @@
 
 @import "tailwindcss";
 
+/* ─────────────────────────────────────────────────
+   Tailwind 4 theme — expose EventNest brand tokens
+   as utility classes (bg-mp-blue, text-text-1,
+   shadow-card, font-display, etc.) while keeping the
+   raw --mp-* / --text-* / --surface-* / --border-*
+   custom properties below so existing inline styles
+   keep working. The `inline` keyword preserves the
+   var() reference literally, so dark-mode overrides
+   at [data-theme="dark"] flow through automatically.
+   ───────────────────────────────────────────────── */
+@theme inline {
+  /* Brand */
+  --color-mp-blue:     var(--mp-blue);
+  --color-mp-blue-700: var(--mp-blue-700);
+  --color-mp-blue-200: var(--mp-blue-200);
+  --color-mp-blue-100: var(--mp-blue-100);
+  --color-mp-blue-50:  var(--mp-blue-50);
+  --color-mp-navy:     var(--mp-navy);
+
+  /* Accent */
+  --color-mp-coral:     var(--mp-coral);
+  --color-mp-coral-600: var(--mp-coral-600);
+  --color-mp-coral-100: var(--mp-coral-100);
+  --color-mp-coral-50:  var(--mp-coral-50);
+
+  /* Text */
+  --color-text-1: var(--text-1);
+  --color-text-2: var(--text-2);
+  --color-text-3: var(--text-3);
+  --color-text-on-blue:  var(--text-on-blue);
+  --color-text-on-navy:  var(--text-on-navy);
+  --color-text-on-coral: var(--text-on-coral);
+
+  /* Surfaces */
+  --color-surface-page:     var(--surface-page);
+  --color-surface-subtle:   var(--surface-subtle);
+  --color-surface-elevated: var(--surface-elevated);
+  --color-surface-dark:     var(--surface-dark);
+  --color-surface-hero:     var(--surface-hero);
+
+  /* Borders */
+  --color-border:        var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-border-focus:  var(--border-focus);
+
+  /* Status */
+  --color-success:    var(--success);
+  --color-success-bg: var(--success-bg);
+  --color-warning:    var(--warning);
+  --color-warning-bg: var(--warning-bg);
+  --color-error:      var(--error);
+  --color-error-bg:   var(--error-bg);
+  --color-danger:     var(--danger);
+  --color-danger-bg:  var(--danger-bg);
+
+  /* Fonts */
+  --font-sans:    var(--font-sans);
+  --font-display: var(--font-display);
+
+  /* Shadows */
+  --shadow-card:     var(--shadow-card);
+  --shadow-elevated: var(--shadow-elevated);
+  --shadow-modal:    var(--shadow-modal);
+}
+
+/* Make `dark:` variant target our [data-theme="dark"] convention
+   instead of Tailwind's prefers-color-scheme default so the in-app
+   theme toggle drives both Tailwind utilities and the raw custom
+   properties at the same time. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
 /* EventNest — Moniepoint brand tokens */
 /* =====================================================
    Google Fonts already imported at top of file
