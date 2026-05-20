@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router';
 import { useSelector } from 'react-redux';
 import {
     useGetVendorsQuery,
-    useGetMyVendorVerificationQuery,
+    useGetMyVendorProfileQuery,
 } from '@/features/organiser/vendorsApi';
 import { selectIsAuthenticated } from '@/features/auth/authSlice';
 import TopNav from '@/components/ui/TopNav';
@@ -11,20 +11,21 @@ import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import { Icons } from '@/components/ui/Icon';
 
-/* Category chips map to the backend's ?serviceType= partial-match filter.
-   The keyword (lowercase) is what we send — the backend matches it against
-   the vendor's serviceType string case-insensitively. */
+/* Category chips map 1:1 to the backend's VendorCategory enum (PRD §3.16, table 42).
+   `key` is sent as the `?category=` query param when a chip other than "all" is active. */
 const CATEGORIES = [
-    { key: 'all',         label: 'All',           keyword: null },
-    { key: 'catering',    label: 'Catering',      keyword: 'cater' },
-    { key: 'av',          label: 'AV & Sound',    keyword: 'av' },
-    { key: 'photography', label: 'Photography',   keyword: 'photo' },
-    { key: 'venue',       label: 'Venues',        keyword: 'venue' },
-    { key: 'security',    label: 'Security',      keyword: 'security' },
-    { key: 'print',       label: 'Print & Swag',  keyword: 'print' },
-    { key: 'decor',       label: 'Decor',         keyword: 'decor' },
-    { key: 'transport',   label: 'Transport',     keyword: 'transport' },
+    { key: null,         label: 'All' },
+    { key: 'CATERING',   label: 'Catering' },
+    { key: 'AV',         label: 'AV & Sound' },
+    { key: 'PHOTOGRAPHY', label: 'Photography' },
+    { key: 'VENUE',      label: 'Venues' },
+    { key: 'DECORATION', label: 'Decoration' },
+    { key: 'MUSIC',      label: 'Music & DJs' },
+    { key: 'SECURITY',   label: 'Security' },
+    { key: 'OTHER',      label: 'Other' },
 ];
+
+const CATEGORY_LABEL = Object.fromEntries(CATEGORIES.map((c) => [c.key, c.label]));
 
 function initials(name) {
     if (!name) return '?';
@@ -47,25 +48,33 @@ function avatarColor(name = '') {
 export default function VendorMarketplacePage() {
     const navigate = useNavigate();
     const isAuthenticated = useSelector(selectIsAuthenticated);
-    const [category, setCategory] = useState('all');
+    const [category, setCategory] = useState(null);
     const [searchInput, setSearchInput] = useState('');
 
-    const keyword = CATEGORIES.find((c) => c.key === category)?.keyword || null;
-    const { data: rawVendors = [], isLoading, isError, refetch } =
-        useGetVendorsQuery({ serviceType: keyword });
+    const vendorsQ = useGetVendorsQuery({ category });
+    const { isLoading, isError, refetch } = vendorsQ;
 
-    // Personal verification state powers the page-level CTA (Apply /
-    // Resubmit / Profile / Pending). Skipped for anon callers — the
-    // marketplace itself is public.
-    const verification = useGetMyVendorVerificationQuery(undefined, { skip: !isAuthenticated });
+    // Backend returns Page<PublicVendorResponse>; older shape returned a bare array.
+    const rawVendors = useMemo(() => {
+        const d = vendorsQ.data;
+        if (!d) return [];
+        if (Array.isArray(d)) return d;
+        if (Array.isArray(d.content)) return d.content;
+        return [];
+    }, [vendorsQ.data]);
 
-    // Backend only filters by serviceType. Apply the free-text query
-    // client-side across name + service type so the search box still works.
+    // Personal profile state powers the page-level CTA (Apply / Resubmit / Profile / Pending).
+    // Skipped for anonymous callers — the marketplace itself is public.
+    const myProfileQ = useGetMyVendorProfileQuery(undefined, { skip: !isAuthenticated });
+
+    // Backend filters by category server-side. The free-text search runs client-side over
+    // businessName + bio + serviceAreas so it still works alongside the category chip.
     const vendors = useMemo(() => {
         const q = searchInput.trim().toLowerCase();
         if (!q) return rawVendors;
         return rawVendors.filter((v) => {
-            const hay = `${v.vendorName || ''} ${v.serviceType || ''} ${v.profileDescription || ''}`.toLowerCase();
+            const areas = Array.isArray(v.serviceAreas) ? v.serviceAreas.join(' ') : '';
+            const hay = `${v.businessName || ''} ${v.bio || ''} ${areas}`.toLowerCase();
             return hay.includes(q);
         });
     }, [rawVendors, searchInput]);
@@ -93,9 +102,10 @@ export default function VendorMarketplacePage() {
                             AV technicians, security, and more.
                         </p>
                     </div>
-                    {isAuthenticated && !verification.isLoading && (
+                    {isAuthenticated && !myProfileQ.isLoading && (
                         <PersonalCta
-                            status={verification.data?.status}
+                            status={myProfileQ.data?.status}
+                            hasProfile={Boolean(myProfileQ.data)}
                             onApply={() => navigate('/vendor/profile')}
                             onProfile={() => navigate('/vendor')}
                         />
@@ -205,12 +215,21 @@ export default function VendorMarketplacePage() {
     );
 }
 
-/* Personal CTA that flips by the caller's verification status.
-   - VERIFIED      → "Profile" → /vendor (dashboard)
-   - PENDING       → read-only pill
-   - REJECTED      → "Resubmit verification" → /vendor/profile
-   - NOT_REQUESTED → "Apply to be a verified vendor" → /vendor/profile (default) */
-function PersonalCta({ status, onApply, onProfile }) {
+/* Personal CTA based on the caller's VendorStatus (PENDING/ACTIVE/VERIFIED/SUSPENDED).
+   No profile yet → "Become a vendor"; profile exists → reflect status. */
+function PersonalCta({ status, hasProfile, onApply, onProfile }) {
+    if (!hasProfile) {
+        return (
+            <Button
+                size="md"
+                variant="primary"
+                icon={<Icons.shield size={14} />}
+                onClick={onApply}
+            >
+                Become a vendor
+            </Button>
+        );
+    }
     if (status === 'VERIFIED') {
         return (
             <Button
@@ -220,65 +239,64 @@ function PersonalCta({ status, onApply, onProfile }) {
                 onClick={onProfile}
                 iconRight={<Icons.arrowR size={13} />}
             >
-                Profile
+                My vendor dashboard
             </Button>
         );
     }
-    if (status === 'PENDING') {
+    if (status === 'ACTIVE') {
+        return (
+            <Button
+                size="md"
+                variant="secondary"
+                icon={<Icons.shield size={14} />}
+                onClick={onApply}
+            >
+                Submit for verification
+            </Button>
+        );
+    }
+    if (status === 'SUSPENDED') {
         return (
             <div style={{
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: 8,
                 padding: '8px 14px',
-                background: '#FEF4E2',
-                color: '#B8770A',
+                background: 'var(--error-bg)',
+                color: 'var(--error)',
                 borderRadius: 10,
                 fontSize: 13,
                 fontWeight: 600,
             }}>
-                <Icons.clock size={14} />
-                Verification pending
+                <Icons.alert size={14} />
+                Vendor suspended
             </div>
         );
     }
-    if (status === 'REJECTED') {
-        return (
-            <Button
-                size="md"
-                variant="primary"
-                icon={<Icons.alert size={14} />}
-                onClick={onApply}
-            >
-                Resubmit verification
-            </Button>
-        );
-    }
-    // NOT_REQUESTED or no record yet — show the apply CTA.
+    // PENDING (default) — either awaiting first submission OR awaiting admin review.
     return (
         <Button
             size="md"
             variant="primary"
-            icon={<Icons.shield size={14} />}
+            icon={<Icons.clock size={14} />}
             onClick={onApply}
         >
-            Apply to be a verified vendor
+            Continue verification
         </Button>
     );
 }
 
 function VendorCard({ vendor, onView }) {
-    // Maps onto VendorMarketplaceResponse from the backend.
-    const name     = vendor.vendorName || '';
-    const verified = vendor.vendorVerified === true;
-    const service  = vendor.serviceType || '';
-    const bio      = vendor.profileDescription || '';
-    const rating   = vendor.averageRating;
-    const reviews  = vendor.totalRatings;
-    const events   = vendor.completedEvents;
+    // Maps onto PublicVendorResponse (PRD §3.16). Marketplace only returns VERIFIED
+    // vendors, so the badge is always shown.
+    const name        = vendor.businessName || '';
+    const service     = CATEGORY_LABEL[vendor.category] ?? vendor.category ?? 'Vendor';
+    const bio         = vendor.bio || '';
+    const trustScore  = vendor.trustScore != null ? Number(vendor.trustScore) : null;
+    const completed   = vendor.completedContracts;
+    const disputeRate = vendor.disputeRate != null ? Number(vendor.disputeRate) : null;
 
     const [bg, fg] = avatarColor(name);
-    const stars = Math.round((rating || 0) * 2) / 2;
 
     return (
         <div style={{
@@ -305,42 +323,43 @@ function VendorCard({ vendor, onView }) {
                         <span style={{ fontWeight: 700, fontSize: 15, color: 'var(--text-1)' }}>
                             {name}
                         </span>
-                        {verified && (
-                            <span title="Verified vendor" style={{
-                                display: 'inline-flex', alignItems: 'center', gap: 3,
-                                background: '#EAF1FE', color: 'var(--mp-blue)',
-                                fontSize: 11, fontWeight: 600,
-                                padding: '2px 7px', borderRadius: 99,
-                            }}>
-                                <Icons.shield size={10} />
-                                Verified
-                            </span>
-                        )}
+                        <span title="Verified vendor" style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 3,
+                            background: 'var(--mp-blue-50)', color: 'var(--mp-blue)',
+                            fontSize: 11, fontWeight: 600,
+                            padding: '2px 7px', borderRadius: 99,
+                        }}>
+                            <Icons.shield size={10} />
+                            Verified
+                        </span>
                     </div>
                     <div style={{ fontSize: 13, color: 'var(--text-2)', marginTop: 2 }}>
-                        {service || 'Vendor'}
+                        {service}
                     </div>
                 </div>
             </div>
 
-            {/* Rating + events */}
-            <div style={{ display: 'flex', gap: 16, fontSize: 13, flexWrap: 'wrap' }}>
-                {rating != null ? (
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--text-2)' }}>
-                        <StarRow rating={stars} />
+            {/* Trust score + completed contracts */}
+            <div style={{ display: 'flex', gap: 16, fontSize: 13, flexWrap: 'wrap', alignItems: 'center' }}>
+                {trustScore != null ? (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--text-2)' }}>
+                        <TrustPill score={trustScore} />
                         <span className="mp-num" style={{ color: 'var(--text-1)', fontWeight: 600 }}>
-                            {Number(rating).toFixed(1)}
+                            {trustScore.toFixed(0)}
                         </span>
-                        {reviews != null && (
-                            <span style={{ color: 'var(--text-3)' }}>({reviews})</span>
-                        )}
+                        <span style={{ color: 'var(--text-3)' }}>trust</span>
                     </span>
                 ) : (
-                    <span style={{ color: 'var(--text-3)', fontSize: 12 }}>No ratings yet</span>
+                    <span style={{ color: 'var(--text-3)', fontSize: 12 }}>No trust score yet</span>
                 )}
-                {events != null && (
+                {completed != null && (
                     <span style={{ color: 'var(--text-3)' }}>
-                        {events} event{events !== 1 ? 's' : ''} completed
+                        {completed} contract{completed !== 1 ? 's' : ''} completed
+                    </span>
+                )}
+                {disputeRate != null && disputeRate > 0 && (
+                    <span style={{ color: 'var(--warning)', fontWeight: 500 }}>
+                        {(disputeRate * 100).toFixed(0)}% disputed
                     </span>
                 )}
             </div>
@@ -375,18 +394,18 @@ function VendorCard({ vendor, onView }) {
     );
 }
 
-function StarRow({ rating }) {
+/* Trust score badge dot — colour-codes 0..100 per the PRD threshold table
+   (≥80 green, 60–79 amber, 40–59 orange, <40 red — the auto-suspend cutoff). */
+function TrustPill({ score }) {
+    let color = 'var(--success)';
+    if (score < 40) color = 'var(--error)';
+    else if (score < 60) color = '#E85423';
+    else if (score < 80) color = 'var(--warning)';
     return (
-        <span style={{ display: 'inline-flex', gap: 1, color: '#F59E0B' }}>
-            {[1, 2, 3, 4, 5].map((n) => (
-                <span key={n} style={{
-                    fontSize: 12,
-                    opacity: rating >= n ? 1 : rating >= n - 0.5 ? 0.6 : 0.2,
-                }}>
-                    ★
-                </span>
-            ))}
-        </span>
+        <span style={{
+            width: 8, height: 8, borderRadius: 99,
+            background: color, flexShrink: 0,
+        }} />
     );
 }
 

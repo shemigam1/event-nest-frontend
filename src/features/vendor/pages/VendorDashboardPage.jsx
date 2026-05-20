@@ -28,11 +28,15 @@ const STATUS_BADGE = {
     REJECTED: { bg: '#FBE9E9', fg: '#D62828', label: 'Rejected' },
 };
 
+/* Maps onto the backend VendorStatus enum (PRD §3.16):
+   PENDING (no verification yet) | ACTIVE (invite-onboarded) | VERIFIED | SUSPENDED.
+   The NO_PROFILE key is the local-only state when the caller hasn't created one. */
 const VER_STATE = {
-    NOT_REQUESTED: { label: 'Profile not set up', fg: 'var(--text-3)', bg: 'var(--surface-subtle)' },
-    PENDING:       { label: 'Awaiting verification', fg: '#B8770A', bg: '#FEF4E2' },
-    VERIFIED:      { label: 'Verified vendor',    fg: '#0F7B3E',   bg: '#E6F4EA' },
-    REJECTED:      { label: 'Verification rejected', fg: '#D62828', bg: '#FBE9E9' },
+    NO_PROFILE: { label: 'Profile not set up',     fg: 'var(--text-3)',  bg: 'var(--surface-subtle)' },
+    PENDING:    { label: 'Awaiting verification',  fg: 'var(--warning)', bg: 'var(--warning-bg)' },
+    ACTIVE:     { label: 'Active',                 fg: 'var(--mp-blue)', bg: 'var(--mp-blue-50)' },
+    VERIFIED:   { label: 'Verified vendor',        fg: 'var(--success)', bg: 'var(--success-bg)' },
+    SUSPENDED:  { label: 'Vendor suspended',       fg: 'var(--error)',   bg: 'var(--error-bg)' },
 };
 
 function ngn(amount) {
@@ -111,9 +115,12 @@ export default function VendorDashboardPage() {
             .slice(0, 5)
     ), [list]);
 
-    const verStatus = verification.data?.status || 'NOT_REQUESTED';
-    const verBadge  = VER_STATE[verStatus] || VER_STATE.NOT_REQUESTED;
-    const hasProfile = !!verification.data?.serviceType;
+    // The backend returns the full VendorProfile when one exists; a missing profile
+    // surfaces as a 404 (verification.isError + status 404). Either path resolves to
+    // "no profile" for the dashboard's "set up profile" nudge.
+    const hasProfile = !!verification.data?.businessName;
+    const verStatus = hasProfile ? (verification.data.status || 'PENDING') : 'NO_PROFILE';
+    const verBadge  = VER_STATE[verStatus] || VER_STATE.NO_PROFILE;
 
     return (
         <div style={{ background: 'var(--surface-subtle)', minHeight: '100vh' }}>
@@ -157,10 +164,12 @@ export default function VendorDashboardPage() {
                     </div>
                 </div>
 
-                {/* Verification banner — only when something needs the user's
-                    attention. A NOT_REQUESTED state gets a setup nudge;
-                    REJECTED shows the admin's reason inline. */}
-                {(verStatus === 'NOT_REQUESTED' || verStatus === 'REJECTED') && !verification.isLoading && (
+                {/* Profile-setup / verification banner. We render it when:
+                     - the user has no profile yet (NO_PROFILE — setup nudge), or
+                     - the most recent verification submission was rejected
+                       (verificationRejectionReason is populated). */}
+                {(verStatus === 'NO_PROFILE' || verification.data?.verificationRejectionReason)
+                    && !verification.isLoading && (
                     <VerificationBanner
                         verification={verification.data}
                         status={verStatus}
@@ -380,7 +389,9 @@ export default function VendorDashboardPage() {
 /* ─── Banner + sections ──────────────────────────── */
 
 function VerificationBanner({ verification, status, onAction }) {
-    const isRejected = status === 'REJECTED';
+    // status === 'NO_PROFILE' → setup nudge.
+    // Otherwise, when there's a rejection reason on the profile, show the admin's note.
+    const isRejected = status !== 'NO_PROFILE' && !!verification?.verificationRejectionReason;
     return (
         <div style={{
             display: 'grid',
@@ -390,14 +401,14 @@ function VerificationBanner({ verification, status, onAction }) {
             padding: '16px 20px',
             marginBottom: 24,
             borderRadius: 12,
-            background: isRejected ? '#FBE9E9' : 'var(--mp-blue-50, #EAF1FE)',
-            border: `1px solid ${isRejected ? '#F4C5C5' : 'var(--mp-blue-200, #C4D5F8)'}`,
+            background: isRejected ? 'var(--error-bg)' : 'var(--mp-blue-50)',
+            border: `1px solid ${isRejected ? 'var(--error)' : 'var(--mp-blue-200)'}`,
         }}>
             <div>
                 <div style={{
                     display: 'inline-flex', alignItems: 'center', gap: 6,
                     fontSize: 11, fontWeight: 700,
-                    color: isRejected ? '#D62828' : 'var(--mp-blue)',
+                    color: isRejected ? 'var(--error)' : 'var(--mp-blue)',
                     letterSpacing: 0.4,
                     marginBottom: 4,
                 }}>
@@ -414,8 +425,8 @@ function VerificationBanner({ verification, status, onAction }) {
                     lineHeight: 1.5,
                 }}>
                     {isRejected
-                        ? (verification?.rejectionReason || 'Admin wants more detail. Edit your service type or description and resubmit.')
-                        : 'Service type + a short description is all it takes. You don\'t need to be verified to apply, but verification gets you a badge.'}
+                        ? (verification?.verificationRejectionReason || 'Admin wants more detail. Edit your profile and resubmit.')
+                        : 'Business name, category, bio and portfolio. Verified vendors show up in the public marketplace.'}
                 </p>
             </div>
             <Button

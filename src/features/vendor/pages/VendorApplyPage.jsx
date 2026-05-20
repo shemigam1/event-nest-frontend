@@ -59,7 +59,8 @@ export default function VendorApplyPage() {
     useEffect(() => {
         if (!isAuthenticated) return;
         if (verification.isLoading) return;
-        const hasProfile = !!verification.data?.serviceType;
+        // Real backend profile has `businessName`; the old `serviceType` field no longer exists.
+        const hasProfile = !!verification.data?.businessName;
         if (!hasProfile) {
             navigate('/vendor/profile', {
                 replace: true,
@@ -177,7 +178,10 @@ export default function VendorApplyPage() {
                         />
                     ) : (
                         <PitchForm
-                            initialServiceType={verification.data?.serviceType ?? ''}
+                            // Pre-fill the pitch's service-type field with the vendor's
+                            // backend category enum (e.g. "PHOTOGRAPHY"). The form will
+                            // typically map this to a user-friendly label downstream.
+                            initialServiceType={verification.data?.category ?? ''}
                             description={description}
                             setDescription={setDescription}
                             proposedAmount={proposedAmount}

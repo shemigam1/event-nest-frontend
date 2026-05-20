@@ -35,6 +35,34 @@ function initials(name) {
     return name.trim().split(/\s+/).map((p) => p[0]).slice(0, 2).join('').toUpperCase() || '?';
 }
 
+/* Map the backend's PublicVendorResponse (PRD §3.16) onto the legacy field
+   names this page was originally written against. Keeps the render below
+   unchanged while talking to the real API. */
+const CATEGORY_LABEL = {
+    CATERING:    'Catering',
+    AV:          'AV & Sound',
+    PHOTOGRAPHY: 'Photography',
+    VENUE:       'Venue',
+    DECORATION:  'Decoration',
+    MUSIC:       'Music & DJs',
+    SECURITY:    'Security',
+    OTHER:       'Other',
+};
+function adaptVendor(v) {
+    if (!v) return v;
+    return {
+        ...v,
+        vendorName:         v.vendorName         ?? v.businessName,
+        vendorVerified:     v.vendorVerified     ?? true, // marketplace returns VERIFIED only
+        serviceType:        v.serviceType        ?? CATEGORY_LABEL[v.category] ?? v.category,
+        profileDescription: v.profileDescription ?? v.bio,
+        // averageRating / totalRatings come from a separate rating system not surfaced
+        // by the backend marketplace yet — leave undefined so the page falls back to
+        // its "No ratings yet" copy. The hero shows the trust score separately.
+        completedEvents:    v.completedEvents    ?? v.completedContracts ?? 0,
+    };
+}
+
 function fmtDate(iso) {
     if (!iso) return '—';
     const d = new Date(iso);
@@ -144,7 +172,11 @@ export default function VendorDetailPage() {
         );
     }
 
-    const v = profile.data;
+    // Backend returns PublicVendorResponse (PRD §3.16). The page was originally written
+    // against an older shape (vendorName / serviceType / profileDescription / averageRating
+    // / completedEvents). adaptVendor() maps the new fields onto the legacy names so the
+    // page renders unchanged. Marketplace only returns VERIFIED vendors, so the badge is on.
+    const v = adaptVendor(profile.data);
     const upcoming  = v.upcomingSchedule || [];
     const completed = v.completedWork    || [];
     const ratedWork = completed.filter((c) => c.ratingScore != null);
