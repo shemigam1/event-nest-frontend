@@ -160,6 +160,18 @@ export const contractsApi = baseApi.injectEndpoints({
             ],
             transformResponse: (r) => r?.data ?? r,
         }),
+
+        disputeMilestone: builder.mutation({
+            query: ({ contractId, milestoneId, reason }) => ({
+                url: `/contracts/${contractId}/escrow/milestones/${milestoneId}/dispute`,
+                method: 'POST',
+                body: { reason },
+            }),
+            invalidatesTags: (result, error, { contractId }) => [
+                { type: 'Escrow', id: contractId },
+            ],
+            transformResponse: (r) => r?.data ?? r,
+        }),
     }),
 });
 
@@ -178,4 +190,5 @@ export const {
     useAddMilestoneMutation,
     useApproveMilestoneMutation,
     useReleaseMilestoneMutation,
+    useDisputeMilestoneMutation,
 } = contractsApi;

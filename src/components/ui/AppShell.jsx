@@ -196,6 +196,7 @@ function Sidebar() {
                 { icon: Icons.signal, label: 'Event moderation',    path: '/admin/moderation' },
                 { icon: Icons.users,  label: 'Manage users',        path: '/admin/users' },
                 { icon: Icons.list,   label: 'Event edit requests', path: '/admin/event-edits' },
+                { icon: Icons.shield, label: 'Escrow disputes',     path: '/admin/escrow' },
                 { icon: Icons.mail,   label: 'Invite admin',        path: '/admin/invite' },
             ];
         }

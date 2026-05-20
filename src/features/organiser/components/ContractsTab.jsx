@@ -12,6 +12,7 @@ import {
   useAddMilestoneMutation,
   useApproveMilestoneMutation,
   useReleaseMilestoneMutation,
+  useDisputeMilestoneMutation,
 } from "../contractsApi";
 import { useGetEventVendorApplicationsQuery } from '../vendorsApi';
 import Button from "@/components/ui/Button";
@@ -34,6 +35,7 @@ const MILESTONE_STYLE = {
   PENDING: { bg: "#FEF4E2", fg: "#B8770A", label: "Pending" },
   APPROVED: { bg: "#EAF1FE", fg: "var(--mp-blue)", label: "Approved" },
   RELEASED: { bg: "#E6F4EA", fg: "#0F9D58", label: "Released" },
+  DISPUTED: { bg: "#FBE9E9", fg: "#D62828", label: "Disputed" },
 };
 
 function ngn(v) {
@@ -501,9 +503,11 @@ function TimestampChip({ label, value }) {
 
 function EscrowPanel({ contractId, contractStatus }) {
   const [showAddMilestone, setShowAddMilestone] = useState(false);
+  const [disputingMilestone, setDisputingMilestone] = useState(null);
   const escrowQ = useGetEscrowQuery(contractId);
   const [approveMilestone, approveState] = useApproveMilestoneMutation();
   const [releaseMilestone, releaseState] = useReleaseMilestoneMutation();
+  const [disputeMilestone, disputeState] = useDisputeMilestoneMutation();
   const [err, setErr] = useState("");
 
   const escrow = escrowQ.data;
@@ -525,6 +529,16 @@ function EscrowPanel({ contractId, contractStatus }) {
       await releaseMilestone({ contractId, milestoneId }).unwrap();
     } catch (e) {
       setErr(e?.data?.message ?? "Failed to release milestone");
+    }
+  }
+
+  async function handleDispute(milestoneId, reason) {
+    setErr("");
+    try {
+      await disputeMilestone({ contractId, milestoneId, reason }).unwrap();
+      setDisputingMilestone(null);
+    } catch (e) {
+      setErr(e?.data?.message ?? "Failed to raise dispute");
     }
   }
 
@@ -631,9 +645,10 @@ function EscrowPanel({ contractId, contractStatus }) {
               key={m.id}
               milestone={m}
               canRelease={canRelease}
-              busy={approveState.isLoading || releaseState.isLoading}
+              busy={approveState.isLoading || releaseState.isLoading || disputeState.isLoading}
               onApprove={() => handleApprove(m.id)}
               onRelease={() => handleRelease(m.id)}
+              onDispute={() => setDisputingMilestone(m)}
             />
           ))}
         </div>
@@ -649,6 +664,15 @@ function EscrowPanel({ contractId, contractStatus }) {
         <AddMilestoneModal
           contractId={contractId}
           onDismiss={() => setShowAddMilestone(false)}
+        />
+      )}
+
+      {disputingMilestone && (
+        <DisputeReasonModal
+          milestone={disputingMilestone}
+          onSubmit={(reason) => handleDispute(disputingMilestone.id, reason)}
+          onDismiss={() => setDisputingMilestone(null)}
+          busy={disputeState.isLoading}
         />
       )}
     </div>
@@ -673,6 +697,7 @@ function MilestoneRow({
   busy,
   onApprove,
   onRelease,
+  onDispute,
 }) {
   const ms = MILESTONE_STYLE[m.status] ?? MILESTONE_STYLE.PENDING;
   return (
@@ -696,6 +721,11 @@ function MilestoneRow({
             {m.description}
           </div>
         )}
+        {m.disputeReason && (
+          <div style={{ fontSize: 12, color: "#D62828", marginTop: 2 }}>
+            Dispute: {m.disputeReason}
+          </div>
+        )}
       </div>
       <div
         style={{
@@ -709,14 +739,24 @@ function MilestoneRow({
       </div>
       <Badge style={ms} label={ms.label} />
       {m.status === "PENDING" && (
-        <Button
-          variant="secondary"
-          size="sm"
-          disabled={busy}
-          onClick={onApprove}
-        >
-          Approve
-        </Button>
+        <>
+          <Button
+            variant="secondary"
+            size="sm"
+            disabled={busy}
+            onClick={onApprove}
+          >
+            Approve
+          </Button>
+          <Button
+            variant="destructive"
+            size="sm"
+            disabled={busy}
+            onClick={onDispute}
+          >
+            Raise dispute
+          </Button>
+        </>
       )}
       {m.status === "APPROVED" && canRelease && (
         <Button variant="primary" size="sm" disabled={busy} onClick={onRelease}>
@@ -1151,6 +1191,73 @@ function AddMilestoneModal({ contractId, onDismiss }) {
               disabled={!canSubmit || state.isLoading}
             >
               {state.isLoading ? "Adding…" : "Add milestone"}
+            </Button>
+          </div>
+        </form>
+      </div>
+    </Modal>
+  );
+}
+
+/* ─── DisputeReasonModal ─────────────────────────────── */
+
+function DisputeReasonModal({ milestone, onSubmit, onDismiss, busy }) {
+  const [reason, setReason] = useState("");
+  const canSubmit = reason.trim().length >= 10;
+
+  function handleSubmit(e) {
+    e.preventDefault();
+    if (canSubmit) onSubmit(reason.trim());
+  }
+
+  return (
+    <Modal open onClose={onDismiss} label="Raise dispute" width={440}>
+      <div style={{ padding: 24 }}>
+        <h3 className="mp-h3" style={{ margin: "0 0 6px", color: "var(--text-1)" }}>
+          Raise a dispute
+        </h3>
+        <p style={{ fontSize: 13, color: "var(--text-2)", margin: "0 0 20px" }}>
+          Milestone: <strong>{milestone.title}</strong>
+        </p>
+        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          <div>
+            <label
+              style={{
+                display: "block",
+                fontSize: 13,
+                fontWeight: 600,
+                color: "var(--text-1)",
+                marginBottom: 6,
+              }}
+            >
+              Reason *
+            </label>
+            <textarea
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder="Describe why you are disputing this milestone (min. 10 characters)…"
+              rows={4}
+              required
+              style={{
+                width: "100%",
+                padding: "9px 12px",
+                fontSize: 14,
+                border: "1px solid var(--border)",
+                borderRadius: 8,
+                resize: "vertical",
+                fontFamily: "inherit",
+                boxSizing: "border-box",
+                color: "var(--text-1)",
+                background: "white",
+              }}
+            />
+          </div>
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 4 }}>
+            <Button type="button" variant="secondary" size="md" onClick={onDismiss}>
+              Cancel
+            </Button>
+            <Button type="submit" variant="destructive" size="md" disabled={!canSubmit || busy}>
+              {busy ? "Submitting…" : "Submit dispute"}
             </Button>
           </div>
         </form>

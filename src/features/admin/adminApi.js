@@ -112,6 +112,37 @@ export const adminApi = baseApi.injectEndpoints({
             }),
             transformResponse: (r) => r.data ?? r,
         }),
+
+        /* ── Escrow disputes ──────────────────────────────────────────── */
+
+        getEscrowDisputes: builder.query({
+            query: () => '/admin/escrow/disputes',
+            providesTags: ['Escrow'],
+            transformResponse: (r) => {
+                const d = r.data ?? r;
+                return Array.isArray(d) ? d : (d?.content ?? []);
+            },
+        }),
+
+        ruleForVendor: builder.mutation({
+            query: ({ disputeId, notes }) => ({
+                url: `/admin/escrow/disputes/${disputeId}/rule-for-vendor`,
+                method: 'POST',
+                body: { notes },
+            }),
+            invalidatesTags: ['Escrow'],
+            transformResponse: (r) => r.data ?? r,
+        }),
+
+        ruleForOrganiser: builder.mutation({
+            query: ({ disputeId, notes }) => ({
+                url: `/admin/escrow/disputes/${disputeId}/rule-for-organiser`,
+                method: 'POST',
+                body: { notes },
+            }),
+            invalidatesTags: ['Escrow'],
+            transformResponse: (r) => r.data ?? r,
+        }),
     }),
 });
 
@@ -134,4 +165,7 @@ export const {
     useRejectEventEditMutation,
     useInviteAdminMutation,
     useCompleteAdminInvitationMutation,
+    useGetEscrowDisputesQuery,
+    useRuleForVendorMutation,
+    useRuleForOrganiserMutation,
 } = adminApi;
