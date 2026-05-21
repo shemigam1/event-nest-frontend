@@ -224,6 +224,7 @@ function Header({ event, totalSold, totalCapacity, checkedIn, checkInRate, tab, 
         { id: 'contributions', label: 'Contributions' },
         { id: 'settings',      label: 'Settings' },
     ];
+
     return (
         <div style={{ background: 'white', borderBottom: '1px solid var(--border)' }}>
             <div style={{ maxWidth: 1280, margin: '0 auto', padding: '24px 24px 0' }}>
@@ -690,6 +691,17 @@ function AttendeesTab({ bookings, loading }) {
 
 /* ───────────────────────────── Settings tab ────────────────────── */
 
+const VENDOR_CATEGORIES = [
+    { value: 'CATERING',    label: 'Catering' },
+    { value: 'AV',          label: 'AV / Sound' },
+    { value: 'PHOTOGRAPHY', label: 'Photography' },
+    { value: 'VENUE',       label: 'Venue' },
+    { value: 'DECORATION',  label: 'Decoration' },
+    { value: 'MUSIC',       label: 'Music' },
+    { value: 'SECURITY',    label: 'Security' },
+    { value: 'OTHER',       label: 'Other' },
+];
+
 function SettingsTab({ event, eventId, navigate }) {
     const [submitEvent, submitState]   = useSubmitEventMutation();
     const [deleteEvent, deleteState]   = useDeleteEventMutation();
@@ -703,11 +715,19 @@ function SettingsTab({ event, eventId, navigate }) {
 
     // Config may not exist yet (404) — treat as all-off defaults.
     const config = configQuery.data ?? {};
-    const programmeOn  = config.programmeEnabled  ?? false;
-    const guestListOn  = config.guestListEnabled  ?? false;
-    const ratingsOn    = config.ratingsEnabled     ?? false;
-    const ticketingOn  = config.ticketingEnabled   ?? true;
-    const commentsOn   = config.commentsEnabled    ?? true;
+    const programmeOn      = config.programmeEnabled      ?? false;
+    const guestListOn      = config.guestListEnabled      ?? false;
+    const ratingsOn        = config.ratingsEnabled        ?? false;
+    const ticketingOn      = config.ticketingEnabled      ?? true;
+    const commentsOn       = config.commentsEnabled       ?? true;
+    const transfersOn      = config.transfersEnabled      ?? false;
+    const contributionsOn  = config.contributionsEnabled  ?? false;
+    const waitlistOn       = config.waitlistEnabled       ?? false;
+    const vendorAppsOpen   = config.vendorApplicationsOpen ?? false;
+    const freeTicketLimit  = config.freeTicketLimit ?? 2;
+    const requiredCats     = config.requiredVendorCategories ?? [];
+
+    const [limitDraft, setLimitDraft] = useState(null); // null = not editing
 
     async function handleSubmit() {
         setActionError('');
@@ -737,6 +757,27 @@ function SettingsTab({ event, eventId, navigate }) {
 
     const modules = [
         {
+            key: 'ticketingEnabled',
+            label: 'Ticketing',
+            description: 'Enable ticket sales for this event. Turning this off prevents new bookings while keeping existing ones intact.',
+            value: ticketingOn,
+            icon: <Icons.ticket size={18} />,
+        },
+        {
+            key: 'transfersEnabled',
+            label: 'Ticket transfers',
+            description: 'Allow attendees to transfer their tickets to another EventNest user after purchase.',
+            value: transfersOn,
+            icon: <Icons.arrowR size={18} />,
+        },
+        {
+            key: 'waitlistEnabled',
+            label: 'Waitlist',
+            description: 'Offer a waitlist when all ticket tiers are sold out. Waitlisted attendees are notified when capacity opens up.',
+            value: waitlistOn,
+            icon: <Icons.users size={18} />,
+        },
+        {
             key: 'programmeEnabled',
             label: 'Programme / agenda',
             description: 'Publish a run-of-show — sessions, speakers, and timing — visible on the event page and emailed to attendees.',
@@ -751,6 +792,13 @@ function SettingsTab({ event, eventId, navigate }) {
             icon: <Icons.mail size={18} />,
         },
         {
+            key: 'contributionsEnabled',
+            label: 'Contribution pools',
+            description: 'Enable crowd-funded contribution pools so guests can collectively contribute towards event costs.',
+            value: contributionsOn,
+            icon: <Icons.wallet size={18} />,
+        },
+        {
             key: 'ratingsEnabled',
             label: 'Attendee ratings',
             description: 'Allow attendees to rate the event after it ends. Ratings are visible on the public event page.',
@@ -758,18 +806,18 @@ function SettingsTab({ event, eventId, navigate }) {
             icon: <Icons.bolt size={18} />,
         },
         {
-            key: 'ticketingEnabled',
-            label: 'Ticketing',
-            description: 'Enable ticket sales for this event. Turning this off prevents new bookings while keeping existing ones intact.',
-            value: ticketingOn,
-            icon: <Icons.ticket size={18} />,
-        },
-        {
             key: 'commentsEnabled',
             label: 'Discussion',
             description: 'Allow attendees to post comments and reactions on the event page. Turn off if you want a quieter listing.',
             value: commentsOn,
-            icon: <Icons.users size={18} />,
+            icon: <Icons.message size={18} />,
+        },
+        {
+            key: 'vendorApplicationsOpen',
+            label: 'Open vendor applications',
+            description: 'Let verified vendors discover this event on the marketplace and submit service applications.',
+            value: vendorAppsOpen,
+            icon: <Icons.spark size={18} />,
         },
     ];
 
@@ -867,6 +915,133 @@ function SettingsTab({ event, eventId, navigate }) {
                         </button>
                     </div>
                 ))}
+            </div>
+
+            {/* Free ticket limit */}
+            <div style={{
+                background: 'white', border: '1px solid var(--border)',
+                borderRadius: 12, padding: '16px 20px',
+            }}>
+                <div style={{ marginBottom: 14 }}>
+                    <div style={{ fontWeight: 600, color: 'var(--text-1)', fontSize: 15 }}>
+                        Free ticket limit
+                    </div>
+                    <div style={{ fontSize: 13, color: 'var(--text-2)', marginTop: 2 }}>
+                        Maximum free tickets one attendee may hold across all free tiers. Set to <strong>unlimited</strong> to remove the cap.
+                    </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <button
+                        onClick={() => {
+                            const cur = limitDraft ?? freeTicketLimit ?? 2;
+                            if (cur === null) return;
+                            const next = Math.max(1, cur - 1);
+                            setLimitDraft(next);
+                        }}
+                        style={{
+                            width: 36, height: 36, borderRadius: 8, border: '1px solid var(--border)',
+                            background: 'var(--surface-subtle)', fontSize: 18, cursor: 'pointer',
+                            display: 'grid', placeItems: 'center', color: 'var(--text-1)',
+                        }}
+                    >−</button>
+                    <div style={{
+                        minWidth: 60, textAlign: 'center', fontSize: 18, fontWeight: 700, color: 'var(--text-1)',
+                    }}>
+                        {(limitDraft ?? freeTicketLimit) === null ? '∞' : (limitDraft ?? freeTicketLimit)}
+                    </div>
+                    <button
+                        onClick={() => {
+                            const cur = limitDraft ?? freeTicketLimit ?? 2;
+                            setLimitDraft(cur === null ? 1 : cur + 1);
+                        }}
+                        style={{
+                            width: 36, height: 36, borderRadius: 8, border: '1px solid var(--border)',
+                            background: 'var(--surface-subtle)', fontSize: 18, cursor: 'pointer',
+                            display: 'grid', placeItems: 'center', color: 'var(--text-1)',
+                        }}
+                    >+</button>
+                    <button
+                        onClick={async () => {
+                            const isCurrentlyUnlimited = (limitDraft ?? freeTicketLimit) === null;
+                            if (isCurrentlyUnlimited) {
+                                setLimitDraft(2);
+                            } else {
+                                setLimitDraft(null);
+                                try {
+                                    await updateConfig({ eventId, clearFreeTicketLimit: true }).unwrap();
+                                } catch { /* moduleError */ }
+                            }
+                        }}
+                        disabled={configState.isLoading}
+                        style={{
+                            padding: '6px 14px', borderRadius: 8, fontSize: 13, fontWeight: 500,
+                            border: '1px solid var(--border)', background: 'var(--surface-subtle)',
+                            cursor: 'pointer', color: 'var(--text-2)',
+                        }}
+                    >
+                        {(limitDraft ?? freeTicketLimit) === null ? 'Set a limit' : 'Set unlimited'}
+                    </button>
+                    {limitDraft !== null && limitDraft !== freeTicketLimit && (
+                        <button
+                            onClick={async () => {
+                                try {
+                                    await updateConfig({ eventId, freeTicketLimit: limitDraft }).unwrap();
+                                    setLimitDraft(null);
+                                } catch { /* error shown by moduleError */ }
+                            }}
+                            disabled={configState.isLoading}
+                            style={{
+                                padding: '6px 16px', borderRadius: 8, fontSize: 13, fontWeight: 600,
+                                border: 0, background: 'var(--mp-blue)', color: 'white', cursor: 'pointer',
+                            }}
+                        >
+                            Save
+                        </button>
+                    )}
+                </div>
+            </div>
+
+            {/* Required vendor categories */}
+            <div style={{
+                background: 'white', border: '1px solid var(--border)',
+                borderRadius: 12, padding: '16px 20px',
+            }}>
+                <div style={{ marginBottom: 14 }}>
+                    <div style={{ fontWeight: 600, color: 'var(--text-1)', fontSize: 15 }}>
+                        Required vendor categories
+                    </div>
+                    <div style={{ fontSize: 13, color: 'var(--text-2)', marginTop: 2 }}>
+                        Shown on the event card so vendors can self-filter before applying. Click to toggle.
+                    </div>
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                    {VENDOR_CATEGORIES.map(cat => {
+                        const active = requiredCats.includes(cat.value);
+                        return (
+                            <button
+                                key={cat.value}
+                                onClick={async () => {
+                                    const next = active
+                                        ? requiredCats.filter(c => c !== cat.value)
+                                        : [...requiredCats, cat.value];
+                                    try {
+                                        await updateConfig({ eventId, requiredVendorCategories: next }).unwrap();
+                                    } catch { /* moduleError */ }
+                                }}
+                                disabled={configState.isLoading}
+                                style={{
+                                    padding: '6px 14px', borderRadius: 99, fontSize: 13, fontWeight: 600,
+                                    border: active ? '2px solid var(--mp-blue)' : '1px solid var(--border)',
+                                    background: active ? '#EAF1FE' : 'var(--surface-subtle)',
+                                    color: active ? 'var(--mp-blue)' : 'var(--text-2)',
+                                    cursor: 'pointer', transition: 'all 0.15s',
+                                }}
+                            >
+                                {cat.label}
+                            </button>
+                        );
+                    })}
+                </div>
             </div>
 
             {/* Event details */}

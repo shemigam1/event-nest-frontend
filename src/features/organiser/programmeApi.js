@@ -5,7 +5,7 @@ export const programmeApi = baseApi.injectEndpoints({
         getProgramme: builder.query({
             query: (eventId) => `/events/${eventId}/programme`,
             providesTags: (result, error, eventId) => [{ type: 'Programme', id: eventId }],
-            transformResponse: (r) => r?.data ?? r ?? [],
+            transformResponse: (r) => { const d = r?.data ?? r; return Array.isArray(d) ? d : (d?.content ?? []); },
         }),
         addProgrammeItem: builder.mutation({
             query: ({ eventId, ...body }) => ({

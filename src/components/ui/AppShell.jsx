@@ -29,15 +29,27 @@ const WORKSPACE_NAV = {
     ],
     ORGANISER: [
         { icon: Icons.calendar, label: 'My events',          path: '/organiser' },
+        { icon: Icons.lock,     label: 'Contracts',          path: '/organiser/contracts' },
         { icon: Icons.users,    label: 'Vendor marketplace', path: '/vendors' },
+        { icon: Icons.message,  label: 'Messages',           path: '/messages' },
+        { icon: Icons.wallet,   label: 'Account',            path: '/organiser/account' },
+        { icon: Icons.alert,    label: 'Disputes',           path: '/organiser/disputes', comingSoon: true },
     ],
     MANAGER: [
         { icon: Icons.calendar, label: 'My events',          path: '/organiser' },
+        { icon: Icons.lock,     label: 'Contracts',          path: '/organiser/contracts' },
         { icon: Icons.users,    label: 'Vendor marketplace', path: '/vendors' },
+        { icon: Icons.message,  label: 'Messages',           path: '/messages' },
+        { icon: Icons.wallet,   label: 'Account',            path: '/organiser/account' },
+        { icon: Icons.alert,    label: 'Disputes',           path: '/organiser/disputes', comingSoon: true },
     ],
     VENDOR: [
-        { icon: Icons.calendar, label: 'Browse events', path: '/vendor/opportunities' },
-        { icon: Icons.signal,   label: 'My events',     path: '/vendor' },
+        { icon: Icons.calendar, label: 'Browse events',  path: '/vendor/opportunities' },
+        { icon: Icons.signal,   label: 'Dashboard',      path: '/vendor' },
+        { icon: Icons.lock,     label: 'Contracts',      path: '/vendor/contracts' },
+        { icon: Icons.list,     label: 'Applications',   path: '/vendor/applications' },
+        { icon: Icons.message,  label: 'Messages',       path: '/messages' },
+        { icon: Icons.alert,    label: 'Disputes',       path: '/vendor/disputes', comingSoon: true },
     ],
 };
 
@@ -284,7 +296,8 @@ function Sidebar() {
                             label={item.label}
                             active={active}
                             collapsed={collapsed}
-                            onClick={() => go(item.path)}
+                            comingSoon={item.comingSoon}
+                            onClick={() => !item.comingSoon && go(item.path)}
                         />
                     );
                 })}
@@ -364,11 +377,12 @@ function Sidebar() {
 
 /* ─── Pieces ──────────────────────────────────────────────────── */
 
-function SidebarLink({ icon, label, active, collapsed, danger, onClick }) {
+function SidebarLink({ icon, label, active, collapsed, danger, comingSoon, onClick }) {
     const baseColor   = danger ? 'var(--error)' : 'var(--text-1)';
     const activeBg    = 'var(--mp-blue-50, #EAF1FE)';
     const activeColor = 'var(--mp-blue)';
-    return (
+
+    const btn = (
         <button
             onClick={onClick}
             title={collapsed ? label : undefined}
@@ -387,15 +401,18 @@ function SidebarLink({ icon, label, active, collapsed, danger, onClick }) {
                 fontFamily: 'inherit',
                 fontSize: 14,
                 fontWeight: active ? 600 : 500,
-                cursor: 'pointer',
+                cursor: comingSoon ? 'default' : 'pointer',
                 textAlign: 'left',
                 minWidth: 0,
+                filter: comingSoon ? 'blur(1.5px)' : 'none',
+                opacity: comingSoon ? 0.45 : 1,
+                userSelect: 'none',
             }}
             onMouseOver={(e) => {
-                if (!active) e.currentTarget.style.background = 'var(--surface-subtle)';
+                if (!active && !comingSoon) e.currentTarget.style.background = 'var(--surface-subtle)';
             }}
             onMouseOut={(e) => {
-                if (!active) e.currentTarget.style.background = 'transparent';
+                if (!active && !comingSoon) e.currentTarget.style.background = 'transparent';
             }}
         >
             <span style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center' }}>
@@ -411,6 +428,40 @@ function SidebarLink({ icon, label, active, collapsed, danger, onClick }) {
                 </span>
             )}
         </button>
+    );
+
+    if (!comingSoon) return btn;
+
+    return (
+        <div style={{ position: 'relative' }}>
+            {btn}
+            <div style={{
+                position: 'absolute',
+                inset: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: collapsed ? 'center' : 'flex-end',
+                paddingRight: collapsed ? 0 : 10,
+                pointerEvents: 'none',
+                borderRadius: 8,
+            }}>
+                {!collapsed && (
+                    <span style={{
+                        fontSize: 10,
+                        fontWeight: 700,
+                        letterSpacing: '0.04em',
+                        textTransform: 'uppercase',
+                        background: 'var(--mp-blue)',
+                        color: 'white',
+                        padding: '2px 7px',
+                        borderRadius: 99,
+                        opacity: 0.9,
+                    }}>
+                        Soon
+                    </span>
+                )}
+            </div>
+        </div>
     );
 }
 

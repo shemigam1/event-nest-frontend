@@ -103,6 +103,7 @@ function adaptEvent(event) {
     return {
         ...event,
         dateLabel: formatEventDate(event.startTime),
+        venue: event.venue || event.venueName || '',
         tiers: event.tiers ?? [],
     };
 }
@@ -111,8 +112,8 @@ function adaptEvent(event) {
 function applyFilter(event, filter, query) {
     if (query) {
         const q = query.toLowerCase();
-        const matchesTitle = event.title.toLowerCase().includes(q);
-        const matchesVenue = event.venue.toLowerCase().includes(q);
+        const matchesTitle = (event.title ?? '').toLowerCase().includes(q);
+        const matchesVenue = (event.venue ?? '').toLowerCase().includes(q);
         if (!matchesTitle && !matchesVenue) return false;
     }
 
@@ -214,7 +215,7 @@ export default function DiscoveryPage() {
                             <EventCard
                                 key={event.id}
                                 event={event}
-                                onClick={() => navigate(`/events/${event.id}`)}
+                                onClick={() => navigate(`/events/${event.slug ?? event.id}`)}
                             />
                         ))}
                     </div>

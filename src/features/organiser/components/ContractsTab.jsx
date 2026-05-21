@@ -4,9 +4,8 @@ import {
   useGetEventContractsQuery,
   useCreateContractMutation,
   useUpdateContractMutation,
-  useActivateContractMutation,
-  useCompleteContractMutation,
-  useTerminateContractMutation,
+  useRescindContractMutation,
+  useCancelContractMutation,
   useFundEscrowMutation,
   useGetEscrowQuery,
   useAddMilestoneMutation,
@@ -23,12 +22,12 @@ import { Icons } from "@/components/ui/Icon";
 /* ─── constants ──────────────────────────────────────── */
 
 const STATUS_STYLE = {
-  DRAFT: { bg: "var(--surface-subtle)", fg: "var(--text-2)", label: "Draft" },
-  SIGNED: { bg: "#EAF1FE", fg: "var(--mp-blue)", label: "Signed" },
-  FUNDED: { bg: "#FEF4E2", fg: "#B8770A", label: "Funded" },
-  ACTIVE: { bg: "#E6F4EA", fg: "#0F9D58", label: "Active" },
-  COMPLETED: { bg: "#E6F4EA", fg: "#0F7B3E", label: "Completed" },
-  TERMINATED: { bg: "#FBE9E9", fg: "#D62828", label: "Terminated" },
+  DRAFT:         { bg: "var(--surface-subtle)", fg: "var(--text-2)", label: "Draft" },
+  SIGNED:        { bg: "#EAF1FE", fg: "var(--mp-blue)", label: "Signed" },
+  ACTIVE:        { bg: "#E6F4EA", fg: "#0F9D58", label: "Active" },
+  COMPLETED:     { bg: "#E6F4EA", fg: "#0F7B3E", label: "Completed" },
+  CANCELLED:     { bg: "#FBE9E9", fg: "#D62828", label: "Cancelled" },
+  COUNTERSIGNED: { bg: "#EAF1FE", fg: "var(--mp-blue)", label: "Countersigned" },
 };
 
 const MILESTONE_STYLE = {
@@ -77,7 +76,8 @@ function Badge({ style, label }) {
 export default function ContractsTab({ eventId }) {
   const [showCreate, setShowCreate] = useState(false);
   const contractsQ = useGetEventContractsQuery(eventId);
-  const contracts = contractsQ.data ?? [];
+  const _cd = contractsQ.data;
+  const contracts = Array.isArray(_cd) ? _cd : (_cd?.content ?? []);
 
   if (contractsQ.isLoading) {
     return (
@@ -210,20 +210,18 @@ function ContractCard({ contract, eventId }) {
   const [err, setErr] = useState("");
 
   const [fundEscrow, fundState] = useFundEscrowMutation();
-  const [activate, activateState] = useActivateContractMutation();
-  const [complete, completeState] = useCompleteContractMutation();
-  const [terminate, terminateState] = useTerminateContractMutation();
+  const [rescind, rescindState] = useRescindContractMutation();
+  const [cancel, cancelState] = useCancelContractMutation();
 
   const busy =
     fundState.isLoading ||
-    activateState.isLoading ||
-    completeState.isLoading ||
-    terminateState.isLoading;
+    rescindState.isLoading ||
+    cancelState.isLoading;
 
   const s = STATUS_STYLE[contract.status] ?? STATUS_STYLE.DRAFT;
   const isDone =
-    contract.status === "COMPLETED" || contract.status === "TERMINATED";
-  const hasEscrow = ["FUNDED", "ACTIVE", "COMPLETED", "TERMINATED"].includes(
+    contract.status === "COMPLETED" || contract.status === "CANCELLED";
+  const hasEscrow = ["ACTIVE", "COMPLETED", "CANCELLED"].includes(
     contract.status,
   );
 
@@ -397,38 +395,26 @@ function ContractCard({ contract, eventId }) {
                 </Button>
               )}
               {contract.status === "SIGNED" && (
-                <Button
-                  variant="primary"
-                  size="sm"
-                  disabled={busy}
-                  onClick={() =>
-                    run(() => fundEscrow(contract.id), "fund escrow")
-                  }
-                >
-                  {fundState.isLoading ? "Funding…" : "Fund escrow"}
-                </Button>
-              )}
-              {contract.status === "FUNDED" && (
-                <Button
-                  variant="primary"
-                  size="sm"
-                  disabled={busy}
-                  onClick={() => run(() => activate(contract.id), "activate")}
-                >
-                  {activateState.isLoading
-                    ? "Activating…"
-                    : "Activate contract"}
-                </Button>
-              )}
-              {contract.status === "ACTIVE" && (
-                <Button
-                  variant="primary"
-                  size="sm"
-                  disabled={busy}
-                  onClick={() => run(() => complete(contract.id), "complete")}
-                >
-                  {completeState.isLoading ? "Completing…" : "Mark complete"}
-                </Button>
+                <>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    disabled={busy}
+                    onClick={() =>
+                      run(() => fundEscrow(contract.id), "fund escrow")
+                    }
+                  >
+                    {fundState.isLoading ? "Funding…" : "Fund escrow"}
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    disabled={busy}
+                    onClick={() => run(() => rescind(contract.id), "rescind")}
+                  >
+                    {rescindState.isLoading ? "Rescinding…" : "Rescind"}
+                  </Button>
+                </>
               )}
               {contract.conversationId && (
                 <Button
@@ -445,9 +431,9 @@ function ContractCard({ contract, eventId }) {
                 variant="destructive"
                 size="sm"
                 disabled={busy}
-                onClick={() => run(() => terminate(contract.id), "terminate")}
+                onClick={() => run(() => cancel(contract.id), "cancel")}
               >
-                {terminateState.isLoading ? "Terminating…" : "Terminate"}
+                {cancelState.isLoading ? "Cancelling…" : "Cancel contract"}
               </Button>
             </div>
           )}

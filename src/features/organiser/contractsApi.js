@@ -18,17 +18,48 @@ export const contractsApi = baseApi.injectEndpoints({
         }),
 
         getEventContracts: builder.query({
-            query: (eventId) => `/events/${eventId}/contracts`,
+            query: (eventId) => `/organiser/events/${eventId}/contracts`,
             providesTags: (result, error, eventId) => [
                 { type: 'Contract', id: eventId },
             ],
-            transformResponse: (r) => r?.data ?? r ?? [],
+            transformResponse: (r) => {
+                const d = r?.data ?? r;
+                return Array.isArray(d) ? d : (d?.content ?? []);
+            },
+        }),
+
+        getVendorContracts: builder.query({
+            query: () => '/contracts/mine',
+            providesTags: ['ContractMine'],
+            transformResponse: (r) => {
+                const d = r?.data ?? r;
+                const items = Array.isArray(d) ? d : (d?.content ?? []);
+                return items.map(c => ({
+                    ...c,
+                    id:           c.id           ?? c.contractId,
+                    status:       c.status       ?? c.contractStatus,
+                    amount:       c.amount       ?? c.totalValue,
+                    eventName:    c.eventName    ?? c.eventTitle,
+                    organiserName: c.organiserName,
+                    milestones:   c.milestones   ?? [],
+                }));
+            },
         }),
 
         getMyContracts: builder.query({
-            query: () => '/contracts/mine',
+            query: () => '/me/organiser/contracts',
             providesTags: ['ContractMine'],
-            transformResponse: (r) => r?.data ?? r ?? [],
+            transformResponse: (r) => {
+                const d = r?.data ?? r;
+                const items = Array.isArray(d) ? d : (d?.content ?? []);
+                // Normalize ContractSummaryResponse field names to what the UI expects
+                return items.map(c => ({
+                    ...c,
+                    amount:     c.amount     ?? c.totalValue,
+                    vendorName: c.vendorName ?? c.vendorBusinessName,
+                    eventName:  c.eventName  ?? c.eventTitle,
+                }));
+            },
         }),
 
         getContract: builder.query({
@@ -53,9 +84,10 @@ export const contractsApi = baseApi.injectEndpoints({
         }),
 
         signContract: builder.mutation({
-            query: (contractId) => ({
+            query: ({ contractId, signatureIntent = 'I agree to the terms of this contract.' }) => ({
                 url: `/contracts/${contractId}/sign`,
-                method: 'PATCH',
+                method: 'POST',
+                body: { signatureIntent },
             }),
             invalidatesTags: (result, error, contractId) => [
                 { type: 'Contract', id: contractId },
@@ -65,10 +97,10 @@ export const contractsApi = baseApi.injectEndpoints({
             transformResponse: (r) => r?.data ?? r,
         }),
 
-        activateContract: builder.mutation({
+        rescindContract: builder.mutation({
             query: (contractId) => ({
-                url: `/contracts/${contractId}/activate`,
-                method: 'PATCH',
+                url: `/contracts/${contractId}/rescind`,
+                method: 'POST',
             }),
             invalidatesTags: (result, error, contractId) => [
                 { type: 'Contract', id: contractId },
@@ -78,24 +110,16 @@ export const contractsApi = baseApi.injectEndpoints({
             transformResponse: (r) => r?.data ?? r,
         }),
 
-        completeContract: builder.mutation({
-            query: (contractId) => ({
-                url: `/contracts/${contractId}/complete`,
-                method: 'PATCH',
-            }),
-            invalidatesTags: (result, error, contractId) => [
-                { type: 'Contract', id: contractId },
-                ...(result?.eventId ? [{ type: 'Contract', id: result.eventId }] : []),
-                'ContractMine',
-            ],
-            transformResponse: (r) => r?.data ?? r,
-        }),
-
-        terminateContract: builder.mutation({
-            query: (contractId) => ({
-                url: `/contracts/${contractId}/terminate`,
-                method: 'PATCH',
-            }),
+        cancelContract: builder.mutation({
+            query: (arg) => {
+                const contractId = typeof arg === 'object' ? arg.contractId : arg;
+                const reason = (typeof arg === 'object' && arg.reason) ? arg.reason : 'Cancelled by organiser';
+                return {
+                    url: `/contracts/${contractId}/cancel`,
+                    method: 'POST',
+                    body: { reason },
+                };
+            },
             invalidatesTags: (result, error, contractId) => [
                 { type: 'Contract', id: contractId },
                 ...(result?.eventId ? [{ type: 'Contract', id: result.eventId }] : []),
@@ -176,15 +200,15 @@ export const contractsApi = baseApi.injectEndpoints({
 });
 
 export const {
+    useGetVendorContractsQuery,
     useCreateContractMutation,
     useGetEventContractsQuery,
     useGetMyContractsQuery,
     useGetContractQuery,
     useUpdateContractMutation,
     useSignContractMutation,
-    useActivateContractMutation,
-    useCompleteContractMutation,
-    useTerminateContractMutation,
+    useRescindContractMutation,
+    useCancelContractMutation,
     useFundEscrowMutation,
     useGetEscrowQuery,
     useAddMilestoneMutation,

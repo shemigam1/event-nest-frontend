@@ -3,8 +3,11 @@ import { useNavigate, useParams } from 'react-router';
 import { useSelector } from 'react-redux';
 import {
     useGetEventByIdQuery,
+    useGetEventBySlugQuery,
     useGetEventTiersQuery,
 } from '../eventsApi';
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 import { selectIsAuthenticated, selectCurrentUserId } from '@/features/auth/authSlice';
 import { formatEventDate } from '@/utils/dateFormat';
 import { formatNaira } from '@/utils/currency';
@@ -16,29 +19,33 @@ import { Icons } from '@/components/ui/Icon';
 import CommentSection from '@/features/comments/components/CommentSection';
 
 export default function EventDetailPage() {
-    const { id } = useParams();
+    const { identifier } = useParams();
     const navigate = useNavigate();
     const isAuthenticated = useSelector(selectIsAuthenticated);
     const currentUserId = useSelector(selectCurrentUserId);
 
-    const event = useGetEventByIdQuery(id);
-    const tiersQuery = useGetEventTiersQuery(id);
+    const isUuid = UUID_RE.test(identifier);
+    const byId   = useGetEventByIdQuery(identifier,   { skip: !isUuid });
+    const bySlug = useGetEventBySlugQuery(identifier, { skip: isUuid });
+    const event  = isUuid ? byId : bySlug;
+
+    // Once event data is loaded, always use the UUID for downstream navigation
+    const eventId = event.data?.id ?? identifier;
+    const tiersQuery = useGetEventTiersQuery(eventId, { skip: !event.data });
 
     const handleBook = () => {
         if (!isAuthenticated) {
-            navigate('/login', { state: { from: `/events/${id}/book` } });
+            navigate('/login', { state: { from: `/events/${eventId}/book` } });
         } else {
-            navigate(`/events/${id}/book`);
+            navigate(`/events/${eventId}/book`);
         }
     };
 
-    // Send vendors to the dedicated apply page. That page owns the
-    // profile-required gate + the pitch form; this button just routes.
     const handleVendorApply = () => {
         if (!isAuthenticated) {
-            navigate('/login', { state: { from: `/vendor/apply/${id}` } });
+            navigate('/login', { state: { from: `/vendor/apply/${eventId}` } });
         } else {
-            navigate(`/vendor/apply/${id}`);
+            navigate(`/vendor/apply/${eventId}`);
         }
     };
 
@@ -118,7 +125,7 @@ export default function EventDetailPage() {
                             marginTop: 24,
                         }}>
                             <InfoTile icon={<Icons.calendar size={18} />} label="When" value={formatEventDate(e.startTime)} />
-                            <InfoTile icon={<Icons.pin size={18} />} label="Where" value={e.venue} />
+                            <InfoTile icon={<Icons.pin size={18} />} label="Where" value={e.venueName || e.venue} />
                         </div>
 
                         <div style={{ marginTop: 32, paddingTop: 24, borderTop: '1px solid var(--border)' }}>
@@ -278,7 +285,7 @@ export default function EventDetailPage() {
                     own "module off" notice on 409. */}
                 <div style={{ marginTop: 20 }}>
                     <CommentSection
-                        eventId={id}
+                        eventId={eventId}
                         eventStatus={e.status}
                         canModerate={isOwnEvent}
                     />

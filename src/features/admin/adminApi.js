@@ -7,16 +7,18 @@ export const adminApi = baseApi.injectEndpoints({
             providesTags: ['Event'],
             transformResponse: (r) => { const d = r.data ?? r; return Array.isArray(d) ? d : (d?.content ?? []); },
         }),
+
+        /* Approve or reject a PENDING_APPROVAL event — single review endpoint */
         approveEvent: builder.mutation({
-            query: (id) => ({ url: `/admin/events/${id}/approve`, method: 'PATCH' }),
+            query: (id) => ({ url: `/admin/events/${id}/review`, method: 'POST', body: { approved: true } }),
             invalidatesTags: ['Event'],
             transformResponse: (r) => r.data ?? r,
         }),
         rejectEvent: builder.mutation({
             query: ({ id, reason }) => ({
-                url: `/admin/events/${id}/reject`,
-                method: 'PATCH',
-                body: { reason },
+                url: `/admin/events/${id}/review`,
+                method: 'POST',
+                body: { approved: false, reason },
             }),
             invalidatesTags: ['Event'],
             transformResponse: (r) => r.data ?? r,
@@ -26,6 +28,8 @@ export const adminApi = baseApi.injectEndpoints({
             invalidatesTags: ['Event'],
             transformResponse: (r) => r.data ?? r,
         }),
+
+        /* Users */
         getAdminUsers: builder.query({
             query: () => '/admin/users',
             providesTags: ['User'],
@@ -65,11 +69,6 @@ export const adminApi = baseApi.injectEndpoints({
             invalidatesTags: ['User'],
             transformResponse: (r) => r.data ?? r,
         }),
-        cancelEvent: builder.mutation({
-            query: (id) => ({ url: `/admin/events/${id}/cancel`, method: 'PATCH' }),
-            invalidatesTags: ['Event'],
-            transformResponse: (r) => r.data ?? r,
-        }),
         getEventsByOrganiser: builder.query({
             query: (organiserId) => `/admin/events?organiserId=${organiserId}`,
             providesTags: ['Event'],
@@ -80,21 +79,33 @@ export const adminApi = baseApi.injectEndpoints({
             providesTags: ['Analytics'],
             transformResponse: (r) => r.data ?? r,
         }),
+
+        /* Event change requests (critical-field edits on published events) */
         getEventEdits: builder.query({
-            query: (status) => status ? `/admin/event-edits?status=${status}` : '/admin/event-edits',
+            query: (status) => status ? `/admin/events/change-requests?status=${status}` : '/admin/events/change-requests',
             providesTags: ['EventEdit'],
             transformResponse: (r) => { const d = r.data ?? r; return Array.isArray(d) ? d : (d?.content ?? []); },
         }),
         approveEventEdit: builder.mutation({
-            query: (id) => ({ url: `/admin/event-edits/${id}/approve`, method: 'PATCH' }),
+            query: (id) => ({
+                url: `/admin/events/changes/${id}/review`,
+                method: 'POST',
+                body: { approved: true },
+            }),
             invalidatesTags: ['EventEdit', 'Event'],
             transformResponse: (r) => r.data ?? r,
         }),
         rejectEventEdit: builder.mutation({
-            query: ({ id, reason }) => ({ url: `/admin/event-edits/${id}/reject`, method: 'PATCH', body: { reason } }),
+            query: ({ id, reason }) => ({
+                url: `/admin/events/changes/${id}/review`,
+                method: 'POST',
+                body: { approved: false, reason },
+            }),
             invalidatesTags: ['EventEdit', 'Event'],
             transformResponse: (r) => r.data ?? r,
         }),
+
+        /* Admin invitations */
         inviteAdmin: builder.mutation({
             query: ({ email }) => ({
                 url: '/admin/invite',
@@ -113,8 +124,7 @@ export const adminApi = baseApi.injectEndpoints({
             transformResponse: (r) => r.data ?? r,
         }),
 
-        /* ── Escrow disputes ──────────────────────────────────────────── */
-
+        /* Escrow disputes */
         getEscrowDisputes: builder.query({
             query: () => '/admin/escrow/disputes',
             providesTags: ['Escrow'],
@@ -123,114 +133,83 @@ export const adminApi = baseApi.injectEndpoints({
                 return Array.isArray(d) ? d : (d?.content ?? []);
             },
         }),
-
         ruleForVendor: builder.mutation({
-            query: ({ disputeId, notes }) => ({
-                url: `/admin/escrow/disputes/${disputeId}/rule-for-vendor`,
-                method: 'POST',
+            query: ({ milestoneId, notes }) => ({
+                url: `/admin/escrow/disputes/${milestoneId}/rule-for-vendor`,
+                method: 'PATCH',
                 body: { notes },
             }),
             invalidatesTags: ['Escrow'],
             transformResponse: (r) => r.data ?? r,
         }),
-
         ruleForOrganiser: builder.mutation({
-            query: ({ disputeId, notes }) => ({
-                url: `/admin/escrow/disputes/${disputeId}/rule-for-organiser`,
-                method: 'POST',
+            query: ({ milestoneId, notes }) => ({
+                url: `/admin/escrow/disputes/${milestoneId}/rule-for-organiser`,
+                method: 'PATCH',
                 body: { notes },
             }),
             invalidatesTags: ['Escrow'],
             transformResponse: (r) => r.data ?? r,
         }),
-
-        /** Admin confirms an escrow violation on a contract — fires the −35 trust event. */
         flagEscrowViolation: builder.mutation({
-            query: ({ contractId, reason }) => ({
+            query: (contractId) => ({
                 url: `/admin/escrow/contracts/${contractId}/flag-violation`,
                 method: 'PATCH',
-                body: { reason },
             }),
-            invalidatesTags: ['Escrow', 'Vendor'],
+            invalidatesTags: ['Escrow'],
             transformResponse: (r) => r.data ?? r,
         }),
 
-        /* ── Admin vendor management ─────────────────────────────────── */
-
-        /** Paginated vendor list, optionally filtered by status. */
+        /* Admin vendor management */
         getAdminVendors: builder.query({
-            query: ({ status, page = 0, size = 20 } = {}) => ({
-                url: '/admin/vendors',
-                params: {
-                    ...(status ? { status } : {}),
-                    page,
-                    size,
-                },
-            }),
+            query: (status) => status ? `/admin/vendors?status=${status}` : '/admin/vendors',
             providesTags: ['Vendor'],
-            transformResponse: (r) => {
-                const d = r?.data ?? r;
-                if (d && Array.isArray(d.content)) return d;
-                if (Array.isArray(d)) return { content: d, totalElements: d.length, number: 0, size: d.length };
-                return d;
-            },
+            transformResponse: (r) => { const d = r.data ?? r; return Array.isArray(d) ? d : (d?.content ?? []); },
         }),
-
         getAdminVendorById: builder.query({
             query: (vendorId) => `/admin/vendors/${vendorId}`,
             providesTags: (result, error, vendorId) => [{ type: 'Vendor', id: vendorId }],
-            transformResponse: (r) => r?.data ?? r,
+            transformResponse: (r) => r.data ?? r,
         }),
-
-        /** Approve a vendor's verification → status = VERIFIED. */
+        getVendorTrustHistory: builder.query({
+            query: (vendorId) => `/admin/vendors/${vendorId}/trust-history`,
+            providesTags: (result, error, vendorId) => [{ type: 'Vendor', id: `trust-${vendorId}` }],
+            transformResponse: (r) => { const d = r.data ?? r; return Array.isArray(d) ? d : (d?.content ?? []); },
+        }),
         verifyVendor: builder.mutation({
-            query: (vendorId) => ({
-                url: `/admin/vendors/${vendorId}/verify`,
-                method: 'PATCH',
-            }),
-            invalidatesTags: (result, error, vendorId) => [
-                { type: 'Vendor', id: vendorId },
-                'Vendor',
-            ],
-            transformResponse: (r) => r?.data ?? r,
+            query: (vendorId) => ({ url: `/admin/vendors/${vendorId}/verify`, method: 'PATCH' }),
+            invalidatesTags: ['Vendor'],
+            transformResponse: (r) => r.data ?? r,
         }),
-
-        /** Reject the current verification submission with an explanation. */
+        suspendVendor: builder.mutation({
+            query: (vendorId) => ({ url: `/admin/vendors/${vendorId}/suspend`, method: 'PATCH' }),
+            invalidatesTags: ['Vendor'],
+            transformResponse: (r) => r.data ?? r,
+        }),
         rejectVendorVerification: builder.mutation({
             query: ({ vendorId, reason }) => ({
                 url: `/admin/vendors/${vendorId}/reject-verification`,
                 method: 'PATCH',
                 body: { reason },
             }),
-            invalidatesTags: (result, error, { vendorId }) => [
-                { type: 'Vendor', id: vendorId },
-                'Vendor',
-            ],
-            transformResponse: (r) => r?.data ?? r,
+            invalidatesTags: ['Vendor'],
+            transformResponse: (r) => r.data ?? r,
         }),
 
-        /** Suspend the vendor (status → SUSPENDED, removed from marketplace). */
-        suspendVendor: builder.mutation({
-            query: ({ vendorId, reason }) => ({
-                url: `/admin/vendors/${vendorId}/suspend`,
-                method: 'PATCH',
-                body: { reason },
+        /* Admin capacity requests */
+        getCapacityRequests: builder.query({
+            query: (status = 'PENDING') => `/admin/capacity-requests?status=${status}`,
+            providesTags: ['Event'],
+            transformResponse: (r) => { const d = r.data ?? r; return Array.isArray(d) ? d : (d?.content ?? []); },
+        }),
+        reviewCapacityRequest: builder.mutation({
+            query: ({ requestId, approved, reason }) => ({
+                url: `/admin/capacity-requests/${requestId}/review`,
+                method: 'POST',
+                body: { approved, reason },
             }),
-            invalidatesTags: (result, error, { vendorId }) => [
-                { type: 'Vendor', id: vendorId },
-                'Vendor',
-            ],
-            transformResponse: (r) => r?.data ?? r,
-        }),
-
-        /** Full audit trail of trust-score deltas for a vendor (newest first). */
-        getVendorTrustHistory: builder.query({
-            query: (vendorId) => `/admin/vendors/${vendorId}/trust-history`,
-            providesTags: (result, error, vendorId) => [{ type: 'Vendor', id: `trust-${vendorId}` }],
-            transformResponse: (r) => {
-                const d = r?.data ?? r;
-                return Array.isArray(d) ? d : (d?.content ?? []);
-            },
+            invalidatesTags: ['Event'],
+            transformResponse: (r) => r.data ?? r,
         }),
     }),
 });
@@ -260,8 +239,10 @@ export const {
     useFlagEscrowViolationMutation,
     useGetAdminVendorsQuery,
     useGetAdminVendorByIdQuery,
-    useVerifyVendorMutation,
-    useRejectVendorVerificationMutation,
-    useSuspendVendorMutation,
     useGetVendorTrustHistoryQuery,
+    useVerifyVendorMutation,
+    useSuspendVendorMutation,
+    useRejectVendorVerificationMutation,
+    useGetCapacityRequestsQuery,
+    useReviewCapacityRequestMutation,
 } = adminApi;

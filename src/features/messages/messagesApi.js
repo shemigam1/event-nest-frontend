@@ -3,36 +3,29 @@ import { baseApi } from '@/services/baseApi';
 export const messagesApi = baseApi.injectEndpoints({
     endpoints: (builder) => ({
         getConversations: builder.query({
-            query: () => '/chat/conversations',
-            transformResponse: (res) => res.data ?? res,
+            query: ({ page = 0, size = 20 } = {}) => `/conversations?page=${page}&size=${size}`,
+            transformResponse: (res) => {
+                const d = res?.data ?? res;
+                return Array.isArray(d) ? d : (d?.content ?? []);
+            },
             providesTags: ['Conversation'],
         }),
 
         getConversationMessages: builder.query({
-            query: ({ conversationId, limit = 20, beforeId }) => {
-                const params = new URLSearchParams({ limit });
-                if (beforeId) params.set('beforeId', beforeId);
-                return `/chat/conversations/${conversationId}/messages?${params}`;
+            query: ({ conversationId, page = 0, size = 30 }) =>
+                `/conversations/${conversationId}/messages?page=${page}&size=${size}`,
+            transformResponse: (res) => {
+                const d = res?.data ?? res;
+                return Array.isArray(d) ? d : (d?.content ?? []);
             },
-            transformResponse: (res) => res.data ?? res,
             providesTags: (result, error, { conversationId }) => [
                 { type: 'ConversationMessages', id: conversationId },
             ],
         }),
 
-        createOrGetConversation: builder.mutation({
-            query: (body) => ({
-                url: '/chat/conversations',
-                method: 'POST',
-                body,
-            }),
-            transformResponse: (res) => res.data ?? res,
-            invalidatesTags: ['Conversation'],
-        }),
-
         markConversationRead: builder.mutation({
             query: (conversationId) => ({
-                url: `/chat/conversations/${conversationId}/read`,
+                url: `/conversations/${conversationId}/read`,
                 method: 'POST',
             }),
             transformResponse: (res) => res?.data ?? res,
@@ -44,6 +37,5 @@ export const messagesApi = baseApi.injectEndpoints({
 export const {
     useGetConversationsQuery,
     useGetConversationMessagesQuery,
-    useCreateOrGetConversationMutation,
     useMarkConversationReadMutation,
 } = messagesApi;

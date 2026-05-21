@@ -48,6 +48,8 @@ export default function RatingsTab({ eventId }) {
         );
     }
 
+    if (!formQ.data) return <DesignerEmpty eventId={eventId} />;
+
     return <FormView form={formQ.data} eventId={eventId} />;
 }
 

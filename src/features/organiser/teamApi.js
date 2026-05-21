@@ -3,13 +3,13 @@ import { baseApi } from '@/services/baseApi';
 export const teamApi = baseApi.injectEndpoints({
     endpoints: (builder) => ({
         getEventManagers: builder.query({
-            query: (eventId) => `/organizer/events/${eventId}/managers`,
+            query: (eventId) => `/events/${eventId}/managers`,
             providesTags: (result, error, eventId) => [{ type: 'Manager', id: eventId }],
-            transformResponse: (r) => r?.data ?? r ?? [],
+            transformResponse: (r) => { const d = r?.data ?? r; return Array.isArray(d) ? d : (d?.content ?? []); },
         }),
         assignManager: builder.mutation({
             query: ({ eventId, email }) => ({
-                url: `/organizer/events/${eventId}/managers`,
+                url: `/events/${eventId}/managers`,
                 method: 'POST',
                 body: { email },
             }),
@@ -18,7 +18,7 @@ export const teamApi = baseApi.injectEndpoints({
         }),
         removeManager: builder.mutation({
             query: ({ eventId, managerId }) => ({
-                url: `/organizer/events/${eventId}/managers/${managerId}`,
+                url: `/events/${eventId}/managers/${managerId}`,
                 method: 'DELETE',
             }),
             invalidatesTags: (result, error, { eventId }) => [{ type: 'Manager', id: eventId }],

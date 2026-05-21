@@ -10,7 +10,17 @@ export const ticketsApi = baseApi.injectEndpoints({
                 return Array.isArray(d) ? d : (d?.content ?? []);
             },
         }),
+
+        transferTicket: builder.mutation({
+            query: ({ ticketId, recipientEmail }) => ({
+                url: `/tickets/${ticketId}/transfer`,
+                method: 'POST',
+                body: { toEmail: recipientEmail },
+            }),
+            invalidatesTags: ['Ticket'],
+            transformResponse: (r) => r?.data ?? r,
+        }),
     }),
 });
 
-export const { useGetMyTicketsQuery } = ticketsApi;
+export const { useGetMyTicketsQuery, useTransferTicketMutation } = ticketsApi;

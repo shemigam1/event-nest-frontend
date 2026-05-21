@@ -1,17 +1,20 @@
 import { useNavigate } from 'react-router';
 import { StatusBadge } from './Badge';
 import { Icons } from './Icon';
+import { formatNaira } from '@/utils/currency';
 
 export default function EventCard({ event, onClick }) {
   const navigate = useNavigate();
-  const lowest = Math.min(...(event.tiers || [{ price: 0 }]).map(t => t.price));
-  const totalCap = (event.tiers || []).reduce((s, t) => s + (t.total ?? t.totalCapacity ?? 0), 0) || 100;
-  const totalSold = (event.tiers || []).reduce((s, t) => s + (t.sold ?? 0), 0) || 0;
-  const pct = (totalSold / totalCap) * 100;
+  const tiers = event.tiers ?? [];
+  const lowest = tiers.length ? Math.min(...tiers.map(t => t.price ?? 0)) : null;
+  const totalCap = tiers.reduce((s, t) => s + (t.total ?? t.totalCapacity ?? 0), 0) || null;
+  const totalSold = tiers.reduce((s, t) => s + (t.sold ?? (t.totalCapacity ?? 0) - (t.availableCapacity ?? 0)), 0);
+  const pct = totalCap ? (totalSold / totalCap) * 100 : 0;
+  const venue = event.venue || event.venueName || null;
 
   const handleClick = () => {
     if (onClick) onClick(event);
-    else navigate(`/events/${event.id}`);
+    else navigate(`/events/${event.slug ?? event.id}`);
   };
 
   return (
@@ -39,11 +42,15 @@ export default function EventCard({ event, onClick }) {
         e.currentTarget.style.transform = 'translateY(0)';
       }}
     >
-      <div
-        className="mp-placeholder"
-        data-label={event.imageNote || 'EVENT IMAGE'}
-        style={{ height: 160 }}
-      />
+      {event.coverImageUrl ? (
+        <img
+          src={event.coverImageUrl}
+          alt={event.title}
+          style={{ width: '100%', height: 160, objectFit: 'cover', display: 'block' }}
+        />
+      ) : (
+        <div className="mp-placeholder" data-label="EVENT IMAGE" style={{ height: 160 }} />
+      )}
       <div style={{ padding: 20, flex: 1, display: 'flex', flexDirection: 'column' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
           <StatusBadge status={event.status} size="sm" />
@@ -83,10 +90,18 @@ export default function EventCard({ event, onClick }) {
             <Icons.calendar size={15} style={{ color: 'var(--text-3)' }} />
             {event.dateLabel}
           </span>
-          <span style={{ display: 'inline-flex', gap: 8, alignItems: 'center' }}>
-            <Icons.pin size={15} style={{ color: 'var(--text-3)' }} />
-            {event.venue}
-          </span>
+          {venue && (
+            <span style={{ display: 'inline-flex', gap: 8, alignItems: 'center' }}>
+              <Icons.pin size={15} style={{ color: 'var(--text-3)' }} />
+              {venue}
+            </span>
+          )}
+          {event.organizerName && (
+            <span style={{ display: 'inline-flex', gap: 8, alignItems: 'center' }}>
+              <Icons.users size={15} style={{ color: 'var(--text-3)' }} />
+              {event.organizerName}
+            </span>
+          )}
         </div>
         <div style={{
           marginTop: 16,
@@ -97,13 +112,14 @@ export default function EventCard({ event, onClick }) {
           alignItems: 'center',
         }}>
           <span className="mp-num" style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-1)' }}>
-            {lowest > 0 && (
-              <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--text-3)' }}>from </span>
+            {lowest === null ? (
+              <span style={{ fontSize: 13, fontWeight: 400, color: 'var(--text-3)' }}>—</span>
+            ) : lowest === 0 ? 'Free' : (
+              <><span style={{ fontSize: 12, fontWeight: 400, color: 'var(--text-3)' }}>from </span>{formatNaira(lowest)}</>
             )}
-            {lowest === 0 ? 'Free' : `₦${lowest.toLocaleString()}`}
           </span>
           <span className="mp-num" style={{ fontSize: 12, color: 'var(--text-3)' }}>
-            {totalSold}/{totalCap} sold
+            {totalCap ? `${totalSold}/${totalCap} sold` : ''}
           </span>
         </div>
       </div>

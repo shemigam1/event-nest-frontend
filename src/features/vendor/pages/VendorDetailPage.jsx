@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { useSelector } from 'react-redux';
 import { useGetVendorProfileQuery } from '@/features/organiser/vendorsApi';
-import { useCreateOrGetConversationMutation, useGetConversationsQuery } from '@/features/messages/messagesApi';
+import { useGetConversationsQuery } from '@/features/messages/messagesApi';
 import { selectIsAuthenticated } from '@/features/auth/authSlice';
 import TopNav from '@/components/ui/TopNav';
 import Button from '@/components/ui/Button';
@@ -103,7 +103,6 @@ export default function VendorDetailPage() {
     const [tab, setTab] = useState('overview');
 
     const isAuthenticated = useSelector(selectIsAuthenticated);
-    const [createConv, { isLoading: isStartingChat }] = useCreateOrGetConversationMutation();
     const { data: existingConversations = [] } = useGetConversationsQuery(undefined, { skip: !isAuthenticated });
     const [inquiryOpen, setInquiryOpen] = useState(false);
 
@@ -134,19 +133,8 @@ export default function VendorDetailPage() {
             return;
         }
 
-        try {
-            const conv = await createConv({
-                participantIds: [vendorIdStr],
-            }).unwrap();
-            if (conv?.id) {
-                navigate(`/messages?c=${conv.id}`);
-            } else {
-                navigate('/messages');
-            }
-        } catch (err) {
-            console.error('Failed to create conversation:', err);
-            alert('Could not start a direct message with this vendor. Please try again.');
-        }
+        // No existing conversation — send user to messages to start one
+        navigate('/messages');
     };
 
     const profile = useGetVendorProfileQuery(id);
@@ -288,10 +276,10 @@ export default function VendorDetailPage() {
                             variant="primary"
                             size="md"
                             onClick={() => handleContactVendor(v.vendorName, v.userId || v.id || id)}
-                            disabled={isStartingChat}
+                            disabled={false}
                             icon={<Icons.message size={15} />}
                         >
-                            {isStartingChat ? 'Opening chat…' : 'Message vendor'}
+                            Message vendor
                         </Button>
                     </div>
                 </div>

@@ -11,30 +11,36 @@ export const organizerApi = baseApi.injectEndpoints({
             },
         }),
         getOrganizerEventById: builder.query({
-            query: (id) => `/organizer/events/${id}`,
+            query: (id) => `/me/organiser/events/${id}`,
             providesTags: (result, error, id) => [{ type: 'Event', id }],
             transformResponse: (response) => response.data ?? response,
         }),
         getEventBookings: builder.query({
-            // Backend returns a raw List<BookingResponse> (same shape as
-            // /me/bookings), not a paged Page wrapper — hence the simple
-            // `response ?? []` fallback.
-            query: (eventId) => `/organizer/events/${eventId}/bookings`,
+            query: (eventId) => `/me/organiser/events/${eventId}/bookings?page=0&size=100`,
             providesTags: (result, error, eventId) => [
                 'Booking',
                 { type: 'Booking', id: `org-${eventId}` },
             ],
-            transformResponse: (response) => response?.data ?? response ?? [],
+            transformResponse: (response) => {
+                const d = response?.data ?? response;
+                return Array.isArray(d) ? d : (d?.content ?? []);
+            },
         }),
-
         getEventAnalytics: builder.query({
-            query: (eventId) => `/organizer/events/${eventId}/analytics`,
+            query: (eventId) => `/me/organiser/events/${eventId}/analytics`,
             providesTags: (result, error, eventId) => [
                 { type: 'Analytics', id: eventId },
             ],
             transformResponse: (response) => response?.data ?? response,
         }),
-
+        getManagerEvents: builder.query({
+            query: () => '/me/manager/events',
+            providesTags: ['Event'],
+            transformResponse: (response) => {
+                const d = response.data ?? response;
+                return Array.isArray(d) ? d : (d?.content ?? []);
+            },
+        }),
         getWorkspaces: builder.query({
             query: () => '/me/workspaces',
             providesTags: ['User'],
@@ -51,5 +57,6 @@ export const {
     useGetOrganizerEventByIdQuery,
     useGetEventBookingsQuery,
     useGetEventAnalyticsQuery,
+    useGetManagerEventsQuery,
     useGetWorkspacesQuery,
 } = organizerApi;
