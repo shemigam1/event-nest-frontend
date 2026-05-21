@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router';
+import { useNavigate, Link } from 'react-router';
 import Brand from '../../components/ui/Brand';
 import Button from '../../components/ui/Button';
 import CapacityBar from '../../components/ui/CapacityBar';
@@ -491,11 +491,33 @@ export default function LandingPage() {
           margin: '0 auto',
           display: 'flex',
           flexWrap: 'wrap',
-          gap: 12,
+          gap: 16,
           justifyContent: 'space-between',
           alignItems: 'center',
         }}>
           <Brand color="white" size={20} />
+          {/* Legal links — hover lifts to white for clear affordance against
+              the navy background. */}
+          <nav aria-label="Legal" style={{
+            display: 'flex', gap: 24, fontSize: 13, flexWrap: 'wrap',
+          }}>
+            <Link
+              to="/terms"
+              style={{ color: 'rgba(255,255,255,0.75)', textDecoration: 'none' }}
+              onMouseOver={(e) => { e.currentTarget.style.color = 'white'; }}
+              onMouseOut={(e)  => { e.currentTarget.style.color = 'rgba(255,255,255,0.75)'; }}
+            >
+              Terms
+            </Link>
+            <Link
+              to="/privacy"
+              style={{ color: 'rgba(255,255,255,0.75)', textDecoration: 'none' }}
+              onMouseOver={(e) => { e.currentTarget.style.color = 'white'; }}
+              onMouseOut={(e)  => { e.currentTarget.style.color = 'rgba(255,255,255,0.75)'; }}
+            >
+              Privacy
+            </Link>
+          </nav>
           <div style={{ fontSize: 13 }}>
             EventNest · Moniepoint DreamDev · v2.0
           </div>

@@ -39,6 +39,8 @@ export const Icons = {
   inbox:     p => <Icon {...p} d="M22 13h-6l-2 3h-4l-2-3H2M5 7l-3 6v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3-6a2 2 0 00-1.8-1.2H6.8A2 2 0 005 7z" />,
   mail:      p => <Icon {...p} d={<><rect x="3" y="5" width="18" height="14" rx="2" /><path d="M3 7l9 6 9-6" /></>} />,
   lock:      p => <Icon {...p} d={<><rect x="4" y="11" width="16" height="10" rx="2" /><path d="M8 11V7a4 4 0 018 0v4" /></>} />,
+  eye:       p => <Icon {...p} d={<><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" /><circle cx="12" cy="12" r="3" /></>} />,
+  eyeOff:    p => <Icon {...p} d={<><path d="M17.94 17.94A10.94 10.94 0 0112 19c-6.5 0-10-7-10-7a18.46 18.46 0 014.66-5.36M9.9 4.24A10.66 10.66 0 0112 4c6.5 0 10 7 10 7a18.5 18.5 0 01-2.16 3.19M14.12 14.12a3 3 0 11-4.24-4.24" /><path d="M1 1l22 22" /></>} />,
   grid:      p => <Icon {...p} d={<><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" /></>} />,
   list:      p => <Icon {...p} d="M4 6h16M4 12h16M4 18h16" />,
   trend:     p => <Icon {...p} d="M3 17l6-6 4 4 8-8M14 7h7v7" />,

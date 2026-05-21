@@ -100,7 +100,12 @@ export default function AppShell() {
     // Public discovery pages (/events, /vendors and their detail routes)
     // hide the sidebar only when the user is anonymous; authenticated users
     // browsing those pages still get the full shell.
-    const ALWAYS_NO_SIDEBAR = new Set(['/', '/login', '/register', '/forgot-password', '/reset-password']);
+    const ALWAYS_NO_SIDEBAR = new Set([
+        '/', '/login', '/register', '/forgot-password', '/reset-password',
+        // Legal pages render their own minimal chrome (LegalPage component) —
+        // signed-in users hitting /terms from Settings still see them clean.
+        '/terms', '/privacy',
+    ]);
     const p = location.pathname;
     const isCheckinRoute = p === '/checkin' || p.startsWith('/checkin/');
     const isPublicBrowsingPage =

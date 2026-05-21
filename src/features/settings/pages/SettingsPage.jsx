@@ -1,6 +1,6 @@
 import { useState, useEffect, useSyncExternalStore } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { useNavigate } from 'react-router';
+import { useNavigate, Link } from 'react-router';
 import {
     useGetMeQuery,
     useUpdateProfileMutation,
@@ -547,6 +547,23 @@ export default function SettingsPage() {
                         <PasswordSection />
                         <AppearanceSection />
                         <AccountSection profile={displayProfile} />
+
+                        {/* Lightweight legal footer — keeps Terms + Privacy
+                            reachable from Settings without bloating the page
+                            with another full Section card. */}
+                        <nav aria-label="Legal" style={{
+                            display: 'flex',
+                            gap: 20,
+                            flexWrap: 'wrap',
+                            justifyContent: 'center',
+                            padding: '16px 0 4px',
+                            fontSize: 13,
+                            color: 'var(--text-3)',
+                        }}>
+                            <Link to="/terms"   style={{ color: 'var(--text-2)' }}>Terms and Conditions</Link>
+                            <span aria-hidden="true">·</span>
+                            <Link to="/privacy" style={{ color: 'var(--text-2)' }}>Privacy Policy</Link>
+                        </nav>
                     </div>
                 )}
             </div>
