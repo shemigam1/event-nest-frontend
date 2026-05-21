@@ -15,8 +15,8 @@ import ResetPasswordPage from '../features/auth/pages/ResetPasswordPage';
 import TermsPage from '../features/legal/pages/TermsPage';
 import PrivacyPage from '../features/legal/pages/PrivacyPage';
 import BookingPage from '../features/bookings/pages/BookingPage';
-import DashboardPage from '../features/bookings/pages/DashboardPage';
 import TicketsPage from '../features/tickets/pages/TicketsPage';
+import MyEventsPage from '../features/events/pages/MyEventsPage';
 import CreateEventPage from '../features/events/pages/CreateEventPage';
 import EditEventPage from '../features/events/pages/EditEventPage';
 import EventModerationPage from '../features/admin/pages/EventModerationPage';
@@ -38,6 +38,7 @@ import VendorDisputesPage from '../features/vendor/pages/VendorDisputesPage';
 import VendorOpportunitiesPage from '../features/vendor/pages/VendorOpportunitiesPage';
 import MyApplicationsPage from '../features/vendor/pages/MyApplicationsPage';
 import VendorApplyPage from '../features/vendor/pages/VendorApplyPage';
+import VendorEventPage from '../features/vendor/pages/VendorEventPage';
 import VendorDashboardPage from '../features/vendor/pages/VendorDashboardPage';
 import CheckInPage from '../features/checkin/pages/CheckInPage';
 import PaymentResultPage from '../features/bookings/pages/PaymentResultPage';
@@ -81,7 +82,8 @@ const router = createBrowserRouter([
                     { path: '/events/:id/edit',   element: <EditEventPage /> },
                     { path: '/events/:id/book',   element: <BookingPage /> },
                     { path: '/tickets',           element: <TicketsPage /> },
-                    { path: '/dashboard',         element: <DashboardPage /> },
+                    { path: '/my-events',         element: <MyEventsPage /> },
+                    { path: '/dashboard',         element: <Navigate to="/my-events" replace /> },
                     { path: '/organiser',             element: <OrganizerConsolePage /> },
                     { path: '/organiser/events/:id', element: <OrganizerEventPage /> },
                     { path: '/organiser/contracts',  element: <OrganizerContractsPage /> },
@@ -94,6 +96,7 @@ const router = createBrowserRouter([
                     { path: '/vendor/applications',  element: <MyApplicationsPage /> },
                     { path: '/vendor/profile',       element: <VendorProfileSetupPage /> },
                     { path: '/vendor/apply/:eventId', element: <VendorApplyPage /> },
+                    { path: '/vendor/events/:id',    element: <VendorEventPage /> },
                     { path: '/messages',                  element: <MessagesPage /> },
                     { path: '/messages/:conversationId',  element: <ConversationRedirect /> },
                     { path: '/settings',              element: <SettingsPage /> },

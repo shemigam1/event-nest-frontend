@@ -105,11 +105,10 @@ export default function MyApplicationsPage() {
                 }}>
                     <div>
                         <h1 className="mp-h1" style={{ margin: 0, color: 'var(--text-1)' }}>
-                            My vendor applications
+                            My events
                         </h1>
                         <p className="body" style={{ margin: '6px 0 0', color: 'var(--text-2)' }}>
-                            Switch between events you&apos;re working at and the full list of
-                            applications you&apos;ve submitted.
+                            Events you&apos;re working at, plus every application you&apos;ve sent.
                         </p>
                     </div>
                     <Button
@@ -183,7 +182,7 @@ export default function MyApplicationsPage() {
                     <WorkingView
                         working={working}
                         onBrowse={() => navigate('/vendor/opportunities')}
-                        onView={(eventId) => navigate(`/events/${eventId}`)}
+                        onView={(eventId) => navigate(`/vendor/events/${eventId}`)}
                     />
                 )}
 
@@ -194,7 +193,7 @@ export default function MyApplicationsPage() {
                         filter={filter}
                         counts={counts}
                         onFilterChange={setFilter}
-                        onView={(eventId) => navigate(`/events/${eventId}`)}
+                        onView={(eventId) => navigate(`/vendor/events/${eventId}`)}
                         onBrowse={() => navigate('/vendor/opportunities')}
                     />
                 )}

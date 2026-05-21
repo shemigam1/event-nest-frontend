@@ -14,17 +14,17 @@ describe('LoginPage', () => {
     test('enables submit button when both fields are filled', async () => {
         renderWithProviders(<LoginPage />);
         await userEvent.type(screen.getByPlaceholderText(/you@company\.com/i), 'a@b.com');
-        await userEvent.type(screen.getByLabelText(/password/i), 'password123');
+        await userEvent.type(screen.getByLabelText('Password'), 'password123');
         expect(screen.getByRole('button', { name: /sign in/i })).not.toBeDisabled();
     });
 
-    test('navigates to dashboard on successful login', async () => {
+    test('navigates to browse events on successful login', async () => {
         renderWithProviders(<LoginPage />);
         await userEvent.type(screen.getByPlaceholderText(/you@company\.com/i), 'a@b.com');
-        await userEvent.type(screen.getByLabelText(/password/i), 'password123');
+        await userEvent.type(screen.getByLabelText('Password'), 'password123');
         await userEvent.click(screen.getByRole('button', { name: /sign in/i }));
         await waitFor(() =>
-            expect(screen.getByTestId('location')).toHaveTextContent('/dashboard')
+            expect(screen.getByTestId('location')).toHaveTextContent('/events')
         );
     });
 
@@ -36,7 +36,7 @@ describe('LoginPage', () => {
         );
         renderWithProviders(<LoginPage />);
         await userEvent.type(screen.getByPlaceholderText(/you@company\.com/i), 'a@b.com');
-        await userEvent.type(screen.getByLabelText(/password/i), 'wrongpass');
+        await userEvent.type(screen.getByLabelText('Password'), 'wrongpass');
         await userEvent.click(screen.getByRole('button', { name: /sign in/i }));
         await waitFor(() =>
             expect(screen.getByText(/invalid email or password/i)).toBeInTheDocument()

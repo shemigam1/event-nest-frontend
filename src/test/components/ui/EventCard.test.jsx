@@ -10,8 +10,9 @@ const baseEvent = {
     dateLabel: 'Sat 16 May · 10:00 AM',
     status: 'PUBLISHED',
     tiers: [
-        { id: 't1', name: 'VIP',     price: 75000, sold: 38,  total: 50  },
-        { id: 't2', name: 'General', price: 25000, sold: 287, total: 400 },
+        // Prices in kobo (NGN × 100): ₦75,000 and ₦25,000
+        { id: 't1', name: 'VIP',     price: 7_500_000, sold: 38,  total: 50  },
+        { id: 't2', name: 'General', price: 2_500_000, sold: 287, total: 400 },
     ],
 };
 

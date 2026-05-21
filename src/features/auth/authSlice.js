@@ -2,6 +2,7 @@ import { createSlice } from "@reduxjs/toolkit";
 import { userFromToken } from "@/utils/decodeJwt";
 
 const WORKSPACE_KEY = 'activeWorkspace';
+const VENDOR_MODE_KEY = 'vendorModeActive';
 const ALLOWED_WORKSPACES = new Set(['ATTENDEE', 'ORGANISER', 'MANAGER', 'VENDOR']);
 
 const storedToken = localStorage.getItem('accessToken');
@@ -15,6 +16,7 @@ const storedWorkspace = (() => {
     const raw = localStorage.getItem(WORKSPACE_KEY);
     return raw && ALLOWED_WORKSPACES.has(raw) ? raw : null;
 })();
+const storedVendorMode = localStorage.getItem(VENDOR_MODE_KEY) === 'true';
 
 const initialState = {
     user: storedProfile,
@@ -22,9 +24,12 @@ const initialState = {
     token: tokenUser ? storedToken : null,
     refreshToken: tokenUser ? localStorage.getItem('refreshToken') : null,
     isAuthenticated: Boolean(tokenUser),
-    // The workspace the user is currently looking at (Attendee / Organiser / Manager / Vendor).
-    // Drives the sidebar nav and is toggled from the new TopBar avatar dropdown.
+    // The workspace the user is currently looking at.
+    // Only meaningful values now are 'ATTENDEE' (unified user mode) or 'VENDOR'.
     activeWorkspace: tokenUser ? storedWorkspace : null,
+    // Whether the user has activated vendor mode in the sidebar toggle.
+    // Controls visibility of the "Switch to vendor" button.
+    vendorModeActive: tokenUser ? storedVendorMode : false,
 };
 
 if (!tokenUser && storedToken) {
@@ -52,10 +57,12 @@ const authSlice = createSlice({
             state.refreshToken = null;
             state.isAuthenticated = false;
             state.activeWorkspace = null;
+            state.vendorModeActive = false;
             localStorage.removeItem('accessToken');
             localStorage.removeItem('refreshToken');
             localStorage.removeItem('userProfile');
             localStorage.removeItem(WORKSPACE_KEY);
+            localStorage.removeItem(VENDOR_MODE_KEY);
         },
         setUser: (state, action) => {
             state.user = action.payload;
@@ -72,10 +79,14 @@ const authSlice = createSlice({
             if (next) localStorage.setItem(WORKSPACE_KEY, next);
             else localStorage.removeItem(WORKSPACE_KEY);
         },
+        setVendorModeActive: (state, action) => {
+            state.vendorModeActive = Boolean(action.payload);
+            localStorage.setItem(VENDOR_MODE_KEY, action.payload ? 'true' : 'false');
+        },
     },
 });
 
-export const { setCredentials, logout, setUser, setActiveWorkspace } = authSlice.actions;
+export const { setCredentials, logout, setUser, setActiveWorkspace, setVendorModeActive } = authSlice.actions;
 
 export const selectCurrentUser = (state) => state.auth.user;
 export const selectCurrentUserId = (state) => state.auth.tokenUser?.sub ?? state.auth.user?.id ?? null;
@@ -87,5 +98,6 @@ export const selectIsAdmin = (state) =>
 export const selectIsCheckinStaff = (state) =>
     state.auth.tokenUser?.roles?.includes('ROLE_CHECKIN_STAFF') ?? false;
 export const selectActiveWorkspace = (state) => state.auth.activeWorkspace;
+export const selectVendorModeActive = (state) => state.auth.vendorModeActive;
 
 export default authSlice.reducer;

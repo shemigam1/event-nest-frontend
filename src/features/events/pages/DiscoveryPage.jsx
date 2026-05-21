@@ -31,7 +31,7 @@ function FilterTabs({ active, onChange }) {
                     key={id}
                     onClick={() => onChange(id)}
                     style={{
-                        background: active === id ? 'white' : 'transparent',
+                        background: active === id ? 'var(--surface-elevated)' : 'transparent',
                         border: 0, padding: '8px 14px', borderRadius: 8,
                         fontSize: 14,
                         fontWeight: active === id ? 600 : 500,
@@ -79,12 +79,12 @@ function ErrorState({ onRetry }) {
     );
 }
 
-/* ── Skeleton card (loading placeholder) ── */
+/* ── Skeleton card ── */
 function SkeletonCard() {
     const pulse = { animation: 'mp-flash 1.6s ease-in-out infinite', borderRadius: 8, background: 'var(--surface-subtle)' };
     return (
         <div style={{
-            background: 'white', border: '1px solid var(--border)',
+            background: 'var(--surface-elevated)', border: '1px solid var(--border)',
             borderRadius: 12, overflow: 'hidden',
         }}>
             <div style={{ height: 160, background: 'var(--surface-subtle)' }} />
@@ -108,6 +108,15 @@ function adaptEvent(event) {
     };
 }
 
+/* ── Compute "hotness" score for sorting Selling Fast ── */
+function hotnessScore(event) {
+    if (!event.tiers?.length) return 0;
+    const sold  = event.tiers.reduce((s, t) => s + (t.sold ?? 0), 0);
+    const total = event.tiers.reduce((s, t) => s + (t.total ?? t.totalCapacity ?? 0), 0);
+    if (total === 0) return 0;
+    return sold / total;
+}
+
 /* ── Client-side filter predicate ── */
 function applyFilter(event, filter, query) {
     if (query) {
@@ -120,22 +129,21 @@ function applyFilter(event, filter, query) {
     if (filter === 'this-month') return isThisMonth(event.startTime);
 
     if (filter === 'free') {
-        if (!event.tiers?.length) return true; // no tier data — don't exclude
+        if (!event.tiers?.length) return true;
         return event.tiers.some(t => t.price === 0);
     }
 
     if (filter === 'sellingfast') {
-        if (!event.tiers?.length) return true; // no tier data — don't exclude
-        const sold  = event.tiers.reduce((s, t) => s + (t.sold ?? 0), 0);
-        const total = event.tiers.reduce((s, t) => s + (t.total ?? t.totalCapacity ?? 0), 0);
-        return total > 0 && sold / total >= 0.6;
+        return hotnessScore(event) >= 0.6;
     }
 
-    return true; // 'all'
+    return true;
 }
 
 /* ══════════════════════════════════════════
-   DISCOVERY PAGE
+   DISCOVERY / HOME PAGE
+   The default landing for signed-in users.
+   Search + filter + Selling Fast strip + grid + Create CTA.
 ══════════════════════════════════════════ */
 export default function DiscoveryPage() {
     const navigate = useNavigate();
@@ -155,23 +163,55 @@ export default function DiscoveryPage() {
         [events, filter, query]
     );
 
+    // Top selling-fast events for the hero strip — independent of the
+    // user's active filter. Only show when there's no search query.
+    const sellingFast = useMemo(() => {
+        if (query) return [];
+        return [...events]
+            .map((e) => ({ event: e, score: hotnessScore(e) }))
+            .filter((x) => x.score >= 0.4) // a bit looser than the filter — anything moving
+            .sort((a, b) => b.score - a.score)
+            .slice(0, 4)
+            .map((x) => x.event);
+    }, [events, query]);
+
     return (
         <div style={{ background: 'var(--surface-subtle)', minHeight: '100vh' }}>
-            {/* Only render the marketing TopNav when the user is anonymous —
-                authenticated users see AppShell's persistent sidebar + TopBar. */}
             {!isAuthenticated && <TopNav showBrowse={false} />}
 
             {/* ── Header strip ── */}
-            <div style={{ background: 'white', borderBottom: '1px solid var(--border)' }}>
+            <div style={{ background: 'var(--surface-elevated)', borderBottom: '1px solid var(--border)' }}>
                 <div style={{ maxWidth: 1280, margin: '0 auto', padding: '32px 24px 24px' }}>
-                    <h1 className="mp-h1" style={{ margin: 0, color: 'var(--text-1)' }}>
-                        Browse events
-                    </h1>
-                    <p className="body" style={{ margin: '8px 0 0', color: 'var(--text-2)' }}>
-                        {isLoading
-                            ? 'Loading events…'
-                            : `${filtered.length} event${filtered.length !== 1 ? 's' : ''} available · capacity updates in real time`}
-                    </p>
+                    <div style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'flex-start',
+                        flexWrap: 'wrap',
+                        gap: 16,
+                    }}>
+                        <div style={{ minWidth: 0, flex: '1 1 auto' }}>
+                            <h1 className="mp-h1" style={{ margin: 0, color: 'var(--text-1)' }}>
+                                Browse events
+                            </h1>
+                            <p className="body" style={{ margin: '8px 0 0', color: 'var(--text-2)' }}>
+                                {isLoading
+                                    ? 'Loading events…'
+                                    : `${filtered.length} event${filtered.length !== 1 ? 's' : ''} available · capacity updates in real time`}
+                            </p>
+                        </div>
+
+                        {/* Create your own event CTA — only for authed users */}
+                        {isAuthenticated && (
+                            <Button
+                                variant="primary"
+                                size="md"
+                                onClick={() => navigate('/events/new')}
+                                iconLeft={<Icons.plus size={16} />}
+                            >
+                                Create your own event
+                            </Button>
+                        )}
+                    </div>
 
                     <div style={{
                         display: 'flex', gap: 12, marginTop: 24,
@@ -191,8 +231,26 @@ export default function DiscoveryPage() {
                 </div>
             </div>
 
-            {/* ── Grid ── */}
+            {/* ── Main content ── */}
             <div style={{ maxWidth: 1280, margin: '0 auto', padding: '32px 24px 64px' }}>
+                {/* Selling fast strip — only when not searching and we have hot events */}
+                {!isError && !isLoading && sellingFast.length > 0 && filter === 'all' && (
+                    <SellingFastStrip
+                        events={sellingFast}
+                        onClick={(e) => navigate(`/events/${e.slug ?? e.id}`)}
+                    />
+                )}
+
+                {/* Main grid heading — only shown when selling-fast appears above */}
+                {sellingFast.length > 0 && filter === 'all' && !isLoading && !isError && (
+                    <h2 className="mp-h3" style={{
+                        margin: '0 0 16px',
+                        color: 'var(--text-1)',
+                    }}>
+                        All events
+                    </h2>
+                )}
+
                 {isError ? (
                     <ErrorState onRetry={refetch} />
                 ) : isLoading ? (
@@ -222,5 +280,57 @@ export default function DiscoveryPage() {
                 )}
             </div>
         </div>
+    );
+}
+
+/* ── Selling fast strip — small section above the main grid ───────────────
+   Up to 4 cards, no horizontal scroll, with a flame icon header.
+   ─────────────────────────────────────────────────────────────────────────── */
+function SellingFastStrip({ events, onClick }) {
+    return (
+        <section style={{ marginBottom: 32 }}>
+            <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                marginBottom: 16,
+            }}>
+                <span style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: 28, height: 28, borderRadius: 8,
+                    background: 'var(--mp-blue-50, #EAF1FE)',
+                    color: 'var(--mp-blue)',
+                }}>
+                    <Icons.spark size={16} />
+                </span>
+                <h2 className="mp-h3" style={{ margin: 0, color: 'var(--text-1)' }}>
+                    Selling fast
+                </h2>
+                <span style={{
+                    fontSize: 12,
+                    fontWeight: 500,
+                    color: 'var(--text-3)',
+                    marginLeft: 4,
+                }}>
+                    Don&apos;t miss out
+                </span>
+            </div>
+
+            <div className="mp-events-grid" style={{
+                display: 'grid',
+                gridTemplateColumns: `repeat(${Math.min(events.length, 4)}, minmax(0, 1fr))`,
+                gap: 16,
+            }}>
+                {events.map((event) => (
+                    <EventCard
+                        key={event.id}
+                        event={event}
+                        onClick={() => onClick(event)}
+                    />
+                ))}
+            </div>
+        </section>
     );
 }

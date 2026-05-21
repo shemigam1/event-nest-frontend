@@ -143,11 +143,12 @@ describe('AdminPage', () => {
     });
 
     describe('approve action', () => {
-        test('clicking Approve calls PATCH /admin/events/:id/approve', async () => {
+        test('clicking Approve calls POST /admin/events/:id/review', async () => {
             const approved = [];
             server.use(
-                http.patch('http://localhost:3000/admin/events/:id/approve', ({ params }) => {
-                    approved.push(params.id);
+                http.post('http://localhost:3000/admin/events/:id/review', async ({ params, request }) => {
+                    const body = await request.json();
+                    if (body.approved) approved.push(params.id);
                     return HttpResponse.json({ success: true, data: { id: params.id, status: 'PUBLISHED' } });
                 })
             );
@@ -186,12 +187,12 @@ describe('AdminPage', () => {
             expect(screen.getByText('A rejection reason is required')).toBeInTheDocument();
         });
 
-        test('submitting rejection reason calls PATCH /admin/events/:id/reject', async () => {
+        test('submitting rejection reason calls POST /admin/events/:id/review', async () => {
             const rejected = [];
             server.use(
-                http.patch('http://localhost:3000/admin/events/:id/reject', async ({ params, request }) => {
+                http.post('http://localhost:3000/admin/events/:id/review', async ({ params, request }) => {
                     const body = await request.json();
-                    rejected.push({ id: params.id, reason: body.reason });
+                    if (!body.approved) rejected.push({ id: params.id, reason: body.reason });
                     return HttpResponse.json({ success: true, data: { id: params.id, status: 'DRAFT', rejectionReason: body.reason } });
                 })
             );

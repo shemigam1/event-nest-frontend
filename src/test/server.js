@@ -299,16 +299,17 @@ export const MOCK_ADMIN_USERS = [
     { id: 'user_admin', firstName: 'Admin', lastName: 'User', email: 'admin@example.com', role: 'ADMIN', enabled: true, createdAt: '2026-01-01T00:00:00' },
 ];
 
+// Prices are in kobo (NGN × 100), matching the production API contract.
 export const MOCK_TIERS = {
     evt_001: [
-        { id: 't1', eventId: 'evt_001', name: 'VIP Front Row', price: 75000, rowPrefix: 'VIP', rowCount: 5, seatsPerRow: 10, totalCapacity: 50, availableCapacity: 12, createdAt: '2026-01-01T00:00:00' },
-        { id: 't2', eventId: 'evt_001', name: 'General Admission', price: 25000, rowPrefix: 'GEN', rowCount: 20, seatsPerRow: 20, totalCapacity: 400, availableCapacity: 113, createdAt: '2026-01-01T00:00:00' },
+        { id: 't1', eventId: 'evt_001', name: 'VIP Front Row', price: 7_500_000, rowPrefix: 'VIP', rowCount: 5, seatsPerRow: 10, totalCapacity: 50, availableCapacity: 12, createdAt: '2026-01-01T00:00:00' },
+        { id: 't2', eventId: 'evt_001', name: 'General Admission', price: 2_500_000, rowPrefix: 'GEN', rowCount: 20, seatsPerRow: 20, totalCapacity: 400, availableCapacity: 113, createdAt: '2026-01-01T00:00:00' },
     ],
     evt_002: [
         { id: 't3', eventId: 'evt_002', name: 'Standard', price: 0, rowPrefix: 'A', rowCount: 15, seatsPerRow: 10, totalCapacity: 150, availableCapacity: 8, createdAt: '2026-01-02T00:00:00' },
     ],
     evt_003: [
-        { id: 't4', eventId: 'evt_003', name: 'Certificate Track', price: 35000, rowPrefix: 'C', rowCount: 8, seatsPerRow: 10, totalCapacity: 80, availableCapacity: 32, createdAt: '2026-01-03T00:00:00' },
+        { id: 't4', eventId: 'evt_003', name: 'Certificate Track', price: 3_500_000, rowPrefix: 'C', rowCount: 8, seatsPerRow: 10, totalCapacity: 80, availableCapacity: 32, createdAt: '2026-01-03T00:00:00' },
     ],
 };
 
@@ -389,6 +390,13 @@ export const server = setupServer(
             message: 'Event updated successfully',
             data: { ...existing, id: params.id, status: 'DRAFT', ...body },
         });
+    }),
+
+    // Single event by slug — page hits this when the URL param is not a UUID.
+    http.get(`${BASE_URL}/events/slug/:slug`, ({ params }) => {
+        const event = MOCK_EVENTS.find(e => e.slug === params.slug || e.id === params.slug);
+        if (!event) return HttpResponse.json({ success: false, message: 'Not found' }, { status: 404 });
+        return HttpResponse.json({ success: true, data: event });
     }),
 
     // Single event (with pendingUpdate if applicable)
@@ -557,18 +565,16 @@ export const server = setupServer(
         });
     }),
 
-    // Admin: approve event
-    http.patch(`${BASE_URL}/admin/events/:id/approve`, ({ params }) =>
-        HttpResponse.json({
-            success: true,
-            message: 'Event approved and published',
-            data: { id: params.id, status: 'PUBLISHED' },
-        })
-    ),
-
-    // Admin: reject event
-    http.patch(`${BASE_URL}/admin/events/:id/reject`, async ({ params, request }) => {
+    // Admin: review event (single endpoint that handles both approve & reject)
+    http.post(`${BASE_URL}/admin/events/:id/review`, async ({ params, request }) => {
         const body = await request.json();
+        if (body.approved) {
+            return HttpResponse.json({
+                success: true,
+                message: 'Event approved and published',
+                data: { id: params.id, status: 'PUBLISHED' },
+            });
+        }
         return HttpResponse.json({
             success: true,
             message: 'Event rejected',

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { loadGoogleMaps, hasGoogleMapsKey } from '@/utils/googleMaps';
 import { Icons } from './Icon';
 
@@ -43,6 +43,7 @@ export default function VenueAutocomplete({
 }) {
     const slotRef = useRef(null);
     const elementRef = useRef(null);
+    const inputId = useId();
     const [status, setStatus] = useState('idle');  // 'idle' | 'loading' | 'ready' | 'error'
     const [selectedPlace, setSelectedPlace] = useState(null);
     const enabled = hasGoogleMapsKey();
@@ -162,12 +163,16 @@ export default function VenueAutocomplete({
     return (
         <div>
             {label && (
-                <div style={{
-                    fontSize: 14, fontWeight: 500,
-                    color: 'var(--text-1)', marginBottom: 6,
-                }}>
+                <label
+                    htmlFor={inputId}
+                    style={{
+                        display: 'block',
+                        fontSize: 14, fontWeight: 500,
+                        color: 'var(--text-1)', marginBottom: 6,
+                    }}
+                >
                     {label}
-                </div>
+                </label>
             )}
 
             {/*
@@ -203,6 +208,7 @@ export default function VenueAutocomplete({
 
             {status !== 'ready' && (
                 <FallbackInput
+                    id={inputId}
                     value={value}
                     placeholder={placeholder}
                     onChange={onChange}
@@ -253,7 +259,7 @@ export default function VenueAutocomplete({
      · There's no Google Maps API key configured, OR
      · The Places library failed to load (bad key, billing off, etc.)
    We still want the form to be submittable, so users can type the venue. */
-function FallbackInput({ value, placeholder, onChange, error, disabled }) {
+function FallbackInput({ id, value, placeholder, onChange, error, disabled }) {
     return (
         <span style={{ position: 'relative', display: 'block' }}>
             <span style={{
@@ -265,6 +271,7 @@ function FallbackInput({ value, placeholder, onChange, error, disabled }) {
                 <Icons.pin size={16} />
             </span>
             <input
+                id={id}
                 type="text"
                 placeholder={placeholder}
                 value={value ?? ''}

@@ -253,7 +253,8 @@ function ReviewQueue() {
 /* ── Users panel ─────────────────────────────────── */
 export function UsersPanel() {
     const { data, isLoading, isError, refetch } = useGetAdminUsersQuery();
-    const users = data?.content ?? [];
+    // transformResponse already unwraps to a flat array.
+    const users = Array.isArray(data) ? data : (data?.content ?? []);
 
     if (isLoading) return <QueueSkeleton />;
     if (isError) return (
@@ -268,7 +269,7 @@ export function UsersPanel() {
         <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: 12, boxShadow: 'var(--shadow-card)', overflow: 'hidden' }}>
             <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontWeight: 600, color: 'var(--text-1)', fontSize: 14 }}>Platform users</span>
-                <span style={{ fontSize: 13, color: 'var(--text-3)' }}>{data?.totalElements ?? 0} users</span>
+                <span style={{ fontSize: 13, color: 'var(--text-3)' }}>{users.length} users</span>
             </div>
             {users.map((user, i) => {
                 const joined = new Date(user.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });

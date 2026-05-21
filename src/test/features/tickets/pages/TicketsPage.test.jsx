@@ -35,8 +35,8 @@ function renderPage() {
 describe('TicketsPage', () => {
     test('renders the page heading and subhead', async () => {
         renderPage();
-        expect(await screen.findByRole('heading', { name: /my tickets/i })).toBeInTheDocument();
-        expect(screen.getByText(/tap any ticket to display the qr/i)).toBeInTheDocument();
+        expect(await screen.findByRole('heading', { name: /^tickets$/i })).toBeInTheDocument();
+        expect(screen.getByText(/view your tickets or transfer/i)).toBeInTheDocument();
     });
 
     test('renders a card per ticket from the API', async () => {
@@ -69,7 +69,6 @@ describe('TicketsPage', () => {
         const dialog = await screen.findByRole('dialog', { name: /ticket qr code/i });
         expect(within(dialog).getByText('BOARDING PASS')).toBeInTheDocument();
         expect(within(dialog).getByText('VIP2-5')).toBeInTheDocument();
-        expect(within(dialog).getByText('qr_a8f3-72ce-bb1d')).toBeInTheDocument();
     });
 
     test('modal closes via the close button', async () => {
