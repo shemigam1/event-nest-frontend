@@ -170,9 +170,10 @@ function Sidebar() {
     const email          = useSelector(selectAuthEmail);
 
     const { data: notifData } = useGetMyNotificationsQuery(undefined, { pollingInterval: 60_000 });
-    const { data: unreadCount = 0 } = useGetUnreadNotificationCountQuery(undefined, { pollingInterval: 30_000 });
+    // SSE already invalidates 'Notification' on every push — no need to poll the count separately
+    const { data: unreadCount = 0 } = useGetUnreadNotificationCountQuery();
     const [markRead] = useMarkNotificationAsReadMutation();
-    const notifications = notifData ?? [];
+    const notifications = notifData?.content ?? [];
 
     // Workspace is selected via the TopBar avatar dropdown and stored in
     // Redux (persisted to localStorage). The toggle exposes all three

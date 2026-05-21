@@ -5,7 +5,12 @@ export const adminApi = baseApi.injectEndpoints({
         getAdminEvents: builder.query({
             query: (status = 'PENDING_APPROVAL') => `/admin/events?status=${status}`,
             providesTags: ['Event'],
-            transformResponse: (r) => { const d = r.data ?? r; return Array.isArray(d) ? d : (d?.content ?? []); },
+            transformResponse: (r) => {
+                const d = r.data ?? r;
+                if (d && typeof d === 'object' && 'content' in d) return d;
+                const items = Array.isArray(d) ? d : [];
+                return { content: items, totalElements: items.length, totalPages: items.length > 0 ? 1 : 0 };
+            },
         }),
 
         /* Approve or reject a PENDING_APPROVAL event — single review endpoint */
