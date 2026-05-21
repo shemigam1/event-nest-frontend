@@ -18,8 +18,8 @@ export const bookingsApi = baseApi.injectEndpoints({
         }),
         cancelBooking: builder.mutation({
             query: ({ eventId, bookingId }) => ({
-                url: `/events/${eventId}/bookings/${bookingId}/cancel`,
-                method: 'PATCH',
+                url: `/events/${eventId}/bookings/${bookingId}`,
+                method: 'DELETE',
             }),
             invalidatesTags: (result, error, { eventId }) => [
                 'Booking',

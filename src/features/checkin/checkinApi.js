@@ -10,7 +10,7 @@ export const checkinApi = baseApi.injectEndpoints({
     endpoints: (builder) => ({
         scanTicket: builder.mutation({
             query: ({ eventId, staffToken, qrCode }) => ({
-                url: `/events/${eventId}/checkin`,
+                url: `/events/${eventId}/check-in/scan`,
                 method: 'POST',
                 // Send the code as both fields — backend resolves whichever matches.
                 // This lets staff enter either the UUID (from a scanned QR) or the
@@ -22,7 +22,7 @@ export const checkinApi = baseApi.injectEndpoints({
         }),
         createCheckInInvite: builder.mutation({
             query: ({ eventId, name, email }) => ({
-                url: `/events/${eventId}/checkin/invites`,
+                url: `/events/${eventId}/check-in/invites`,
                 method: 'POST',
                 body: { name, email },
             }),
@@ -32,15 +32,18 @@ export const checkinApi = baseApi.injectEndpoints({
             transformResponse: (response) => response.data ?? response,
         }),
         listCheckInInvites: builder.query({
-            query: (eventId) => `/events/${eventId}/checkin/invites`,
+            query: (eventId) => `/events/${eventId}/check-in/invites`,
             providesTags: (result, error, eventId) => [
                 { type: 'Event', id: `${eventId}-checkin-invites` },
             ],
-            transformResponse: (response) => response.data ?? response,
+            transformResponse: (response) => {
+                const d = response?.data ?? response;
+                return Array.isArray(d) ? d : (d?.content ?? []);
+            },
         }),
         revokeCheckInInvite: builder.mutation({
             query: ({ eventId, inviteId }) => ({
-                url: `/events/${eventId}/checkin/invites/${inviteId}`,
+                url: `/events/${eventId}/check-in/invites/${inviteId}`,
                 method: 'DELETE',
             }),
             invalidatesTags: (result, error, { eventId }) => [

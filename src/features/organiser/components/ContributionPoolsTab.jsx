@@ -44,6 +44,8 @@ export default function ContributionPoolsTab({ eventId }) {
         );
     }
 
+    if (!poolQ.data) return <CreatePoolCard eventId={eventId} />;
+
     return <PoolView pool={poolQ.data} eventId={eventId} />;
 }
 

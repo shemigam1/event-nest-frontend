@@ -28,6 +28,11 @@ import AdminVendorsPage from '../features/admin/pages/AdminVendorsPage';
 import AdminVendorDetailPage from '../features/admin/pages/AdminVendorDetailPage';
 import OrganizerConsolePage from '../features/organiser/pages/OrganizerConsolePage';
 import OrganizerEventPage from '../features/organiser/pages/OrganizerEventPage';
+import OrganizerContractsPage from '../features/organiser/pages/OrganizerContractsPage';
+import OrganizerAccountPage from '../features/organiser/pages/OrganizerAccountPage';
+import OrganizerDisputesPage from '../features/organiser/pages/OrganizerDisputesPage';
+import VendorContractsPage from '../features/vendor/pages/VendorContractsPage';
+import VendorDisputesPage from '../features/vendor/pages/VendorDisputesPage';
 import VendorOpportunitiesPage from '../features/vendor/pages/VendorOpportunitiesPage';
 import MyApplicationsPage from '../features/vendor/pages/MyApplicationsPage';
 import VendorApplyPage from '../features/vendor/pages/VendorApplyPage';
@@ -54,7 +59,7 @@ const router = createBrowserRouter([
         children: [
             { path: '/',          element: <LandingPage /> },
             { path: '/events',    element: <DiscoveryPage /> },
-            { path: '/events/:id', element: <EventDetailPage /> },
+            { path: '/events/:identifier', element: <EventDetailPage /> },
             { path: '/login',            element: <LoginPage /> },
             { path: '/register',         element: <RegisterPage /> },
             { path: '/forgot-password',  element: <ForgotPasswordPage /> },
@@ -73,8 +78,13 @@ const router = createBrowserRouter([
                     { path: '/events/:id/book',   element: <BookingPage /> },
                     { path: '/tickets',           element: <TicketsPage /> },
                     { path: '/dashboard',         element: <DashboardPage /> },
-                    { path: '/organiser',         element: <OrganizerConsolePage /> },
+                    { path: '/organiser',             element: <OrganizerConsolePage /> },
                     { path: '/organiser/events/:id', element: <OrganizerEventPage /> },
+                    { path: '/organiser/contracts',  element: <OrganizerContractsPage /> },
+                    { path: '/organiser/account',    element: <OrganizerAccountPage /> },
+                    { path: '/organiser/disputes',   element: <OrganizerDisputesPage /> },
+                    { path: '/vendor/contracts',     element: <VendorContractsPage /> },
+                    { path: '/vendor/disputes',      element: <VendorDisputesPage /> },
                     { path: '/vendor',               element: <VendorDashboardPage /> },
                     { path: '/vendor/opportunities', element: <VendorOpportunitiesPage /> },
                     { path: '/vendor/applications',  element: <MyApplicationsPage /> },

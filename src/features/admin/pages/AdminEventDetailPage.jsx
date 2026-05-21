@@ -64,9 +64,60 @@ function RejectDialog({ title, onConfirm, onDismiss, loading }) {
 function Skeleton() {
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            {[260, 160, 280].map((h, i) => (
-                <div key={i} style={{ height: h, background: 'white', border: '1px solid var(--border)', borderRadius: 14, animation: 'mp-flash 1.6s ease-in-out infinite', opacity: 1 - i * 0.2 }} />
+            {[260, 40, 160, 280].map((h, i) => (
+                <div key={i} style={{ height: h, background: 'white', border: '1px solid var(--border)', borderRadius: 14, animation: 'mp-flash 1.6s ease-in-out infinite', opacity: 1 - i * 0.15 }} />
             ))}
+        </div>
+    );
+}
+
+/* ── Tab bar ─────────────────────────────────────── */
+function TabBar({ tabs, active, onChange }) {
+    return (
+        <div style={{
+            display: 'flex', gap: 2,
+            borderBottom: '1px solid var(--border)',
+            marginBottom: 20,
+        }}>
+            {tabs.map((tab) => {
+                const isActive = active === tab.id;
+                const isDisabled = tab.disabled;
+                return (
+                    <button
+                        key={tab.id}
+                        disabled={isDisabled}
+                        onClick={() => !isDisabled && onChange(tab.id)}
+                        style={{
+                            padding: '10px 18px',
+                            fontSize: 14,
+                            fontWeight: isActive ? 600 : 400,
+                            color: isDisabled ? 'var(--text-4, var(--text-3))' : isActive ? 'var(--brand)' : 'var(--text-2)',
+                            background: 'none',
+                            border: 'none',
+                            borderBottom: isActive ? '2px solid var(--brand)' : '2px solid transparent',
+                            marginBottom: -1,
+                            cursor: isDisabled ? 'not-allowed' : 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 6,
+                            transition: 'color 0.15s',
+                            opacity: isDisabled ? 0.45 : 1,
+                        }}
+                    >
+                        {tab.label}
+                        {tab.count != null && (
+                            <span style={{
+                                fontSize: 11, fontWeight: 600,
+                                padding: '1px 6px', borderRadius: 10,
+                                background: isActive ? 'var(--brand-light, #EFF6FF)' : 'var(--surface-subtle)',
+                                color: isActive ? 'var(--brand)' : 'var(--text-3)',
+                            }}>
+                                {tab.count}
+                            </span>
+                        )}
+                    </button>
+                );
+            })}
         </div>
     );
 }
@@ -77,12 +128,14 @@ export default function AdminEventDetailPage() {
     const navigate = useNavigate();
 
     const eventQuery    = useGetAdminEventByIdQuery(eventId);
-    const bookingsQuery = useGetAdminEventBookingsQuery(eventId);
+    const isPublished   = eventQuery.data?.status === 'PUBLISHED';
+    const bookingsQuery = useGetAdminEventBookingsQuery(eventId, { skip: !isPublished });
 
     const [approveEvent, approveState] = useApproveEventMutation();
     const [rejectEvent,  rejectState]  = useRejectEventMutation();
     const [cancelEvent,  cancelState]  = useCancelEventMutation();
 
+    const [tab, setTab]                 = useState('details');
     const [showReject, setShowReject]   = useState(false);
     const [showCancel, setShowCancel]   = useState(false);
     const [actionError, setActionError] = useState('');
@@ -132,13 +185,12 @@ export default function AdminEventDetailPage() {
         );
     }
 
-    const event   = eventQuery.data;
-    const tiers   = event?.tiers ?? [];
+    const event    = eventQuery.data;
+    const tiers    = event?.tiers ?? [];
     const bookings = bookingsQuery.data ?? [];
 
-    const isPending   = event.status === 'PENDING_APPROVAL';
-    const isPublished = event.status === 'PUBLISHED';
-    const busy        = approveState.isLoading || rejectState.isLoading || cancelState.isLoading;
+    const isPending = event.status === 'PENDING_APPROVAL';
+    const busy      = approveState.isLoading || rejectState.isLoading || cancelState.isLoading;
 
     const totalCapacity = tiers.reduce((s, t) => s + (t.totalCapacity ?? 0), 0);
     const totalSold     = tiers.reduce((s, t) => s + ((t.totalCapacity ?? 0) - (t.availableCapacity ?? 0)), 0);
@@ -147,7 +199,10 @@ export default function AdminEventDetailPage() {
         return s + sold * Number(t.price ?? 0);
     }, 0);
 
-    const confirmedBookings = bookings.filter((b) => b.status === 'CONFIRMED').length;
+    const tabs = [
+        { id: 'details',  label: 'Details' },
+        { id: 'bookings', label: 'Bookings', count: isPublished ? bookings.length : undefined, disabled: !isPublished },
+    ];
 
     return (
         <Shell>
@@ -159,10 +214,10 @@ export default function AdminEventDetailPage() {
                 </div>
             )}
 
-            {/* Event header */}
+            {/* Event header — always visible above tabs */}
             <div style={{
                 background: 'white', border: '1px solid var(--border)',
-                borderRadius: 16, padding: 28, marginBottom: 20, boxShadow: 'var(--shadow-card)',
+                borderRadius: 16, padding: 28, marginBottom: 24, boxShadow: 'var(--shadow-card)',
             }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 20, flexWrap: 'wrap' }}>
                     <div style={{ flex: 1 }}>
@@ -171,18 +226,24 @@ export default function AdminEventDetailPage() {
                         </div>
                         <h1 className="mp-h2" style={{ margin: '0 0 12px', color: 'var(--text-1)' }}>{event.title}</h1>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: 'var(--text-2)' }}>
-                                <Icons.pin size={15} style={{ color: 'var(--text-3)' }} />{event.venue}
-                            </div>
+                            {(event.venueName || event.venue) && (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: 'var(--text-2)' }}>
+                                    <Icons.pin size={15} style={{ color: 'var(--text-3)' }} />
+                                    {event.venueName ?? event.venue}
+                                    {(event.city || event.country) && (
+                                        <span style={{ color: 'var(--text-3)' }}>· {[event.city, event.country].filter(Boolean).join(', ')}</span>
+                                    )}
+                                </div>
+                            )}
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: 'var(--text-2)' }}>
                                 <Icons.calendar size={15} style={{ color: 'var(--text-3)' }} />{formatEventDate(event.startTime)}
                             </div>
-                            {(event.organizer || event.createdBy) && (
+                            {(event.organizerName || event.organizer || event.createdBy) && (
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: 'var(--text-2)' }}>
                                     <Icons.users size={15} style={{ color: 'var(--text-3)' }} />
                                     {event.organizer
                                         ? <>Hosted by <strong style={{ color: 'var(--text-1)' }}>{event.organizer.firstName} {event.organizer.lastName}</strong> · <span style={{ color: 'var(--text-3)' }}>{event.organizer.email}</span></>
-                                        : <span className="mp-num" style={{ color: 'var(--text-1)' }}>{event.createdBy}</span>
+                                        : <span style={{ color: 'var(--text-1)' }}>Hosted by <strong>{event.organizerName ?? event.createdBy}</strong></span>
                                     }
                                 </div>
                             )}
@@ -193,15 +254,10 @@ export default function AdminEventDetailPage() {
                             </p>
                         )}
                         {event.rejectionReason && (
-                            <div style={{
-                                marginTop: 14, padding: '10px 14px', borderRadius: 8,
-                                background: 'var(--error-bg)', fontSize: 13, color: 'var(--error)',
-                            }}>
+                            <div style={{ marginTop: 14, padding: '10px 14px', borderRadius: 8, background: 'var(--error-bg)', fontSize: 13, color: 'var(--error)' }}>
                                 <strong>Rejection reason:</strong> {event.rejectionReason}
                             </div>
                         )}
-
-                        {/* Pending update chip */}
                         {event.pendingUpdate && (
                             <div style={{
                                 marginTop: 14, padding: '10px 14px', borderRadius: 8,
@@ -214,11 +270,11 @@ export default function AdminEventDetailPage() {
                                     <strong>Pending edit request</strong> — organiser has submitted changes for review.
                                     {event.pendingUpdate.proposedChanges?.description && (
                                         <div style={{ marginTop: 6, color: '#1D4ED8' }}>
-                                            Proposed description: "{event.pendingUpdate.proposedChanges.description}"
+                                            Proposed description: &ldquo;{event.pendingUpdate.proposedChanges.description}&rdquo;
                                         </div>
                                     )}
                                     <div style={{ marginTop: 4 }}>
-                                        <a href={`/admin/event-edits`} style={{ color: '#2563EB', fontWeight: 600, textDecoration: 'none' }}>
+                                        <a href="/admin/event-edits" style={{ color: '#2563EB', fontWeight: 600, textDecoration: 'none' }}>
                                             Review in Event Edits →
                                         </a>
                                     </div>
@@ -248,123 +304,136 @@ export default function AdminEventDetailPage() {
                 </div>
             </div>
 
-            {/* Stats row */}
-            {tiers.length > 0 && (
-                <div className="mp-stat-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 20 }}>
-                    {[
-                        { label: 'Tickets sold',    value: totalSold.toLocaleString(), sub: `of ${totalCapacity.toLocaleString()}`, icon: <Icons.ticket size={15} /> },
-                        { label: 'Revenue',         value: totalRevenue === 0 ? '₦0' : `₦${totalRevenue.toLocaleString()}`, icon: <Icons.wallet size={15} /> },
-                        { label: 'Bookings',        value: confirmedBookings, sub: 'confirmed', icon: <Icons.users size={15} /> },
-                        { label: 'Remaining seats', value: (totalCapacity - totalSold).toLocaleString(), icon: <Icons.scan size={15} /> },
-                    ].map(({ label, value, sub, icon }) => (
-                        <div key={label} style={{ background: 'white', border: '1px solid var(--border)', borderRadius: 12, padding: 18, boxShadow: 'var(--shadow-card)' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 10, fontSize: 13, fontWeight: 500, color: 'var(--text-2)' }}>
-                                {icon}{label}
-                            </div>
-                            <div className="mp-num" style={{ fontSize: 22, fontWeight: 700, color: 'var(--text-1)', lineHeight: 1 }}>{value}</div>
-                            {sub && <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 5 }}>{sub}</div>}
+            {/* Tabs */}
+            <TabBar tabs={tabs} active={tab} onChange={setTab} />
+
+            {/* Details tab */}
+            {tab === 'details' && (
+                <>
+                    {/* Stats row */}
+                    {tiers.length > 0 && (
+                        <div className="mp-stat-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginBottom: 20 }}>
+                            {[
+                                { label: 'Tickets sold',    value: totalSold.toLocaleString(), sub: `of ${totalCapacity.toLocaleString()}`, icon: <Icons.ticket size={15} /> },
+                                { label: 'Revenue',         value: totalRevenue === 0 ? '₦0' : `₦${totalRevenue.toLocaleString()}`, icon: <Icons.wallet size={15} /> },
+                                { label: 'Remaining seats', value: (totalCapacity - totalSold).toLocaleString(), icon: <Icons.scan size={15} /> },
+                            ].map(({ label, value, sub, icon }) => (
+                                <div key={label} style={{ background: 'white', border: '1px solid var(--border)', borderRadius: 12, padding: 18, boxShadow: 'var(--shadow-card)' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 10, fontSize: 13, fontWeight: 500, color: 'var(--text-2)' }}>
+                                        {icon}{label}
+                                    </div>
+                                    <div className="mp-num" style={{ fontSize: 22, fontWeight: 700, color: 'var(--text-1)', lineHeight: 1 }}>{value}</div>
+                                    {sub && <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 5 }}>{sub}</div>}
+                                </div>
+                            ))}
                         </div>
-                    ))}
-                </div>
+                    )}
+
+                    {/* Ticket tiers */}
+                    {tiers.length > 0 ? (
+                        <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden', boxShadow: 'var(--shadow-card)' }}>
+                            <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', fontWeight: 600, color: 'var(--text-1)', fontSize: 14 }}>
+                                Ticket tiers ({tiers.length})
+                            </div>
+                            {tiers.map((tier, i) => {
+                                const sold = (tier.totalCapacity ?? 0) - (tier.availableCapacity ?? 0);
+                                const revenue = sold * Number(tier.price ?? 0);
+                                return (
+                                    <div key={tier.id} style={{ padding: '16px 20px', borderBottom: i === tiers.length - 1 ? 0 : '1px solid var(--border)' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                                            <div>
+                                                <div style={{ fontWeight: 600, color: 'var(--text-1)' }}>{tier.name}</div>
+                                                <div style={{ fontSize: 13, color: 'var(--text-2)', marginTop: 2 }}>
+                                                    {Number(tier.price) === 0 ? 'Free' : `₦${Number(tier.price).toLocaleString()} per ticket`}
+                                                </div>
+                                            </div>
+                                            <div style={{ textAlign: 'right' }}>
+                                                <div className="mp-num" style={{ fontWeight: 600, color: 'var(--text-1)' }}>
+                                                    {revenue === 0 ? '—' : `₦${revenue.toLocaleString()}`}
+                                                </div>
+                                                <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>{sold} sold</div>
+                                            </div>
+                                        </div>
+                                        <CapacityBar sold={sold} total={tier.totalCapacity ?? 0} />
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    ) : (
+                        <div style={{ padding: 48, textAlign: 'center', background: 'white', border: '1px solid var(--border)', borderRadius: 12, boxShadow: 'var(--shadow-card)' }}>
+                            <Icons.ticket size={28} style={{ color: 'var(--text-3)' }} />
+                            <p className="mp-h4" style={{ margin: '12px 0 4px', color: 'var(--text-1)' }}>No ticket tiers</p>
+                            <p className="body-sm" style={{ color: 'var(--text-2)', margin: 0 }}>The organiser has not added any ticket tiers yet.</p>
+                        </div>
+                    )}
+                </>
             )}
 
-            {/* Tiers */}
-            {tiers.length > 0 && (
-                <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden', marginBottom: 20, boxShadow: 'var(--shadow-card)' }}>
-                    <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', fontWeight: 600, color: 'var(--text-1)', fontSize: 14 }}>
-                        Ticket tiers ({tiers.length})
+            {/* Bookings tab */}
+            {tab === 'bookings' && isPublished && (
+                <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden', boxShadow: 'var(--shadow-card)' }}>
+                    <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontWeight: 600, color: 'var(--text-1)', fontSize: 14 }}>Bookings</span>
+                        <span style={{ fontSize: 13, color: 'var(--text-3)' }}>{bookings.length} total</span>
                     </div>
-                    {tiers.map((tier, i) => {
-                        const sold = (tier.totalCapacity ?? 0) - (tier.availableCapacity ?? 0);
-                        const revenue = sold * Number(tier.price ?? 0);
+
+                    {bookingsQuery.isLoading && (
+                        <div style={{ padding: 32, textAlign: 'center', color: 'var(--text-3)', fontSize: 14 }}>Loading bookings…</div>
+                    )}
+
+                    {!bookingsQuery.isLoading && bookings.length === 0 && (
+                        <div style={{ padding: 48, textAlign: 'center' }}>
+                            <Icons.inbox size={28} style={{ color: 'var(--text-3)' }} />
+                            <p className="mp-h4" style={{ margin: '12px 0 4px', color: 'var(--text-1)' }}>No bookings yet</p>
+                            <p className="body-sm" style={{ color: 'var(--text-2)', margin: 0 }}>No attendees have booked this event.</p>
+                        </div>
+                    )}
+
+                    {bookings.map((booking, i) => {
+                        const date = new Date(booking.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+                        const isCancelled = booking.status === 'CANCELLED';
                         return (
-                            <div key={tier.id} style={{ padding: '16px 20px', borderBottom: i === tiers.length - 1 ? 0 : '1px solid var(--border)' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                                    <div>
-                                        <div style={{ fontWeight: 600, color: 'var(--text-1)' }}>{tier.name}</div>
-                                        <div style={{ fontSize: 13, color: 'var(--text-2)', marginTop: 2 }}>
-                                            {Number(tier.price) === 0 ? 'Free' : `₦${Number(tier.price).toLocaleString()} per ticket`}
-                                        </div>
-                                    </div>
-                                    <div style={{ textAlign: 'right' }}>
-                                        <div className="mp-num" style={{ fontWeight: 600, color: 'var(--text-1)' }}>
-                                            {revenue === 0 ? '—' : `₦${revenue.toLocaleString()}`}
-                                        </div>
-                                        <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>{sold} sold</div>
+                            <div
+                                key={booking.id}
+                                className="mp-org-bookings-row"
+                                style={{
+                                    display: 'grid',
+                                    gridTemplateColumns: '1fr 160px 110px 90px',
+                                    gap: 16,
+                                    alignItems: 'center',
+                                    padding: '14px 20px',
+                                    borderBottom: i === bookings.length - 1 ? 0 : '1px solid var(--border)',
+                                    opacity: isCancelled ? 0.6 : 1,
+                                }}
+                            >
+                                <div>
+                                    <div style={{ fontWeight: 500, color: 'var(--text-1)' }}>{booking.attendeeName}</div>
+                                    <div style={{ fontSize: 13, color: 'var(--text-2)', marginTop: 2 }}>{booking.attendeeEmail}</div>
+                                </div>
+                                <div>
+                                    <div style={{ fontSize: 13, color: 'var(--text-1)' }}>{booking.tierName}</div>
+                                    <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>
+                                        {booking.quantity} ticket{booking.quantity !== 1 ? 's' : ''}
                                     </div>
                                 </div>
-                                <CapacityBar sold={sold} total={tier.totalCapacity ?? 0} />
+                                <div className="mp-num" style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-1)' }}>
+                                    {booking.totalAmount === 0 ? 'Free' : `₦${booking.totalAmount.toLocaleString()}`}
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 3, alignItems: 'flex-end' }}>
+                                    <span style={{
+                                        fontSize: 11, fontWeight: 600, padding: '3px 8px', borderRadius: 6,
+                                        background: isCancelled ? 'var(--surface-subtle)' : 'var(--success-bg)',
+                                        color: isCancelled ? 'var(--text-3)' : 'var(--success)',
+                                    }}>
+                                        {booking.status}
+                                    </span>
+                                    <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{date}</span>
+                                </div>
                             </div>
                         );
                     })}
                 </div>
             )}
-
-            {/* Bookings */}
-            <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden', boxShadow: 'var(--shadow-card)' }}>
-                <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontWeight: 600, color: 'var(--text-1)', fontSize: 14 }}>Bookings</span>
-                    <span style={{ fontSize: 13, color: 'var(--text-3)' }}>{bookings.length} total</span>
-                </div>
-
-                {bookingsQuery.isLoading && (
-                    <div style={{ padding: 32, textAlign: 'center', color: 'var(--text-3)', fontSize: 14 }}>Loading bookings…</div>
-                )}
-
-                {!bookingsQuery.isLoading && bookings.length === 0 && (
-                    <div style={{ padding: 48, textAlign: 'center' }}>
-                        <Icons.inbox size={28} style={{ color: 'var(--text-3)' }} />
-                        <p className="mp-h4" style={{ margin: '12px 0 4px', color: 'var(--text-1)' }}>No bookings yet</p>
-                        <p className="body-sm" style={{ color: 'var(--text-2)', margin: 0 }}>
-                            No attendees have booked this event.
-                        </p>
-                    </div>
-                )}
-
-                {bookings.map((booking, i) => {
-                    const date = new Date(booking.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-                    const isCancelled = booking.status === 'CANCELLED';
-                    return (
-                        <div
-                            key={booking.id}
-                            className="mp-org-bookings-row"
-                            style={{
-                                display: 'grid',
-                                gridTemplateColumns: '1fr 160px 110px 90px',
-                                gap: 16,
-                                alignItems: 'center',
-                                padding: '14px 20px',
-                                borderBottom: i === bookings.length - 1 ? 0 : '1px solid var(--border)',
-                                opacity: isCancelled ? 0.6 : 1,
-                            }}
-                        >
-                            <div>
-                                <div style={{ fontWeight: 500, color: 'var(--text-1)' }}>{booking.attendeeName}</div>
-                                <div style={{ fontSize: 13, color: 'var(--text-2)', marginTop: 2 }}>{booking.attendeeEmail}</div>
-                            </div>
-                            <div>
-                                <div style={{ fontSize: 13, color: 'var(--text-1)' }}>{booking.tierName}</div>
-                                <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>
-                                    {booking.quantity} ticket{booking.quantity !== 1 ? 's' : ''}
-                                </div>
-                            </div>
-                            <div className="mp-num" style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-1)' }}>
-                                {booking.totalAmount === 0 ? 'Free' : `₦${booking.totalAmount.toLocaleString()}`}
-                            </div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 3, alignItems: 'flex-end' }}>
-                                <span style={{
-                                    fontSize: 11, fontWeight: 600, padding: '3px 8px', borderRadius: 6,
-                                    background: isCancelled ? 'var(--surface-subtle)' : 'var(--success-bg)',
-                                    color: isCancelled ? 'var(--text-3)' : 'var(--success)',
-                                }}>
-                                    {booking.status}
-                                </span>
-                                <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{date}</span>
-                            </div>
-                        </div>
-                    );
-                })}
-            </div>
 
             {showReject && (
                 <RejectDialog

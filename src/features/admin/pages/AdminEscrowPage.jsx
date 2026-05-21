@@ -239,7 +239,8 @@ function RulingModal({ dispute, onDismiss }) {
     async function handleRule(favour) {
         setErr('');
         try {
-            const args = { disputeId: dispute.id, notes: notes.trim() };
+            // API uses milestoneId as the dispute identifier in the path
+            const args = { milestoneId: dispute.milestoneId ?? dispute.id, notes: notes.trim() };
             if (favour === 'vendor') {
                 await ruleForVendor(args).unwrap();
             } else {
@@ -342,10 +343,7 @@ function FlagViolationModal({ dispute, onDismiss }) {
     async function handleSubmit() {
         setErr('');
         try {
-            await flagViolation({
-                contractId: dispute.contractId,
-                reason: reason.trim(),
-            }).unwrap();
+            await flagViolation(dispute.contractId).unwrap();
             onDismiss();
         } catch (e) {
             setErr(e?.data?.message ?? 'Failed to flag violation');

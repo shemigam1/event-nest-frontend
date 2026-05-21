@@ -3,23 +3,14 @@ import { baseApi } from '@/services/baseApi';
 export const budgetApi = baseApi.injectEndpoints({
     endpoints: (builder) => ({
         getBudgetSummary: builder.query({
-            query: (eventId) => `/events/${eventId}/budget`,
+            query: (eventId) => `/organiser/events/${eventId}/budget`,
             providesTags: (result, error, eventId) => [{ type: 'Budget', id: eventId }],
-            transformResponse: (r) => r?.data ?? r,
-        }),
-        createBudget: builder.mutation({
-            query: ({ eventId, ...body }) => ({
-                url: `/events/${eventId}/budget`,
-                method: 'POST',
-                body,
-            }),
-            invalidatesTags: (result, error, { eventId }) => [{ type: 'Budget', id: eventId }],
             transformResponse: (r) => r?.data ?? r,
         }),
         updateBudget: builder.mutation({
             query: ({ eventId, ...body }) => ({
-                url: `/events/${eventId}/budget`,
-                method: 'PUT',
+                url: `/organiser/events/${eventId}/budget`,
+                method: 'PATCH',
                 body,
             }),
             invalidatesTags: (result, error, { eventId }) => [{ type: 'Budget', id: eventId }],
@@ -27,7 +18,7 @@ export const budgetApi = baseApi.injectEndpoints({
         }),
         addLineItem: builder.mutation({
             query: ({ eventId, ...body }) => ({
-                url: `/events/${eventId}/budget/items`,
+                url: `/organiser/events/${eventId}/budget/items`,
                 method: 'POST',
                 body,
             }),
@@ -36,7 +27,7 @@ export const budgetApi = baseApi.injectEndpoints({
         }),
         markLineItemPaid: builder.mutation({
             query: ({ eventId, itemId, actualAmount }) => ({
-                url: `/events/${eventId}/budget/items/${itemId}/paid`,
+                url: `/organiser/events/${eventId}/budget/items/${itemId}/paid`,
                 method: 'PATCH',
                 body: { actualAmount },
             }),
@@ -45,7 +36,7 @@ export const budgetApi = baseApi.injectEndpoints({
         }),
         deleteLineItem: builder.mutation({
             query: ({ eventId, itemId }) => ({
-                url: `/events/${eventId}/budget/items/${itemId}`,
+                url: `/organiser/events/${eventId}/budget/items/${itemId}`,
                 method: 'DELETE',
             }),
             invalidatesTags: (result, error, { eventId }) => [{ type: 'Budget', id: eventId }],
@@ -55,9 +46,11 @@ export const budgetApi = baseApi.injectEndpoints({
 
 export const {
     useGetBudgetSummaryQuery,
-    useCreateBudgetMutation,
     useUpdateBudgetMutation,
     useAddLineItemMutation,
     useMarkLineItemPaidMutation,
     useDeleteLineItemMutation,
 } = budgetApi;
+
+// Legacy alias — kept so any component still importing useCreateBudgetMutation compiles.
+export const useCreateBudgetMutation = budgetApi.endpoints.updateBudget.useMutation;

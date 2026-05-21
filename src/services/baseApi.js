@@ -17,7 +17,7 @@ export const baseApi = createApi({
         },
     }),
     tagTypes: [
-        'User', 'Event', 'Booking', 'Ticket', 'Analytics', 'Notification',
+        'User', 'Event', 'Booking', 'Ticket', 'Transfer', 'Analytics', 'Notification',
         'CheckInInvite', 'EventEdit', 'Comment', 'Conversation', 'ConversationMessages',
         'Guest', 'Manager', 'Budget', 'Programme', 'Contract', 'Escrow',
         'VendorApplication', 'VendorApplicationMine', 'VendorVerification',

@@ -23,7 +23,7 @@ export default function ForgotPasswordPage() {
         e.preventDefault();
         if (!isFormValid) return;
         try {
-            await forgotPassword(email.trim()).unwrap();
+            await forgotPassword({ email: email.trim() }).unwrap();
             setSuccessMessage('Check your email for a password reset link. The link expires in 1 hour.');
             setEmail('');
         } catch (err) {

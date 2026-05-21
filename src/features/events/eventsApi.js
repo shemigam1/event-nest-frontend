@@ -15,6 +15,11 @@ export const eventsApi = baseApi.injectEndpoints({
             providesTags: (result, error, id) => [{ type: 'Event', id }],
             transformResponse: (response) => response.data ?? response,
         }),
+        getEventBySlug: builder.query({
+            query: (slug) => `/events/slug/${slug}`,
+            providesTags: (result, error, slug) => [{ type: 'Event', id: `slug-${slug}` }],
+            transformResponse: (response) => response.data ?? response,
+        }),
         getEventTiers: builder.query({
             query: (eventId) => `/events/${eventId}/tiers`,
             providesTags: (result, error, eventId) => [{ type: 'Event', id: `${eventId}-tiers` }],
@@ -77,6 +82,7 @@ export const eventsApi = baseApi.injectEndpoints({
 export const {
     useGetPublishedEventsQuery,
     useGetEventByIdQuery,
+    useGetEventBySlugQuery,
     useGetEventTiersQuery,
     useCreateEventMutation,
     useUpdateEventMutation,

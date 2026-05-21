@@ -8,7 +8,11 @@ export const notificationsApi = baseApi.injectEndpoints({
             providesTags: ['Notification'],
             transformResponse: (response) => {
                 const d = response.data ?? response;
-                return Array.isArray(d) ? d : (d?.content ?? []);
+                // Preserve the full page object so the component can read .content and .totalPages
+                if (d && typeof d === 'object' && 'content' in d) return d;
+                // Non-paginated fallback
+                const items = Array.isArray(d) ? d : [];
+                return { content: items, totalPages: items.length > 0 ? 1 : 0, totalElements: items.length };
             },
         }),
         getUnreadNotificationCount: builder.query({

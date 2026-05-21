@@ -5,7 +5,7 @@ export const guestsApi = baseApi.injectEndpoints({
         getGuests: builder.query({
             query: (eventId) => `/events/${eventId}/guests`,
             providesTags: (result, error, eventId) => [{ type: 'Guest', id: eventId }],
-            transformResponse: (r) => r?.data ?? r ?? [],
+            transformResponse: (r) => { const d = r?.data ?? r; return Array.isArray(d) ? d : (d?.content ?? []); },
         }),
         addGuest: builder.mutation({
             query: ({ eventId, ...body }) => ({
