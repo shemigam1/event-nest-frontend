@@ -9,10 +9,12 @@ import { Icons } from '@/components/ui/Icon';
 import { formatEventDate } from '@/utils/dateFormat';
 
 const TYPE_META = {
-    BOOKING_CONFIRMED: { icon: Icons.ticket, accent: 'var(--accent)', label: 'Booking confirmed' },
-    EVENT_APPROVED:    { icon: Icons.check,  accent: 'var(--success)', label: 'Event approved' },
-    EVENT_REJECTED:    { icon: Icons.alert,  accent: 'var(--error)',   label: 'Event rejected' },
-    CHECKIN_SUCCESS:   { icon: Icons.scan,   accent: 'var(--accent)',  label: 'Checked in' },
+    BOOKING_CONFIRMED:        { icon: Icons.ticket, accent: 'var(--accent)',  label: 'Booking confirmed' },
+    EVENT_APPROVED:           { icon: Icons.check,  accent: 'var(--success)', label: 'Event approved' },
+    EVENT_REJECTED:           { icon: Icons.alert,  accent: 'var(--error)',   label: 'Event rejected' },
+    CHECKIN_SUCCESS:          { icon: Icons.scan,   accent: 'var(--accent)',  label: 'Checked in' },
+    TICKET_TRANSFER_RECEIVED: { icon: Icons.send,   accent: 'var(--mp-blue)', label: 'Ticket received' },
+    TICKET_GIFTED:            { icon: Icons.spark,  accent: 'var(--accent)',  label: 'Ticket gifted to you' },
 };
 
 export default function NotificationsPage() {
