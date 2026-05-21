@@ -61,8 +61,12 @@ export default function VendorProfileSetupPage() {
     if (profileQ.isLoading) return <PageShell><Skeleton /></PageShell>;
 
     // 404 from the backend = no profile yet. Render the self-register form.
+    // Also treat a successful-but-empty response the same way — the user simply
+    // hasn't created a profile, and crashing on `profile.status` would just
+    // dump a Something-went-wrong page instead of letting them sign up.
     const isMissing =
-        profileQ.isError && (profileQ.error?.status === 404 || profileQ.error?.originalStatus === 404);
+        (profileQ.isError && (profileQ.error?.status === 404 || profileQ.error?.originalStatus === 404))
+        || (!profileQ.isError && !profileQ.data);
 
     if (isMissing) {
         return (

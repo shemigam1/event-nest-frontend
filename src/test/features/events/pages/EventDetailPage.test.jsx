@@ -30,7 +30,7 @@ function makeAuthState() {
 function renderDetail({ id = 'evt_001', preloadedState } = {}) {
     return renderWithProviders(
         <Routes>
-            <Route path="/events/:id" element={<EventDetailPage />} />
+            <Route path="/events/:identifier" element={<EventDetailPage />} />
             <Route path="/events" element={<div>events list</div>} />
             <Route path="/events/:id/book" element={<div>book page</div>} />
             <Route path="/login" element={<div>login page</div>} />
@@ -124,12 +124,13 @@ describe('EventDetailPage', () => {
     });
 
     test('disables CTA when event is not PUBLISHED', async () => {
+        const draftEvent = { ...MOCK_EVENTS[0], id: 'evt_draft', slug: 'evt_draft', status: 'DRAFT' };
         server.use(
+            http.get('http://localhost:3000/events/slug/evt_draft', () =>
+                HttpResponse.json({ success: true, data: draftEvent })
+            ),
             http.get('http://localhost:3000/events/evt_draft', () =>
-                HttpResponse.json({
-                    success: true,
-                    data: { ...MOCK_EVENTS[0], id: 'evt_draft', status: 'DRAFT' },
-                })
+                HttpResponse.json({ success: true, data: draftEvent })
             ),
             http.get('http://localhost:3000/events/evt_draft/tiers', () =>
                 HttpResponse.json({ success: true, data: MOCK_TIERS.evt_001 })

@@ -1091,8 +1091,8 @@ function SuccessStep({ submitted, navigate }) {
                 <Button variant="secondary" size="lg" onClick={() => navigate('/events')}>
                     Browse events
                 </Button>
-                <Button variant="primary" size="lg" onClick={() => navigate('/dashboard')}>
-                    Go to dashboard
+                <Button variant="primary" size="lg" onClick={() => navigate('/my-events')}>
+                    Go to my events
                 </Button>
             </div>
         </div>

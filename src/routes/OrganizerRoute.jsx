@@ -8,6 +8,6 @@ export default function OrganizerRoute() {
     const location        = useLocation();
 
     if (!isAuthenticated) return <Navigate to="/login" replace state={{ from: location.pathname }} />;
-    if (!isOrganiser)     return <Navigate to="/dashboard" replace />;
+    if (!isOrganiser)     return <Navigate to="/my-events" replace />;
     return <Outlet />;
 }

@@ -34,7 +34,7 @@ export default function LoginPage() {
             dispatch(setCredentials(data));
             const tokenUser = userFromToken(data.accessToken);
             const isAdmin   = tokenUser?.roles?.includes('ROLE_ADMIN') ?? false;
-            const defaultDest = isAdmin ? '/admin/moderation' : '/dashboard';
+            const defaultDest = isAdmin ? '/admin/moderation' : '/events';
             const destination = location.state?.from ?? defaultDest;
             navigate(destination, { replace: true });
         } catch {

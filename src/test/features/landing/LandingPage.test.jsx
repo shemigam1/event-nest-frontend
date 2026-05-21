@@ -11,17 +11,17 @@ describe('LandingPage', () => {
             expect(screen.getAllByText('EventNest').length).toBeGreaterThan(0);
         });
 
-        test('navigates to /login when "Sign in" is clicked', async () => {
+        test('navigates to /login when "Log in" is clicked', async () => {
             renderWithProviders(<LandingPage />, { initialEntries: ['/'] });
             const nav = screen.getByTestId('topnav');
-            await userEvent.click(within(nav).getByRole('button', { name: /sign in/i }));
+            await userEvent.click(within(nav).getByRole('button', { name: /log in/i }));
             expect(screen.getByTestId('location')).toHaveTextContent('/login');
         });
 
-        test('navigates to /register when "Get started" is clicked', async () => {
+        test('navigates to /register when "Sign up" is clicked', async () => {
             renderWithProviders(<LandingPage />, { initialEntries: ['/'] });
             const nav = screen.getByTestId('topnav');
-            await userEvent.click(within(nav).getByRole('button', { name: /get started/i }));
+            await userEvent.click(within(nav).getByRole('button', { name: /sign up/i }));
             expect(screen.getByTestId('location')).toHaveTextContent('/register');
         });
 
@@ -103,15 +103,16 @@ describe('LandingPage', () => {
     });
 
     describe('featured events grid', () => {
-        test('renders the first 3 events from sample data', () => {
+        test('renders the first 3 events from sample data', async () => {
             renderWithProviders(<LandingPage />);
-            expect(screen.getByText('Moniepoint Merchant Summit 2026')).toBeInTheDocument();
+            expect(await screen.findByText('Moniepoint Merchant Summit 2026')).toBeInTheDocument();
             expect(screen.getByText('Agent Onboarding Workshop · Q2')).toBeInTheDocument();
             expect(screen.getByText('Partner Certification Day — Lagos')).toBeInTheDocument();
         });
 
-        test('does not render the 4th event', () => {
+        test('does not render the 4th event', async () => {
             renderWithProviders(<LandingPage />);
+            await screen.findByText('Moniepoint Merchant Summit 2026');
             expect(screen.queryByText('AfroTech Lagos · Investor Mixer')).not.toBeInTheDocument();
         });
 
@@ -124,7 +125,7 @@ describe('LandingPage', () => {
         test('clicking an event card navigates to its detail page', async () => {
             renderWithProviders(<LandingPage />, { initialEntries: ['/'] });
             // Click the first event card (Merchant Summit)
-            const summitTitle = screen.getByText('Moniepoint Merchant Summit 2026');
+            const summitTitle = await screen.findByText('Moniepoint Merchant Summit 2026');
             await userEvent.click(summitTitle.closest('button'));
             expect(screen.getByTestId('location')).toHaveTextContent('/events/evt_001');
         });

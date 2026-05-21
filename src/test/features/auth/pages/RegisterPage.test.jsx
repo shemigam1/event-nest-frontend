@@ -16,7 +16,8 @@ describe('RegisterPage', () => {
         await userEvent.type(screen.getByLabelText(/first name/i), 'Jane');
         await userEvent.type(screen.getByLabelText(/last name/i), 'Doe');
         await userEvent.type(screen.getByLabelText(/email/i), 'jane@example.com');
-        await userEvent.type(screen.getByLabelText(/password/i), 'password123');
+        await userEvent.type(screen.getByLabelText(/^password/i), 'password123');
+        await userEvent.click(screen.getByRole('checkbox'));
         expect(screen.getByRole('button', { name: /create account/i })).not.toBeDisabled();
     });
 
@@ -25,7 +26,8 @@ describe('RegisterPage', () => {
         await userEvent.type(screen.getByLabelText(/first name/i), 'Jane');
         await userEvent.type(screen.getByLabelText(/last name/i), 'Doe');
         await userEvent.type(screen.getByLabelText(/email/i), 'jane@example.com');
-        await userEvent.type(screen.getByLabelText(/password/i), 'password123');
+        await userEvent.type(screen.getByLabelText(/^password/i), 'password123');
+        await userEvent.click(screen.getByRole('checkbox'));
         await userEvent.click(screen.getByRole('button', { name: /create account/i }));
         await waitFor(() =>
             expect(screen.getByTestId('location')).toHaveTextContent('/login')
@@ -42,7 +44,8 @@ describe('RegisterPage', () => {
         await userEvent.type(screen.getByLabelText(/first name/i), 'Jane');
         await userEvent.type(screen.getByLabelText(/last name/i), 'Existing');
         await userEvent.type(screen.getByLabelText(/email/i), 'existing@example.com');
-        await userEvent.type(screen.getByLabelText(/password/i), 'password123');
+        await userEvent.type(screen.getByLabelText(/^password/i), 'password123');
+        await userEvent.click(screen.getByRole('checkbox'));
         await userEvent.click(screen.getByRole('button', { name: /create account/i }));
         await waitFor(() =>
             expect(screen.getByText(/email already in use/i)).toBeInTheDocument()

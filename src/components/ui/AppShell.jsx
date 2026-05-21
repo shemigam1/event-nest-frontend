@@ -9,63 +9,37 @@ import {
     selectCurrentUser,
     selectAuthEmail,
     selectActiveWorkspace,
+    selectVendorModeActive,
+    setActiveWorkspace,
+    setVendorModeActive,
 } from '@/features/auth/authSlice';
 import { useGetMyNotificationsQuery, useGetUnreadNotificationCountQuery, useMarkNotificationAsReadMutation } from '@/features/notifications/notificationsApi';
 import { Icons } from './Icon';
 import { SidebarContext, useSidebar } from './sidebarContext';
 import TopBar from './TopBar';
 
-/* Workspace nav — tight, focused per role. Matches the design's horizontal
-   workspace tabs (Attendee / Organiser & Manager / Vendor): each workspace
-   exposes only its primary destinations. Settings + Sign out live in the
-   sidebar footer regardless of workspace and aren't repeated here.
-   MANAGER shares ORGANISER's nav 1:1 — co-managing an event uses the same
-   console. */
-const WORKSPACE_NAV = {
-    ATTENDEE: [
-        { icon: Icons.calendar, label: 'Browse events', path: '/events' },
-        { icon: Icons.ticket,   label: 'My tickets',    path: '/tickets' },
-        { icon: Icons.signal,   label: 'Dashboard',     path: '/dashboard' },
-    ],
-    ORGANISER: [
-        { icon: Icons.calendar, label: 'My events',          path: '/organiser' },
-        { icon: Icons.lock,     label: 'Contracts',          path: '/organiser/contracts' },
-        { icon: Icons.users,    label: 'Vendor marketplace', path: '/vendors' },
-        { icon: Icons.message,  label: 'Messages',           path: '/messages' },
-        { icon: Icons.wallet,   label: 'Account',            path: '/organiser/account' },
-        { icon: Icons.alert,    label: 'Disputes',           path: '/organiser/disputes', comingSoon: true },
-    ],
-    MANAGER: [
-        { icon: Icons.calendar, label: 'My events',          path: '/organiser' },
-        { icon: Icons.lock,     label: 'Contracts',          path: '/organiser/contracts' },
-        { icon: Icons.users,    label: 'Vendor marketplace', path: '/vendors' },
-        { icon: Icons.message,  label: 'Messages',           path: '/messages' },
-        { icon: Icons.wallet,   label: 'Account',            path: '/organiser/account' },
-        { icon: Icons.alert,    label: 'Disputes',           path: '/organiser/disputes', comingSoon: true },
-    ],
-    VENDOR: [
-        { icon: Icons.calendar, label: 'Browse events',  path: '/vendor/opportunities' },
-        { icon: Icons.signal,   label: 'Dashboard',      path: '/vendor' },
-        { icon: Icons.lock,     label: 'Contracts',      path: '/vendor/contracts' },
-        { icon: Icons.list,     label: 'Applications',   path: '/vendor/applications' },
-        { icon: Icons.message,  label: 'Messages',       path: '/messages' },
-        { icon: Icons.alert,    label: 'Disputes',       path: '/vendor/disputes', comingSoon: true },
-    ],
-};
+/* ── Navigation items ───────────────────────────────────────────────────────
+   The app now has ONE unified user workspace (browse + my events + create).
+   Organiser features (contracts, vendor marketplace, messages) live inside
+   the organiser event page — they are no longer global sidebar items.
 
-// useSidebar is used inside the Sidebar child component below.
+   Vendor mode is activated via a toggle in the sidebar footer. When active,
+   the sidebar swaps to the vendor-specific nav.
+   ─────────────────────────────────────────────────────────────────────────── */
 
-/* ────────────────────────────────────────────────────────────────────────────
-   AppShell — top-level layout. Renders a persistent left sidebar (à la the
-   Claude desktop app) when the user is signed in, with an outlet for the
-   page on the right. The sidebar is retractable to an icon-only rail; the
-   collapsed/expanded state is persisted to localStorage so it survives a
-   reload, and exposed via context so anything in the page (e.g. the TopNav
-   hamburger) can toggle it.
+const USER_NAV = [
+    { icon: Icons.search,   label: 'Browse events', path: '/events' },
+    { icon: Icons.calendar, label: 'My events',      path: '/my-events' },
+];
 
-   On anonymous routes the shell renders the outlet full-width — no sidebar.
-   Mobile (< 1024px wide) auto-collapses to keep the page readable.
-   ──────────────────────────────────────────────────────────────────────── */
+const VENDOR_NAV = [
+    { icon: Icons.signal,   label: 'Dashboard',      path: '/vendor' },
+    { icon: Icons.search,   label: 'Browse events',  path: '/vendor/opportunities' },
+    { icon: Icons.lock,     label: 'Contracts',      path: '/vendor/contracts' },
+    { icon: Icons.calendar, label: 'My events',      path: '/vendor/applications' },
+    { icon: Icons.message,  label: 'Messages',       path: '/messages' },
+    { icon: Icons.alert,    label: 'Disputes',       path: '/vendor/disputes', comingSoon: true },
+];
 
 const STORAGE_KEY = 'mp-sidebar-collapsed';
 
@@ -73,16 +47,11 @@ export default function AppShell() {
     const isAuthenticated = useSelector(selectIsAuthenticated);
     const location = useLocation();
 
-    // Auto-collapse on small viewports. The user can still toggle, and the
-    // toggle persists, but the *initial* render on a phone shouldn't take
-    // up half the screen with the sidebar.
     const [collapsed, setCollapsed] = useState(() => {
         try {
             const stored = localStorage.getItem(STORAGE_KEY);
             if (stored != null) return stored === '1';
-        } catch {
-            /* SSR / disabled storage — fall through */
-        }
+        } catch { /* ignore */ }
         return typeof window !== 'undefined' && window.matchMedia('(max-width: 1023px)').matches;
     });
 
@@ -96,14 +65,8 @@ export default function AppShell() {
         setCollapsed,
     }), [collapsed]);
 
-    // Auth pages and the marketing landing page never show the sidebar.
-    // Public discovery pages (/events, /vendors and their detail routes)
-    // hide the sidebar only when the user is anonymous; authenticated users
-    // browsing those pages still get the full shell.
     const ALWAYS_NO_SIDEBAR = new Set([
         '/', '/login', '/register', '/forgot-password', '/reset-password',
-        // Legal pages render their own minimal chrome (LegalPage component) —
-        // signed-in users hitting /terms from Settings still see them clean.
         '/terms', '/privacy',
     ]);
     const p = location.pathname;
@@ -111,9 +74,7 @@ export default function AppShell() {
     const isPublicBrowsingPage =
         p === '/events' ||
         p === '/vendors' ||
-        // /events/:id — public event detail (but not /events/new or sub-routes)
         (/^\/events\/[^/]+$/.test(p) && p !== '/events/new') ||
-        // /vendors/:id — public vendor profile
         /^\/vendors\/[^/]+$/.test(p);
 
     const isNoSidebarPage =
@@ -122,9 +83,6 @@ export default function AppShell() {
         (!isAuthenticated && isPublicBrowsingPage);
 
     if (isNoSidebarPage) {
-        // Anonymous flows (landing, public discovery, login, register…) get
-        // no sidebar. Still provide the context so consumer components don't
-        // throw if they happen to render on a public page.
         return (
             <SidebarContext.Provider value={ctx}>
                 <Outlet />
@@ -142,8 +100,7 @@ export default function AppShell() {
                 <Sidebar />
                 <main style={{
                     flex: 1,
-                    minWidth: 0, // critical — without this, flex children with
-                                  // long content blow past the viewport width
+                    minWidth: 0,
                     display: 'flex',
                     flexDirection: 'column',
                 }}>
@@ -173,22 +130,15 @@ function Sidebar() {
     const isCheckinStaff = useSelector(selectIsCheckinStaff);
     const user           = useSelector(selectCurrentUser);
     const email          = useSelector(selectAuthEmail);
+    const activeWorkspace  = useSelector(selectActiveWorkspace);
+    const vendorModeActive = useSelector(selectVendorModeActive);
 
     const { data: notifData } = useGetMyNotificationsQuery(undefined, { pollingInterval: 60_000 });
-    // SSE already invalidates 'Notification' on every push — no need to poll the count separately
     const { data: unreadCount = 0 } = useGetUnreadNotificationCountQuery();
     const [markRead] = useMarkNotificationAsReadMutation();
     const notifications = notifData?.content ?? [];
 
-    // Workspace is selected via the TopBar avatar dropdown and stored in
-    // Redux (persisted to localStorage). The toggle exposes all three
-    // workspaces unconditionally — they're contexts a user opts into, not
-    // roles derived from event memberships — so we trust the Redux value
-    // directly without cross-checking against the backend's /me/workspaces
-    // membership list. Fallback to ATTENDEE before the user has explicitly
-    // picked something keeps the sidebar from rendering empty on first load.
-    const reduxActiveWorkspace = useSelector(selectActiveWorkspace);
-    const resolvedWorkspace = reduxActiveWorkspace || 'ATTENDEE';
+    const isVendorMode = activeWorkspace === 'VENDOR';
 
     const displayName = (() => {
         const first = user?.firstName?.trim() || '';
@@ -197,12 +147,21 @@ function Sidebar() {
     })();
     const initial = (displayName[0] || '?').toUpperCase();
 
-    function go(path) {
-        navigate(path);
-    }
+    function go(path) { navigate(path); }
+
     function handleLogout() {
         dispatch(logout());
         navigate('/login', { replace: true });
+    }
+
+    function handleSwitchToVendor() {
+        dispatch(setActiveWorkspace('VENDOR'));
+        navigate('/vendor');
+    }
+
+    function handleExitVendorMode() {
+        dispatch(setActiveWorkspace('ATTENDEE'));
+        navigate('/events');
     }
 
     const items = (() => {
@@ -215,13 +174,11 @@ function Sidebar() {
                 { icon: Icons.users,  label: 'Manage users',        path: '/admin/users' },
                 { icon: Icons.list,   label: 'Event edit requests', path: '/admin/event-edits' },
                 { icon: Icons.shield, label: 'Escrow disputes',     path: '/admin/escrow' },
-                { icon: Icons.spark, label: 'Vendors',                path: '/admin/vendors' },
+                { icon: Icons.spark,  label: 'Vendors',             path: '/admin/vendors' },
                 { icon: Icons.mail,   label: 'Invite admin',        path: '/admin/invite' },
             ];
         }
-        // Fall back to the Attendee nav when no workspace is resolved yet —
-        // every signed-in user is at least an attendee.
-        return WORKSPACE_NAV[resolvedWorkspace] ?? WORKSPACE_NAV.ATTENDEE;
+        return isVendorMode ? VENDOR_NAV : USER_NAV;
     })();
 
     const width = collapsed ? COLLAPSED_WIDTH : EXPANDED_WIDTH;
@@ -237,8 +194,6 @@ function Sidebar() {
                 height: '100vh',
                 width,
                 flexShrink: 0,
-                // Surface tokens (not hardcoded white) so the sidebar stays
-                // consistent with the page when the user picks dark mode.
                 background: 'var(--surface-elevated)',
                 borderRight: '1px solid var(--border)',
                 display: 'flex',
@@ -247,7 +202,7 @@ function Sidebar() {
                 overflow: 'hidden',
             }}
         >
-            {/* Header: collapse toggle only */}
+            {/* ── Header: collapse toggle ── */}
             <div style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -274,16 +229,14 @@ function Sidebar() {
                 </button>
             </div>
 
-            {/* Workspace switcher moved to the TopBar avatar dropdown. */}
-
-            {/* Quick "Create event" CTA — only relevant for organiser workspace */}
-            {!(isCheckinStaff && !isAdmin) && !isAdmin && resolvedWorkspace !== 'ATTENDEE' && resolvedWorkspace !== 'VENDOR' && (
+            {/* ── Create event CTA (user mode only, not admin/checkin/vendor) ── */}
+            {!isAdmin && !isCheckinStaff && !isVendorMode && (
                 <div style={{ padding: collapsed ? '10px 8px' : '10px 12px' }}>
                     <CreateButton collapsed={collapsed} onClick={() => go('/events/new')} />
                 </div>
             )}
 
-            {/* Nav items */}
+            {/* ── Nav items ── */}
             <nav style={{
                 flex: 1,
                 overflowY: 'auto',
@@ -309,7 +262,7 @@ function Sidebar() {
                 })}
             </nav>
 
-            {/* Footer: user info + sign out */}
+            {/* ── Footer ── */}
             <div style={{
                 borderTop: '1px solid var(--border)',
                 padding: collapsed ? '10px 8px' : '12px 12px',
@@ -317,6 +270,19 @@ function Sidebar() {
                 flexDirection: 'column',
                 gap: 8,
             }}>
+                {/* Vendor mode section — hidden for admin/checkin */}
+                {!isAdmin && !isCheckinStaff && (
+                    <VendorModeSection
+                        collapsed={collapsed}
+                        isVendorMode={isVendorMode}
+                        vendorModeActive={vendorModeActive}
+                        onToggleVendorMode={(v) => dispatch(setVendorModeActive(v))}
+                        onSwitchToVendor={handleSwitchToVendor}
+                        onExitVendorMode={handleExitVendorMode}
+                    />
+                )}
+
+                {/* User info */}
                 {!collapsed ? (
                     <div style={{
                         display: 'flex', alignItems: 'center', gap: 10,
@@ -346,6 +312,7 @@ function Sidebar() {
                         <Avatar initial={initial} />
                     </div>
                 )}
+
                 <NotifBell
                     unread={unreadCount}
                     collapsed={collapsed}
@@ -378,6 +345,166 @@ function Sidebar() {
             />
         )}
         </>
+    );
+}
+
+/* ─── Vendor mode section ─────────────────────────────────────────────────
+   Shown in the sidebar footer above user info, for non-admin users.
+
+   User mode: toggle to activate vendor mode; if active, a "Switch to vendor"
+              pill button appears.
+   Vendor mode: a single "Exit vendor mode" button to return to user workspace.
+   ─────────────────────────────────────────────────────────────────────────── */
+function VendorModeSection({ collapsed, isVendorMode, vendorModeActive, onToggleVendorMode, onSwitchToVendor, onExitVendorMode }) {
+    if (collapsed) {
+        // In collapsed mode show a small indicator icon only
+        return (
+            <div style={{ display: 'flex', justifyContent: 'center', paddingBottom: 4 }}>
+                <button
+                    title={isVendorMode ? 'Exit vendor mode' : 'Vendor mode'}
+                    onClick={isVendorMode ? onExitVendorMode : () => onToggleVendorMode(!vendorModeActive)}
+                    style={{
+                        width: 32, height: 32, borderRadius: 8,
+                        border: `1px solid ${isVendorMode ? 'var(--mp-blue)' : 'var(--border)'}`,
+                        background: isVendorMode ? 'var(--mp-blue-50, #EAF1FE)' : 'transparent',
+                        color: isVendorMode ? 'var(--mp-blue)' : 'var(--text-3)',
+                        cursor: 'pointer',
+                        display: 'grid', placeItems: 'center',
+                    }}
+                >
+                    <Icons.spark size={15} />
+                </button>
+            </div>
+        );
+    }
+
+    if (isVendorMode) {
+        return (
+            <div style={{ paddingBottom: 4 }}>
+                <button
+                    onClick={onExitVendorMode}
+                    style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8,
+                        width: '100%',
+                        padding: '8px 12px',
+                        borderRadius: 8,
+                        border: '1px solid var(--border)',
+                        background: 'transparent',
+                        color: 'var(--text-2)',
+                        fontFamily: 'inherit',
+                        fontSize: 13,
+                        fontWeight: 500,
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                    }}
+                    onMouseOver={(e) => { e.currentTarget.style.background = 'var(--surface-subtle)'; }}
+                    onMouseOut={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                >
+                    <Icons.chevronL size={14} />
+                    Exit vendor mode
+                </button>
+            </div>
+        );
+    }
+
+    // User mode: toggle + optional switch button
+    return (
+        <div style={{
+            padding: '8px 4px',
+            borderRadius: 10,
+            border: vendorModeActive ? '1px solid var(--mp-blue-50, #EAF1FE)' : '1px solid var(--border)',
+            background: vendorModeActive ? 'var(--mp-blue-50, #EAF1FE)' : 'var(--surface-subtle)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 8,
+        }}>
+            {/* Toggle row */}
+            <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '0 8px',
+            }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                    <Icons.spark size={14} style={{ color: vendorModeActive ? 'var(--mp-blue)' : 'var(--text-3)' }} />
+                    <span style={{
+                        fontSize: 12,
+                        fontWeight: 600,
+                        color: vendorModeActive ? 'var(--mp-blue)' : 'var(--text-2)',
+                        whiteSpace: 'nowrap',
+                    }}>
+                        Vendor mode
+                    </span>
+                </div>
+                <ToggleSwitch on={vendorModeActive} onChange={onToggleVendorMode} />
+            </div>
+
+            {/* Switch button — only shown when toggle is on */}
+            {vendorModeActive && (
+                <button
+                    onClick={onSwitchToVendor}
+                    style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 8,
+                        width: '100%',
+                        padding: '8px 12px',
+                        borderRadius: 7,
+                        border: 0,
+                        background: 'var(--mp-blue)',
+                        color: 'white',
+                        fontFamily: 'inherit',
+                        fontSize: 13,
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                    }}
+                    onMouseOver={(e) => { e.currentTarget.style.opacity = '0.88'; }}
+                    onMouseOut={(e) => { e.currentTarget.style.opacity = '1'; }}
+                >
+                    Switch to vendor
+                    <Icons.arrowR size={14} />
+                </button>
+            )}
+        </div>
+    );
+}
+
+/* ─── Toggle switch ───────────────────────────────────────────── */
+function ToggleSwitch({ on, onChange }) {
+    return (
+        <button
+            role="switch"
+            aria-checked={on}
+            onClick={() => onChange(!on)}
+            style={{
+                position: 'relative',
+                width: 36,
+                height: 20,
+                borderRadius: 99,
+                border: 0,
+                background: on ? 'var(--mp-blue)' : 'var(--border)',
+                cursor: 'pointer',
+                flexShrink: 0,
+                transition: 'background 0.15s ease',
+                padding: 0,
+            }}
+        >
+            <span style={{
+                position: 'absolute',
+                top: 2,
+                left: on ? 18 : 2,
+                width: 16,
+                height: 16,
+                borderRadius: 99,
+                background: 'white',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                transition: 'left 0.15s ease',
+                display: 'block',
+            }} />
+        </button>
     );
 }
 
@@ -425,11 +552,7 @@ function SidebarLink({ icon, label, active, collapsed, danger, comingSoon, onCli
                 {icon}
             </span>
             {!collapsed && (
-                <span style={{
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                }}>
+                <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {label}
                 </span>
             )}
@@ -442,26 +565,18 @@ function SidebarLink({ icon, label, active, collapsed, danger, comingSoon, onCli
         <div style={{ position: 'relative' }}>
             {btn}
             <div style={{
-                position: 'absolute',
-                inset: 0,
-                display: 'flex',
-                alignItems: 'center',
+                position: 'absolute', inset: 0,
+                display: 'flex', alignItems: 'center',
                 justifyContent: collapsed ? 'center' : 'flex-end',
                 paddingRight: collapsed ? 0 : 10,
-                pointerEvents: 'none',
-                borderRadius: 8,
+                pointerEvents: 'none', borderRadius: 8,
             }}>
                 {!collapsed && (
                     <span style={{
-                        fontSize: 10,
-                        fontWeight: 700,
-                        letterSpacing: '0.04em',
+                        fontSize: 10, fontWeight: 700, letterSpacing: '0.04em',
                         textTransform: 'uppercase',
-                        background: 'var(--mp-blue)',
-                        color: 'white',
-                        padding: '2px 7px',
-                        borderRadius: 99,
-                        opacity: 0.9,
+                        background: 'var(--mp-blue)', color: 'white',
+                        padding: '2px 7px', borderRadius: 99, opacity: 0.9,
                     }}>
                         Soon
                     </span>
@@ -494,6 +609,8 @@ function CreateButton({ collapsed, onClick }) {
                 cursor: 'pointer',
                 boxShadow: 'var(--shadow-card, 0 1px 2px rgba(0,0,0,0.05))',
             }}
+            onMouseOver={(e) => { e.currentTarget.style.opacity = '0.88'; }}
+            onMouseOut={(e) => { e.currentTarget.style.opacity = '1'; }}
         >
             <Icons.plus size={16} />
             {!collapsed && <span style={{ whiteSpace: 'nowrap' }}>Create event</span>}
@@ -507,8 +624,7 @@ function Avatar({ initial }) {
             width: 32, height: 32, borderRadius: 99,
             background: 'var(--mp-blue)', color: 'white',
             display: 'grid', placeItems: 'center',
-            fontSize: 13, fontWeight: 700,
-            flexShrink: 0,
+            fontSize: 13, fontWeight: 700, flexShrink: 0,
         }}>
             {initial}
         </span>
@@ -523,22 +639,14 @@ function NotifBell({ unread, collapsed, open, onToggle }) {
             aria-label={`Notifications${unread > 0 ? ` (${unread} unread)` : ''}`}
             style={{
                 position: 'relative',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 12,
+                display: 'flex', alignItems: 'center', gap: 12,
                 padding: collapsed ? '10px 0' : '10px 12px',
                 justifyContent: collapsed ? 'center' : 'flex-start',
-                width: '100%',
-                borderRadius: 8,
-                border: 0,
+                width: '100%', borderRadius: 8, border: 0,
                 background: open ? 'var(--surface-subtle)' : 'transparent',
-                color: 'var(--text-1)',
-                fontFamily: 'inherit',
-                fontSize: 14,
-                fontWeight: 500,
-                cursor: 'pointer',
-                textAlign: 'left',
-                minWidth: 0,
+                color: 'var(--text-1)', fontFamily: 'inherit',
+                fontSize: 14, fontWeight: 500, cursor: 'pointer',
+                textAlign: 'left', minWidth: 0,
             }}
             onMouseOver={(e) => { if (!open) e.currentTarget.style.background = 'var(--surface-subtle)'; }}
             onMouseOut={(e) => { if (!open) e.currentTarget.style.background = 'transparent'; }}
@@ -547,18 +655,12 @@ function NotifBell({ unread, collapsed, open, onToggle }) {
                 <Icons.bell size={18} />
                 {unread > 0 && (
                     <span style={{
-                        position: 'absolute',
-                        top: -4, right: -4,
-                        minWidth: 16, height: 16,
-                        borderRadius: 99,
-                        background: 'var(--error, #E53E3E)',
-                        color: 'white',
-                        fontSize: 10,
-                        fontWeight: 700,
-                        display: 'grid',
-                        placeItems: 'center',
-                        padding: '0 3px',
-                        lineHeight: 1,
+                        position: 'absolute', top: -4, right: -4,
+                        minWidth: 16, height: 16, borderRadius: 99,
+                        background: 'var(--error, #E53E3E)', color: 'white',
+                        fontSize: 10, fontWeight: 700,
+                        display: 'grid', placeItems: 'center',
+                        padding: '0 3px', lineHeight: 1,
                     }}>
                         {unread > 99 ? '99+' : unread}
                     </span>
@@ -588,25 +690,19 @@ function NotifPanel({ notifications, onClose, onMarkRead, sidebarWidth }) {
                 onClick={onClose}
                 style={{
                     position: 'fixed', inset: 0,
-                    background: 'rgba(2,16,45,0.25)',
-                    zIndex: 58,
+                    background: 'rgba(2,16,45,0.25)', zIndex: 58,
                 }}
             />
             <aside
                 role="dialog"
                 aria-label="Notifications"
                 style={{
-                    position: 'fixed',
-                    top: 0,
-                    left: sidebarWidth,
-                    bottom: 0,
+                    position: 'fixed', top: 0, left: sidebarWidth, bottom: 0,
                     width: 'min(360px, calc(100vw - 64px))',
                     background: 'var(--surface-elevated, white)',
                     borderRight: '1px solid var(--border)',
                     boxShadow: '8px 0 24px rgba(2,16,45,0.1)',
-                    zIndex: 59,
-                    display: 'flex',
-                    flexDirection: 'column',
+                    zIndex: 59, display: 'flex', flexDirection: 'column',
                     animation: 'mp-notif-slide-in 160ms ease-out',
                 }}
             >
@@ -616,9 +712,7 @@ function NotifPanel({ notifications, onClose, onMarkRead, sidebarWidth }) {
                 }}>
                     <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-1)' }}>Notifications</div>
                     <button
-                        type="button"
-                        aria-label="Close"
-                        onClick={onClose}
+                        type="button" aria-label="Close" onClick={onClose}
                         style={{
                             background: 'transparent', border: 0, padding: 6,
                             borderRadius: 6, cursor: 'pointer', color: 'var(--text-2)',
@@ -631,10 +725,7 @@ function NotifPanel({ notifications, onClose, onMarkRead, sidebarWidth }) {
 
                 <div style={{ flex: 1, overflowY: 'auto' }}>
                     {notifications.length === 0 ? (
-                        <div style={{
-                            padding: 32, textAlign: 'center',
-                            color: 'var(--text-3)', fontSize: 14,
-                        }}>
+                        <div style={{ padding: 32, textAlign: 'center', color: 'var(--text-3)', fontSize: 14 }}>
                             No notifications yet
                         </div>
                     ) : (
@@ -645,7 +736,8 @@ function NotifPanel({ notifications, onClose, onMarkRead, sidebarWidth }) {
                                 onClick={() => handleClick(n)}
                                 style={{
                                     display: 'block', width: '100%', textAlign: 'left',
-                                    padding: '14px 20px', border: 0, borderBottom: '1px solid var(--border)',
+                                    padding: '14px 20px', border: 0,
+                                    borderBottom: '1px solid var(--border)',
                                     background: n.read ? 'transparent' : 'var(--mp-blue-50, #EAF1FE)',
                                     cursor: 'pointer',
                                 }}
@@ -671,10 +763,7 @@ function NotifPanel({ notifications, onClose, onMarkRead, sidebarWidth }) {
                                     </div>
                                 )}
                                 {n.createdAt && (
-                                    <div style={{
-                                        fontSize: 11, color: 'var(--text-3)', marginTop: 4,
-                                        marginLeft: n.read ? 0 : 15,
-                                    }}>
+                                    <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4, marginLeft: n.read ? 0 : 15 }}>
                                         {new Date(n.createdAt).toLocaleString()}
                                     </div>
                                 )}
@@ -693,9 +782,6 @@ function NotifPanel({ notifications, onClose, onMarkRead, sidebarWidth }) {
     );
 }
 
-/* Match the sidebar entry against the current path so the active item
-   highlights as you navigate. We avoid pure-prefix matches for "/" so the
-   landing route doesn't permanently look "active". */
 function isActive(currentPath, target) {
     if (target === '/') return currentPath === '/';
     return currentPath === target || currentPath.startsWith(target + '/');
