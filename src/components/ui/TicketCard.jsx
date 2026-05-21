@@ -22,7 +22,7 @@ export default function TicketCard({ ticket, eventStartTime, venue, onShowQr }) 
             data-testid={`ticket-${ticket.id}`}
             className="mp-ticket-card"
             style={{
-                background: 'white',
+                background: 'var(--surface-elevated)',
                 border: '1px solid var(--border)',
                 borderRadius: 12,
                 boxShadow: 'var(--shadow-card)',

@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import TopNav from '@/components/ui/TopNav';
 import Button from '@/components/ui/Button';
 import { Icons } from '@/components/ui/Icon';
 import {
@@ -265,7 +264,6 @@ export default function EventEditsPage() {
 
     return (
         <div style={{ background: 'var(--surface-subtle)', minHeight: '100vh' }}>
-            <TopNav />
             <div style={{ maxWidth: 1000, margin: '0 auto', padding: '32px 24px 80px' }}>
 
                 {/* Header */}

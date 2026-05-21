@@ -7,7 +7,7 @@ export default function AuthLayout({ children }) {
             minHeight: '100vh',
             display: 'grid',
             gridTemplateColumns: '1fr 1fr',
-            background: 'white',
+            background: 'var(--surface-page)',
         }}>
             <aside className="mp-auth-aside" style={{
                 background: 'var(--mp-navy)',

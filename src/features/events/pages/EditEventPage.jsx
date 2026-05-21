@@ -7,8 +7,8 @@ import {
 } from '../eventsApi';
 import { useGetOrganizerEventByIdQuery } from '@/features/organiser/organizerApi';
 import { useCreateTierMutation, useUpdateTierMutation, useDeleteTierMutation } from '../tiersApi';
-import TopNav from '@/components/ui/TopNav';
 import Button from '@/components/ui/Button';
+import VenueAutocomplete from '@/components/ui/VenueAutocomplete';
 import { StatusBadge } from '@/components/ui/Badge';
 import { Icons } from '@/components/ui/Icon';
 
@@ -353,9 +353,11 @@ export default function EditEventPage() {
         const updates = { id: eventId, description };
         if (isDraft) {
             if (!title.trim()) { setFormError('Title is required'); return; }
-            if (!venue.trim()) { setFormError('Venue is required'); return; }
             updates.title = title.trim();
-            updates.venue = venue.trim();
+            // Venue is optional in the UI; backend @NotBlank requires a value
+            // so we mirror CreateEventPage's "To be announced" fallback when
+            // the field is blank.
+            updates.venue = venue.trim() || 'To be announced';
             if (startDate && startTime) updates.startTime = `${startDate}T${startTime}:00`;
             if (endDate && endTime) updates.endTime = `${endDate}T${endTime}:00`;
         }
@@ -491,11 +493,19 @@ export default function EditEventPage() {
                         <Field label="Event title" value={title} onChange={setTitle} placeholder="e.g. Tech Summit 2026" />
                     )}
 
-                    {/* Venue */}
+                    {/* Venue — optional Google Places picker. Editable only
+                        while the event is still in draft/pending (published
+                        events lock the venue per PRD §3.4). Leave blank to
+                        show "To be announced" until the venue is confirmed. */}
                     {isPublished ? (
                         <LockedField label="Venue" value={event.venue} icon={<Icons.pin size={14} />} />
                     ) : (
-                        <Field label="Venue" value={venue} onChange={setVenue} placeholder="e.g. Eko Convention Centre, Lagos" />
+                        <VenueAutocomplete
+                            label="Venue (optional)"
+                            placeholder="Search for a venue or leave blank to announce later"
+                            value={venue}
+                            onChange={(e) => setVenue(e.target.value)}
+                        />
                     )}
 
                     {/* Description — always editable */}
@@ -664,7 +674,6 @@ function AddTierForm({ eventId, onDone }) {
 function Shell({ children }) {
     return (
         <div style={{ background: 'var(--surface-subtle)', minHeight: '100vh' }}>
-            <TopNav />
             <div style={{ maxWidth: 800, margin: '0 auto', padding: '32px 24px 80px' }}>
                 {children}
             </div>

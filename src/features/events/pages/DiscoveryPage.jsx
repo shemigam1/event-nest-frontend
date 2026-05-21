@@ -1,6 +1,8 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router';
+import { useSelector } from 'react-redux';
 import { useGetPublishedEventsQuery } from '../eventsApi';
+import { selectIsAuthenticated } from '@/features/auth/authSlice';
 import { formatEventDate, isThisMonth } from '@/utils/dateFormat';
 import EventCard from '@/components/ui/EventCard';
 import Input from '@/components/ui/Input';
@@ -136,6 +138,7 @@ function applyFilter(event, filter, query) {
 ══════════════════════════════════════════ */
 export default function DiscoveryPage() {
     const navigate = useNavigate();
+    const isAuthenticated = useSelector(selectIsAuthenticated);
     const [query,  setQuery]  = useState('');
     const [filter, setFilter] = useState('all');
 
@@ -153,7 +156,9 @@ export default function DiscoveryPage() {
 
     return (
         <div style={{ background: 'var(--surface-subtle)', minHeight: '100vh' }}>
-            <TopNav showBrowse={false} />
+            {/* Only render the marketing TopNav when the user is anonymous —
+                authenticated users see AppShell's persistent sidebar + TopBar. */}
+            {!isAuthenticated && <TopNav showBrowse={false} />}
 
             {/* ── Header strip ── */}
             <div style={{ background: 'white', borderBottom: '1px solid var(--border)' }}>

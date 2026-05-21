@@ -22,7 +22,7 @@ export default function TopNav({ variant = 'light', showBrowse = true }) {
             borderBottom: '1px solid rgba(255,255,255,0.08)',
         }
         : {
-            background: 'white',
+            background: 'var(--surface-elevated)',
             borderBottom: '1px solid var(--border)',
         };
 

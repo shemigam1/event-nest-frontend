@@ -7,7 +7,6 @@ import {
 } from '@/features/organiser/vendorsApi';
 import { selectCurrentUser, selectAuthEmail } from '@/features/auth/authSlice';
 import { formatEventDate } from '@/utils/dateFormat';
-import TopNav from '@/components/ui/TopNav';
 import Button from '@/components/ui/Button';
 import { Icons } from '@/components/ui/Icon';
 // TODO(Phase F — Messages/chat): The "Received inquiries" panel previously read from
@@ -124,7 +123,6 @@ export default function VendorDashboardPage() {
 
     return (
         <div style={{ background: 'var(--surface-subtle)', minHeight: '100vh' }}>
-            <TopNav />
             <div style={{ maxWidth: 1200, margin: '0 auto', padding: '32px 24px 80px' }}>
 
                 {/* Header */}

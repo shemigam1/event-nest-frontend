@@ -11,45 +11,35 @@ import {
     selectActiveWorkspace,
 } from '@/features/auth/authSlice';
 import { useGetMyNotificationsQuery, useGetUnreadNotificationCountQuery, useMarkNotificationAsReadMutation } from '@/features/notifications/notificationsApi';
-import { useGetWorkspacesQuery } from '@/features/organiser/organizerApi';
 import { Icons } from './Icon';
 import { SidebarContext, useSidebar } from './sidebarContext';
 import TopBar from './TopBar';
 
+/* Workspace nav — tight, focused per role. Matches the design's horizontal
+   workspace tabs (Attendee / Organiser & Manager / Vendor): each workspace
+   exposes only its primary destinations. Settings + Sign out live in the
+   sidebar footer regardless of workspace and aren't repeated here.
+   MANAGER shares ORGANISER's nav 1:1 — co-managing an event uses the same
+   console. */
 const WORKSPACE_NAV = {
+    ATTENDEE: [
+        { icon: Icons.calendar, label: 'Browse events', path: '/events' },
+        { icon: Icons.ticket,   label: 'My tickets',    path: '/tickets' },
+        { icon: Icons.signal,   label: 'Dashboard',     path: '/dashboard' },
+    ],
     ORGANISER: [
-        { icon: Icons.calendar, label: 'My events',         path: '/organiser' },
+        { icon: Icons.calendar, label: 'My events',          path: '/organiser' },
         { icon: Icons.users,    label: 'Vendor marketplace', path: '/vendors' },
-        { icon: Icons.message,  label: 'Messages',           path: '/messages' },
     ],
     MANAGER: [
-        { icon: Icons.calendar, label: 'My events',         path: '/organiser' },
+        { icon: Icons.calendar, label: 'My events',          path: '/organiser' },
         { icon: Icons.users,    label: 'Vendor marketplace', path: '/vendors' },
-        { icon: Icons.message,  label: 'Messages',           path: '/messages' },
     ],
     VENDOR: [
-        { icon: Icons.signal,   label: 'Dashboard',     path: '/vendor' },
-        { icon: Icons.calendar, label: 'Opportunities', path: '/vendor/opportunities' },
-        { icon: Icons.list,     label: 'Applications',  path: '/vendor/applications' },
-        { icon: Icons.users,    label: 'My profile',    path: '/vendor/profile' },
-        { icon: Icons.message,  label: 'Messages',      path: '/messages' },
-    ],
-    ATTENDEE: [
-        { icon: Icons.signal,   label: 'Dashboard',    path: '/dashboard' },
-        { icon: Icons.ticket,   label: 'My tickets',   path: '/tickets' },
-        { icon: Icons.calendar, label: 'Browse events', path: '/events' },
-        { icon: Icons.message,  label: 'Messages',     path: '/messages' },
+        { icon: Icons.calendar, label: 'Browse events', path: '/vendor/opportunities' },
+        { icon: Icons.signal,   label: 'My events',     path: '/vendor' },
     ],
 };
-
-const WORKSPACE_PRIORITY = ['ORGANISER', 'MANAGER', 'VENDOR', 'ATTENDEE'];
-
-function pickDefaultWorkspace(roles = []) {
-    for (const role of WORKSPACE_PRIORITY) {
-        if (roles.includes(role)) return role;
-    }
-    return null;
-}
 
 // useSidebar is used inside the Sidebar child component below.
 
@@ -172,17 +162,15 @@ function Sidebar() {
     const [markRead] = useMarkNotificationAsReadMutation();
     const notifications = notifData ?? [];
 
-    const { data: workspaces = [] } = useGetWorkspacesQuery(undefined, {
-        skip: isAdmin || (isCheckinStaff && !isAdmin),
-    });
-    // Active workspace is now selected via the TopBar avatar dropdown and stored
-    // in Redux (persisted to localStorage). Fall back to the first available role
-    // so the sidebar still highlights something before the user explicitly picks.
+    // Workspace is selected via the TopBar avatar dropdown and stored in
+    // Redux (persisted to localStorage). The toggle exposes all three
+    // workspaces unconditionally — they're contexts a user opts into, not
+    // roles derived from event memberships — so we trust the Redux value
+    // directly without cross-checking against the backend's /me/workspaces
+    // membership list. Fallback to ATTENDEE before the user has explicitly
+    // picked something keeps the sidebar from rendering empty on first load.
     const reduxActiveWorkspace = useSelector(selectActiveWorkspace);
-    const resolvedWorkspace =
-        (reduxActiveWorkspace && workspaces.includes(reduxActiveWorkspace))
-            ? reduxActiveWorkspace
-            : pickDefaultWorkspace(workspaces);
+    const resolvedWorkspace = reduxActiveWorkspace || 'ATTENDEE';
 
     const displayName = (() => {
         const first = user?.firstName?.trim() || '';
@@ -209,15 +197,13 @@ function Sidebar() {
                 { icon: Icons.users,  label: 'Manage users',        path: '/admin/users' },
                 { icon: Icons.list,   label: 'Event edit requests', path: '/admin/event-edits' },
                 { icon: Icons.shield, label: 'Escrow disputes',     path: '/admin/escrow' },
+                { icon: Icons.spark, label: 'Vendors',                path: '/admin/vendors' },
                 { icon: Icons.mail,   label: 'Invite admin',        path: '/admin/invite' },
             ];
         }
-        return WORKSPACE_NAV[resolvedWorkspace] ?? [
-            { icon: Icons.calendar, label: 'My events',  path: '/organiser' },
-            { icon: Icons.ticket,   label: 'My tickets', path: '/tickets' },
-            { icon: Icons.message,  label: 'Messages',   path: '/messages' },
-            { icon: Icons.users,    label: 'Vendors',    path: '/vendors' },
-        ];
+        // Fall back to the Attendee nav when no workspace is resolved yet —
+        // every signed-in user is at least an attendee.
+        return WORKSPACE_NAV[resolvedWorkspace] ?? WORKSPACE_NAV.ATTENDEE;
     })();
 
     const width = collapsed ? COLLAPSED_WIDTH : EXPANDED_WIDTH;
@@ -233,7 +219,9 @@ function Sidebar() {
                 height: '100vh',
                 width,
                 flexShrink: 0,
-                background: 'white',
+                // Surface tokens (not hardcoded white) so the sidebar stays
+                // consistent with the page when the user picks dark mode.
+                background: 'var(--surface-elevated)',
                 borderRight: '1px solid var(--border)',
                 display: 'flex',
                 flexDirection: 'column',

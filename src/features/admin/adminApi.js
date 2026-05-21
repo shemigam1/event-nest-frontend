@@ -143,6 +143,95 @@ export const adminApi = baseApi.injectEndpoints({
             invalidatesTags: ['Escrow'],
             transformResponse: (r) => r.data ?? r,
         }),
+
+        /** Admin confirms an escrow violation on a contract — fires the −35 trust event. */
+        flagEscrowViolation: builder.mutation({
+            query: ({ contractId, reason }) => ({
+                url: `/admin/escrow/contracts/${contractId}/flag-violation`,
+                method: 'PATCH',
+                body: { reason },
+            }),
+            invalidatesTags: ['Escrow', 'Vendor'],
+            transformResponse: (r) => r.data ?? r,
+        }),
+
+        /* ── Admin vendor management ─────────────────────────────────── */
+
+        /** Paginated vendor list, optionally filtered by status. */
+        getAdminVendors: builder.query({
+            query: ({ status, page = 0, size = 20 } = {}) => ({
+                url: '/admin/vendors',
+                params: {
+                    ...(status ? { status } : {}),
+                    page,
+                    size,
+                },
+            }),
+            providesTags: ['Vendor'],
+            transformResponse: (r) => {
+                const d = r?.data ?? r;
+                if (d && Array.isArray(d.content)) return d;
+                if (Array.isArray(d)) return { content: d, totalElements: d.length, number: 0, size: d.length };
+                return d;
+            },
+        }),
+
+        getAdminVendorById: builder.query({
+            query: (vendorId) => `/admin/vendors/${vendorId}`,
+            providesTags: (result, error, vendorId) => [{ type: 'Vendor', id: vendorId }],
+            transformResponse: (r) => r?.data ?? r,
+        }),
+
+        /** Approve a vendor's verification → status = VERIFIED. */
+        verifyVendor: builder.mutation({
+            query: (vendorId) => ({
+                url: `/admin/vendors/${vendorId}/verify`,
+                method: 'PATCH',
+            }),
+            invalidatesTags: (result, error, vendorId) => [
+                { type: 'Vendor', id: vendorId },
+                'Vendor',
+            ],
+            transformResponse: (r) => r?.data ?? r,
+        }),
+
+        /** Reject the current verification submission with an explanation. */
+        rejectVendorVerification: builder.mutation({
+            query: ({ vendorId, reason }) => ({
+                url: `/admin/vendors/${vendorId}/reject-verification`,
+                method: 'PATCH',
+                body: { reason },
+            }),
+            invalidatesTags: (result, error, { vendorId }) => [
+                { type: 'Vendor', id: vendorId },
+                'Vendor',
+            ],
+            transformResponse: (r) => r?.data ?? r,
+        }),
+
+        /** Suspend the vendor (status → SUSPENDED, removed from marketplace). */
+        suspendVendor: builder.mutation({
+            query: ({ vendorId, reason }) => ({
+                url: `/admin/vendors/${vendorId}/suspend`,
+                method: 'PATCH',
+                body: { reason },
+            }),
+            invalidatesTags: (result, error, { vendorId }) => [
+                { type: 'Vendor', id: vendorId },
+                'Vendor',
+            ],
+            transformResponse: (r) => r?.data ?? r,
+        }),
+
+        /** Full audit trail of trust-score deltas for a vendor (newest first). */
+        getVendorTrustHistory: builder.query({
+            query: (vendorId) => `/admin/vendors/${vendorId}/trust-history`,
+            providesTags: (result, error, vendorId) => [{ type: 'Vendor', id: `trust-${vendorId}` }],
+            transformResponse: (r) => {
+                const d = r?.data ?? r;
+                return Array.isArray(d) ? d : (d?.content ?? []);
+            },
+        }),
     }),
 });
 
@@ -168,4 +257,11 @@ export const {
     useGetEscrowDisputesQuery,
     useRuleForVendorMutation,
     useRuleForOrganiserMutation,
+    useFlagEscrowViolationMutation,
+    useGetAdminVendorsQuery,
+    useGetAdminVendorByIdQuery,
+    useVerifyVendorMutation,
+    useRejectVendorVerificationMutation,
+    useSuspendVendorMutation,
+    useGetVendorTrustHistoryQuery,
 } = adminApi;

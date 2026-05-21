@@ -13,7 +13,6 @@ import {
 } from '@/features/organiser/vendorsApi';
 import { selectIsAuthenticated, selectCurrentUserId } from '@/features/auth/authSlice';
 import { formatEventDate } from '@/utils/dateFormat';
-import TopNav from '@/components/ui/TopNav';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import { Icons } from '@/components/ui/Icon';
@@ -659,7 +658,6 @@ function PageSkeleton() {
 function Shell({ children }) {
     return (
         <div style={{ background: 'var(--surface-subtle)', minHeight: '100vh' }}>
-            <TopNav />
             <div style={{ maxWidth: 1200, margin: '0 auto', padding: '24px 24px 80px' }}>
                 {children}
             </div>

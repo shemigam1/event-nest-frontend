@@ -3,6 +3,7 @@ import {
     useGetEscrowDisputesQuery,
     useRuleForVendorMutation,
     useRuleForOrganiserMutation,
+    useFlagEscrowViolationMutation,
 } from '../adminApi';
 import Button from '@/components/ui/Button';
 import Modal from '@/components/ui/Modal';
@@ -44,6 +45,7 @@ export default function AdminEscrowPage() {
     const disputesQ = useGetEscrowDisputesQuery();
     const disputes = disputesQ.data ?? [];
     const [ruling, setRuling] = useState(null);
+    const [flagging, setFlagging] = useState(null);
 
     if (disputesQ.isLoading) {
         return (
@@ -97,6 +99,7 @@ export default function AdminEscrowPage() {
                                         key={d.id}
                                         dispute={d}
                                         onRule={() => setRuling(d)}
+                                        onFlag={() => setFlagging(d)}
                                     />
                                 ))}
                             </div>
@@ -124,13 +127,20 @@ export default function AdminEscrowPage() {
                     onDismiss={() => setRuling(null)}
                 />
             )}
+
+            {flagging && (
+                <FlagViolationModal
+                    dispute={flagging}
+                    onDismiss={() => setFlagging(null)}
+                />
+            )}
         </div>
     );
 }
 
 /* ─── DisputeCard ────────────────────────────────────── */
 
-function DisputeCard({ dispute: d, onRule, resolved }) {
+function DisputeCard({ dispute: d, onRule, onFlag, resolved }) {
     return (
         <div style={{
             background: 'white',
@@ -196,10 +206,19 @@ function DisputeCard({ dispute: d, onRule, resolved }) {
                     </div>
                 </div>
 
-                {!resolved && onRule && (
-                    <Button variant="primary" size="sm" onClick={onRule}>
-                        Rule on dispute
-                    </Button>
+                {!resolved && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end' }}>
+                        {onRule && (
+                            <Button variant="primary" size="sm" onClick={onRule}>
+                                Rule on dispute
+                            </Button>
+                        )}
+                        {onFlag && d.contractId && (
+                            <Button variant="secondary" size="sm" onClick={onFlag}>
+                                Flag escrow violation
+                            </Button>
+                        )}
+                    </div>
                 )}
             </div>
         </div>
@@ -303,6 +322,98 @@ function RulingModal({ dispute, onDismiss }) {
                         onClick={() => handleRule('vendor')}
                     >
                         {vendorState.isLoading ? 'Ruling…' : 'Rule for vendor'}
+                    </Button>
+                </div>
+            </div>
+        </Modal>
+    );
+}
+
+/* ─── FlagViolationModal ────────────────────────────── */
+
+function FlagViolationModal({ dispute, onDismiss }) {
+    const [flagViolation, state] = useFlagEscrowViolationMutation();
+    const [reason, setReason] = useState('');
+    const [err, setErr] = useState('');
+
+    const canSubmit = reason.trim().length >= 10;
+    const busy = state.isLoading;
+
+    async function handleSubmit() {
+        setErr('');
+        try {
+            await flagViolation({
+                contractId: dispute.contractId,
+                reason: reason.trim(),
+            }).unwrap();
+            onDismiss();
+        } catch (e) {
+            setErr(e?.data?.message ?? 'Failed to flag violation');
+        }
+    }
+
+    return (
+        <Modal open onClose={onDismiss} label="Flag escrow violation" width={500}>
+            <div style={{ padding: 24 }}>
+                <h3 className="mp-h3" style={{ margin: '0 0 6px', color: 'var(--text-1)' }}>
+                    Flag escrow violation
+                </h3>
+                <p style={{ fontSize: 13, color: 'var(--text-2)', margin: '0 0 16px' }}>
+                    This records a serious escrow breach by the vendor on contract{' '}
+                    <strong>{dispute.contractTitle ?? dispute.contractId}</strong>
+                    {' '}and applies a <strong style={{ color: 'var(--error)' }}>−35</strong>{' '}
+                    trust-score event. Use sparingly — repeated flags will trigger an auto-suspend.
+                </p>
+
+                <div style={{
+                    background: 'var(--warning-bg)',
+                    border: '1px solid var(--warning)',
+                    borderRadius: 8,
+                    padding: '10px 12px',
+                    fontSize: 12,
+                    color: 'var(--text-1)',
+                    marginBottom: 20,
+                }}>
+                    <strong>Vendor:</strong> {dispute.vendorName ?? '—'}
+                    {dispute.eventName && <> · <strong>Event:</strong> {dispute.eventName}</>}
+                </div>
+
+                <div style={{ marginBottom: 20 }}>
+                    <label style={{
+                        display: 'block', fontSize: 13, fontWeight: 600,
+                        color: 'var(--text-1)', marginBottom: 6,
+                    }}>
+                        Violation reason *
+                    </label>
+                    <textarea
+                        value={reason}
+                        onChange={(e) => setReason(e.target.value)}
+                        placeholder="Describe the escrow violation (min. 10 characters)…"
+                        rows={4}
+                        style={{
+                            width: '100%', padding: '9px 12px', fontSize: 14,
+                            border: '1px solid var(--border)', borderRadius: 8,
+                            resize: 'vertical', fontFamily: 'inherit',
+                            boxSizing: 'border-box', color: 'var(--text-1)', background: 'white',
+                        }}
+                    />
+                </div>
+
+                {err && (
+                    <p style={{ fontSize: 13, color: 'var(--error)', margin: '0 0 12px' }}>{err}</p>
+                )}
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+                    <Button type="button" variant="secondary" size="md" onClick={onDismiss}>
+                        Cancel
+                    </Button>
+                    <Button
+                        variant="primary"
+                        size="md"
+                        disabled={!canSubmit || busy}
+                        onClick={handleSubmit}
+                    >
+                        {busy ? 'Flagging…' : 'Flag violation'}
                     </Button>
                 </div>
             </div>

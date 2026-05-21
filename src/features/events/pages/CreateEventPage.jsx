@@ -1,22 +1,83 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
-import TopNav from '@/components/ui/TopNav';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
+import VenueAutocomplete from '@/components/ui/VenueAutocomplete';
 import { Icons } from '@/components/ui/Icon';
 import { useCreateEventMutation, useSubmitEventMutation, usePresignCoverImageMutation } from '../eventsApi';
+import { useCreateTierMutation } from '../tiersApi';
 import CoverImageField from '../components/CoverImageField';
 
+/* EventCategory enum from backend (event-nest-backend). Keep this list
+   in sync with EventCategory.java — additions on either side need to
+   match or the dropdown will silently drop a valid value. */
+const EVENT_CATEGORIES = [
+    ['MUSIC',          'Music'],
+    ['ARTS',           'Arts'],
+    ['SPORTS',         'Sports'],
+    ['CONFERENCE',     'Conference'],
+    ['WORKSHOP',       'Workshop'],
+    ['FESTIVAL',       'Festival'],
+    ['NETWORKING',     'Networking'],
+    ['FOOD_AND_DRINK', 'Food & drink'],
+    ['BIRTHDAY',       'Birthday'],
+    ['WEDDING',        'Wedding'],
+    ['CLUB_NIGHT',     'Club night'],
+    ['COMEDY_SHOW',    'Comedy show'],
+    ['FASHION_SHOW',   'Fashion show'],
+    ['TECH_EVENT',     'Tech event'],
+    ['RELIGIOUS',      'Religious'],
+    ['CHARITY',        'Charity'],
+    ['CORPORATE',      'Corporate'],
+    ['EXHIBITION',     'Exhibition'],
+    ['OTHER',          'Other'],
+];
+
+/* Defaults used when the organiser leaves the (optional) venue field blank
+   or types a venue without picking a Place suggestion — the backend's
+   CreateEventRequest has @NotBlank on venueName/city/country, so we have
+   to send something. Lagos / Nigeria is the product's default market. */
+const VENUE_DEFAULTS = {
+    venueName: 'To be announced',
+    city: 'Lagos',
+    country: 'Nigeria',
+};
+
+/* Browser's IANA timezone, e.g. "Africa/Lagos". The backend requires a
+   timezone but doesn't surface it in the UI — auto-detect at form mount. */
+function detectTimezone() {
+    try {
+        return Intl.DateTimeFormat().resolvedOptions().timeZone || 'Africa/Lagos';
+    } catch {
+        return 'Africa/Lagos';
+    }
+}
+
 /* ── Helpers ─────────────────────────────────────── */
-function newTier() {
+
+/* Seating model — drives whether tiers ask for rows×seats (assigned seating)
+   or a single "Total tickets" capacity (general admission). The backend
+   supports both natively (CreateTierRequest.seatType is GENERAL_ADMISSION
+   or NUMBERED), so the UI value flows through 1:1 at submit time. */
+export const SEATING_MODES = {
+    SEATED: 'SEATED',
+    GENERAL: 'GENERAL_ADMISSION',
+};
+
+function newTier(seatingMode = SEATING_MODES.SEATED) {
     return {
         _id: String(Math.random()),
         name: '',
         isFree: true,
         price: '',
+        // Seated fields
         rowPrefix: '',
         rowCount: '10',
         seatsPerRow: '10',
+        // General-admission field
+        capacity: '100',
+        // Carry the chosen mode so the row knows which inputs to render.
+        seatingMode,
     };
 }
 
@@ -27,8 +88,9 @@ function toISO(date, time) {
 function validateBasics(b) {
     const errs = {};
     if (!b.title.trim()) errs.title = 'Title is required';
+    if (!b.category) errs.category = 'Category is required';
     if (!b.bannerFile) errs.bannerFile = 'A cover image is required';
-    if (!b.venue.trim()) errs.venue = 'Venue is required';
+    // venue is optional — no validation here
     if (!b.startDate) errs.startDate = 'Required';
     if (!b.startTime) errs.startTime = 'Required';
     if (!b.endDate) errs.endDate = 'Required';
@@ -50,16 +112,70 @@ function validateBasics(b) {
 function validateTier(tier) {
     const errs = {};
     if (!tier.name.trim()) errs.name = 'Required';
-    if (!tier.rowPrefix.trim()) errs.rowPrefix = 'Required';
-    const rc = parseInt(tier.rowCount, 10);
-    const spr = parseInt(tier.seatsPerRow, 10);
-    if (isNaN(rc) || rc < 1) errs.rowCount = 'Min 1';
-    if (isNaN(spr) || spr < 1) errs.seatsPerRow = 'Min 1';
+    if (tier.seatingMode === SEATING_MODES.GENERAL) {
+        // GA: just need a positive capacity number.
+        const cap = parseInt(tier.capacity, 10);
+        if (isNaN(cap) || cap < 1) errs.capacity = 'Min 1 ticket';
+        if (cap > 100000) errs.capacity = 'Max 100,000 tickets';
+    } else {
+        if (!tier.rowPrefix.trim()) errs.rowPrefix = 'Required';
+        const rc = parseInt(tier.rowCount, 10);
+        const spr = parseInt(tier.seatsPerRow, 10);
+        if (isNaN(rc) || rc < 1) errs.rowCount = 'Min 1';
+        if (isNaN(spr) || spr < 1) errs.seatsPerRow = 'Min 1';
+    }
     if (!tier.isFree) {
         const p = parseFloat(tier.price);
         if (isNaN(p) || p < 0) errs.price = 'Enter a valid price';
     }
     return errs;
+}
+
+/* Tier capacity helper used by both the live previews and the review summary,
+   so the number you see equals the number of tickets that get created. */
+export function tierCapacity(tier) {
+    if (tier.seatingMode === SEATING_MODES.GENERAL) {
+        return parseInt(tier.capacity, 10) || 0;
+    }
+    return (parseInt(tier.rowCount, 10) || 0) * (parseInt(tier.seatsPerRow, 10) || 0);
+}
+
+/* Translate a UI tier into the backend CreateTierRequest payload. Returns
+   null when the tier is incomplete (mirrors the validateTier rules so we
+   skip silently instead of triggering a 400 mid-loop).
+
+   Notes for future readers:
+     · price is sent as Long kobo (backend wants whole numbers, no decimals).
+     · accessScope is FULL_EVENT — multi-day passes are the default. A future
+       UI may want DAY_SPECIFIC tiers, which need an eventDayId. */
+function buildTierPayload(t) {
+    if (!t.name?.trim()) return null;
+    const priceKobo = t.isFree ? 0 : Math.round((parseFloat(t.price) || 0) * 100);
+
+    if (t.seatingMode === SEATING_MODES.GENERAL) {
+        const cap = parseInt(t.capacity, 10);
+        if (isNaN(cap) || cap < 1) return null;
+        return {
+            name: t.name.trim(),
+            price: priceKobo,
+            accessScope: 'FULL_EVENT',
+            seatType: 'GENERAL_ADMISSION',
+            totalCapacity: cap,
+        };
+    }
+
+    const rc  = parseInt(t.rowCount, 10);
+    const spr = parseInt(t.seatsPerRow, 10);
+    if (!t.rowPrefix?.trim() || isNaN(rc) || rc < 1 || isNaN(spr) || spr < 1) return null;
+    return {
+        name: t.name.trim(),
+        price: priceKobo,
+        accessScope: 'FULL_EVENT',
+        seatType: 'NUMBERED',
+        rowPrefix: t.rowPrefix.trim(),
+        rowCount: rc,
+        seatsPerRow: spr,
+    };
 }
 
 /* ── Step indicator ──────────────────────────────── */
@@ -204,6 +320,43 @@ function BasicsStep({ data, onChange, onNext }) {
                     aria-label="Event title"
                 />
 
+                {/* Category — required by backend CreateEventRequest */}
+                <div>
+                    <label
+                        htmlFor="event-category"
+                        style={{
+                            display: 'block', fontSize: 14, fontWeight: 500,
+                            color: 'var(--text-1)', marginBottom: 6,
+                        }}
+                    >
+                        Category
+                    </label>
+                    <select
+                        id="event-category"
+                        value={data.category}
+                        onChange={handle('category')}
+                        aria-label="Category"
+                        style={{
+                            width: '100%', height: 44, padding: '0 14px',
+                            background: 'var(--surface-elevated)',
+                            border: `1px solid ${errors.category ? 'var(--error)' : 'var(--border)'}`,
+                            borderRadius: 12, fontSize: 16,
+                            color: data.category ? 'var(--text-1)' : 'var(--text-3)',
+                            boxSizing: 'border-box', fontFamily: 'inherit',
+                        }}
+                    >
+                        <option value="">Choose a category…</option>
+                        {EVENT_CATEGORIES.map(([value, label]) => (
+                            <option key={value} value={value}>{label}</option>
+                        ))}
+                    </select>
+                    {errors.category && (
+                        <span style={{ display: 'block', fontSize: 12, color: 'var(--error)', marginTop: 4 }}>
+                            {errors.category}
+                        </span>
+                    )}
+                </div>
+
                 {/* Cover image — required */}
                 <div>
                     <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-1)', marginBottom: 6 }}>
@@ -251,15 +404,44 @@ function BasicsStep({ data, onChange, onNext }) {
                     />
                 </label>
 
-                {/* Venue */}
-                <Input
-                    label="Venue"
-                    placeholder="e.g. Eko Convention Centre, Lagos"
+                {/* Venue — optional. Google Places autocomplete with map
+                    preview after selection. Falls back to a plain text input
+                    when VITE_GOOGLE_MAPS_API_KEY isn't set.
+
+                    Picking a suggestion populates venueName / city / country
+                    / placeId / lat / lng off the Place's addressComponents.
+                    Manual typing only fills `venue` (display) + `venueName`;
+                    city/country are filled with VENUE_DEFAULTS at submit. */}
+                <VenueAutocomplete
+                    label="Venue (optional)"
+                    placeholder="Search for a venue or leave blank to announce later"
                     value={data.venue}
-                    onChange={handle('venue')}
+                    onChange={(e) => onChange({
+                        ...data,
+                        venue: e.target.value,
+                        // Keep venueName mirrored to the visible text so manual
+                        // typing still flows through. Picking a place fully
+                        // overwrites these via onPlaceSelect below.
+                        venueName: e.target.value,
+                        // Reset structured-place fields if the user edits the
+                        // text after picking a suggestion (they no longer match).
+                        placeId: '',
+                        address: '',
+                        latitude: null,
+                        longitude: null,
+                    })}
+                    onPlaceSelect={(p) => onChange({
+                        ...data,
+                        venue: p.address || p.name || '',
+                        venueName: p.name || p.address || '',
+                        city: p.city || '',
+                        country: p.country || '',
+                        placeId: p.placeId || '',
+                        address: p.address || '',
+                        latitude: p.lat ?? null,
+                        longitude: p.lng ?? null,
+                    })}
                     error={errors.venue}
-                    icon={<Icons.pin size={16} />}
-                    aria-label="Venue"
                 />
 
                 {/* Dates */}
@@ -317,6 +499,30 @@ function BasicsStep({ data, onChange, onNext }) {
                     </div>
                 </div>
 
+                {/* Seating model — drives whether the next step asks for
+                    rows×seats or just a total capacity. */}
+                <div>
+                    <span style={{ display: 'block', fontSize: 14, fontWeight: 500, color: 'var(--text-1)', marginBottom: 8 }}>
+                        Seating
+                    </span>
+                    <div style={{ display: 'flex', gap: 10 }}>
+                        <ToggleCard
+                            selected={data.seatingMode === SEATING_MODES.SEATED}
+                            onClick={() => onChange({ ...data, seatingMode: SEATING_MODES.SEATED })}
+                            icon={<Icons.grid size={15} />}
+                            label="Seated"
+                            desc="Assigned seats with rows & seat numbers"
+                        />
+                        <ToggleCard
+                            selected={data.seatingMode === SEATING_MODES.GENERAL}
+                            onClick={() => onChange({ ...data, seatingMode: SEATING_MODES.GENERAL })}
+                            icon={<Icons.users size={15} />}
+                            label="General admission"
+                            desc="No assigned seats — just a total capacity"
+                        />
+                    </div>
+                </div>
+
                 {/* Pricing */}
                 <div>
                     <span style={{ display: 'block', fontSize: 14, fontWeight: 500, color: 'var(--text-1)', marginBottom: 8 }}>
@@ -353,7 +559,8 @@ function BasicsStep({ data, onChange, onNext }) {
 
 /* ── Tier card ───────────────────────────────────── */
 function TierCard({ tier, onChange, onRemove, errors = {} }) {
-    const capacity = (parseInt(tier.rowCount, 10) || 0) * (parseInt(tier.seatsPerRow, 10) || 0);
+    const capacity = tierCapacity(tier);
+    const isGA = tier.seatingMode === SEATING_MODES.GENERAL;
 
     function handle(field) {
         return (e) => onChange({ ...tier, [field]: e.target.value });
@@ -446,39 +653,52 @@ function TierCard({ tier, onChange, onRemove, errors = {} }) {
                 </div>
             )}
 
-            <div className="mp-tier-seats-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+            {isGA ? (
+                // General admission — one capacity number, no row/seat layout.
                 <Input
-                    label="Row prefix"
-                    placeholder="e.g. VIP"
-                    value={tier.rowPrefix}
-                    onChange={handle('rowPrefix')}
-                    error={errors.rowPrefix}
-                    aria-label="Row prefix"
-                />
-                <Input
-                    label="Rows"
+                    label="Total tickets"
                     type="number"
                     min="1"
-                    value={tier.rowCount}
-                    onChange={handle('rowCount')}
-                    error={errors.rowCount}
-                    aria-label="Rows"
+                    value={tier.capacity}
+                    onChange={handle('capacity')}
+                    error={errors.capacity}
+                    aria-label="Total tickets"
                 />
-                <Input
-                    label="Seats/row"
-                    type="number"
-                    min="1"
-                    value={tier.seatsPerRow}
-                    onChange={handle('seatsPerRow')}
-                    error={errors.seatsPerRow}
-                    aria-label="Seats per row"
-                />
-            </div>
+            ) : (
+                <div className="mp-tier-seats-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+                    <Input
+                        label="Row prefix"
+                        placeholder="e.g. VIP"
+                        value={tier.rowPrefix}
+                        onChange={handle('rowPrefix')}
+                        error={errors.rowPrefix}
+                        aria-label="Row prefix"
+                    />
+                    <Input
+                        label="Rows"
+                        type="number"
+                        min="1"
+                        value={tier.rowCount}
+                        onChange={handle('rowCount')}
+                        error={errors.rowCount}
+                        aria-label="Rows"
+                    />
+                    <Input
+                        label="Seats/row"
+                        type="number"
+                        min="1"
+                        value={tier.seatsPerRow}
+                        onChange={handle('seatsPerRow')}
+                        error={errors.seatsPerRow}
+                        aria-label="Seats per row"
+                    />
+                </div>
+            )}
 
             {capacity > 0 && (
                 <p style={{ margin: '12px 0 0', fontSize: 13, color: 'var(--text-2)' }}>
                     <Icons.users size={14} style={{ verticalAlign: 'middle', marginRight: 4 }} />
-                    <strong>{capacity.toLocaleString()}</strong> seats total
+                    <strong>{capacity.toLocaleString()}</strong> {isGA ? 'tickets total' : 'seats total'}
                 </p>
             )}
         </div>
@@ -486,11 +706,26 @@ function TierCard({ tier, onChange, onRemove, errors = {} }) {
 }
 
 /* ── Step 2: Ticket tiers ────────────────────────── */
-function TiersStep({ tiers, onTiersChange, onNext, onBack }) {
+function TiersStep({ tiers, onTiersChange, onNext, onBack, seatingMode }) {
     const [tierErrors, setTierErrors] = useState({});
 
+    // Keep each tier's seatingMode in lockstep with the event-level choice —
+    // organisers who toggle the basics step (e.g. flipped from Seated to GA
+    // after looking at tiers) shouldn't end up with mixed-mode tiers.
+    useEffect(() => {
+        const needsSync = tiers.some((t) => t.seatingMode !== seatingMode);
+        if (needsSync) {
+            onTiersChange(tiers.map((t) => ({ ...t, seatingMode })));
+        }
+        // We deliberately only depend on seatingMode — re-running on every
+        // tier edit would cause an infinite update loop.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [seatingMode]);
+
     function addTier() {
-        onTiersChange([...tiers, newTier()]);
+        // Inherit the event-level seating mode so the new row renders the
+        // right inputs without an extra click.
+        onTiersChange([...tiers, newTier(seatingMode)]);
     }
 
     function removeTier(id) {
@@ -516,13 +751,17 @@ function TiersStep({ tiers, onTiersChange, onNext, onBack }) {
         onNext();
     }
 
+    const isGA = seatingMode === SEATING_MODES.GENERAL;
+
     return (
         <form onSubmit={submit} noValidate data-testid="step-tiers">
             <h2 className="mp-h1" style={{ margin: '0 0 6px', color: 'var(--text-1)' }}>
                 Set up your tickets
             </h2>
             <p className="body" style={{ margin: '0 0 28px', color: 'var(--text-2)' }}>
-                Define seating tiers and capacity. You can add up to several tiers.
+                {isGA
+                    ? 'Define ticket tiers and how many tickets each tier sells.'
+                    : 'Define seating tiers and capacity. You can add up to several tiers.'}
             </p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -605,15 +844,13 @@ function ReviewStep({ basics, tiers, onBack, onSaveDraft, onSubmitForApproval, s
           })
         : '—';
 
-    const totalSeats = tiers.reduce((sum, t) => {
-        return sum + (parseInt(t.rowCount, 10) || 0) * (parseInt(t.seatsPerRow, 10) || 0);
-    }, 0);
+    const totalSeats = tiers.reduce((sum, t) => sum + tierCapacity(t), 0);
     const expectedRevenue = tiers.reduce((sum, t) => {
         if (t.isFree) return sum;
-        const cap = (parseInt(t.rowCount, 10) || 0) * (parseInt(t.seatsPerRow, 10) || 0);
-        return sum + cap * (parseFloat(t.price) || 0);
+        return sum + tierCapacity(t) * (parseFloat(t.price) || 0);
     }, 0);
     const allFree = tiers.length > 0 && tiers.every(t => t.isFree);
+    const isGA = tiers.length > 0 && tiers.every(t => t.seatingMode === SEATING_MODES.GENERAL);
 
     return (
         <div data-testid="step-review">
@@ -702,7 +939,8 @@ function ReviewStep({ basics, tiers, onBack, onSaveDraft, onSubmitForApproval, s
                         Ticket tiers ({tiers.length})
                     </div>
                     {tiers.map((tier, i) => {
-                        const cap = (parseInt(tier.rowCount, 10) || 0) * (parseInt(tier.seatsPerRow, 10) || 0);
+                        const cap = tierCapacity(tier);
+                        const unit = tier.seatingMode === SEATING_MODES.GENERAL ? 'tickets' : 'seats';
                         const isLast = i === tiers.length - 1;
                         return (
                             <div key={tier._id} style={{
@@ -715,7 +953,7 @@ function ReviewStep({ basics, tiers, onBack, onSaveDraft, onSubmitForApproval, s
                                 <div>
                                     <div style={{ fontWeight: 500, color: 'var(--text-1)' }}>{tier.name || 'Unnamed tier'}</div>
                                     <div style={{ fontSize: 13, color: 'var(--text-2)', marginTop: 2 }}>
-                                        {cap > 0 ? `${cap.toLocaleString()} seats` : 'Capacity TBD'}
+                                        {cap > 0 ? `${cap.toLocaleString()} ${unit}` : 'Capacity TBD'}
                                     </div>
                                 </div>
                                 <div style={{ fontWeight: 600, color: 'var(--text-1)' }}>
@@ -868,14 +1106,31 @@ export default function CreateEventPage() {
     const [basics, setBasics] = useState({
         title: '',
         description: '',
-        venue: '',
+        category: '',          // required, EventCategory enum
+        // Location — venue is one logical concept in the UI but the backend
+        // wants venueName + city + country (+ optional address/placeId/lat/lng).
+        // The VenueAutocomplete fills these in via onPlaceSelect; manual typing
+        // populates only venueName and falls back to VENUE_DEFAULTS for the rest.
+        venue: '',             // free-text display value (driven by autocomplete)
+        venueName: '',
+        city: '',
+        country: '',
+        placeId: '',
+        address: '',
+        latitude: null,
+        longitude: null,
+        // Schedule
         startDate: '',
         startTime: '',
         endDate: '',
         endTime: '',
+        timezone: detectTimezone(),
         bannerFile: null,
         visibility: 'PUBLIC',
         isFree: true,
+        // Default to seated so existing organisers using assigned-seating
+        // venues get the familiar layout.
+        seatingMode: SEATING_MODES.SEATED,
     });
     const [tiers, setTiers] = useState([]);
     const [submitting, setSubmitting] = useState(false);
@@ -885,43 +1140,41 @@ export default function CreateEventPage() {
     const [createEvent] = useCreateEventMutation();
     const [submitEvent] = useSubmitEventMutation();
     const [presignCover] = usePresignCoverImageMutation();
+    const [createTier] = useCreateTierMutation();
 
     async function createEventSequence(shouldSubmit) {
         setSubmitting(true);
         setError('');
         try {
-            // Backend now requires tiers inline on the create-event payload
-            // (CreateEventRequest.tiers is @NotEmpty). The standalone POST
-            // /events/{id}/tiers endpoint is still used for adding tiers to
-            // existing events later — see TicketTierController.
-            const validTiers = tiers
-                .filter(t => t.name.trim() && t.rowPrefix.trim()
-                    && parseInt(t.rowCount, 10) >= 1
-                    && parseInt(t.seatsPerRow, 10) >= 1)
-                .map(t => ({
-                    name: t.name.trim(),
-                    price: t.isFree ? 0 : parseFloat(t.price) || 0,
-                    rowPrefix: t.rowPrefix.trim(),
-                    rowCount: parseInt(t.rowCount, 10),
-                    seatsPerRow: parseInt(t.seatsPerRow, 10),
-                }));
+            // ── 1. Build the event payload to match CreateEventRequest on the
+            //       running backend (event-nest-backend): category, venueName,
+            //       city, country, timezone are required; tiers are NOT inline
+            //       on this backend — they're posted to /events/{id}/tiers in
+            //       a separate loop below.
+            const venueName  = (basics.venueName || basics.venue || '').trim() || VENUE_DEFAULTS.venueName;
+            const city       = (basics.city    || '').trim() || VENUE_DEFAULTS.city;
+            const country    = (basics.country || '').trim() || VENUE_DEFAULTS.country;
 
             const payload = {
-                title: basics.title.trim(),
-                venue: basics.venue.trim(),
+                title:     basics.title.trim(),
+                category:  basics.category,
+                venueName,
+                city,
+                country,
+                timezone:  basics.timezone || detectTimezone(),
                 startTime: toISO(basics.startDate, basics.startTime),
-                endTime: toISO(basics.endDate, basics.endTime),
-                tiers: validTiers,
+                endTime:   toISO(basics.endDate, basics.endTime),
                 visibility: basics.visibility,
-                isFree: basics.isFree,
             };
-            if (basics.description.trim()) {
-                payload.description = basics.description.trim();
-            }
+            if (basics.description.trim())   payload.description = basics.description.trim();
+            if (basics.address?.trim())      payload.address     = basics.address.trim();
+            if (basics.placeId?.trim())      payload.placeId     = basics.placeId.trim();
+            if (Number.isFinite(basics.latitude))  payload.latitude  = basics.latitude;
+            if (Number.isFinite(basics.longitude)) payload.longitude = basics.longitude;
 
             const event = await createEvent(payload).unwrap();
 
-            // Upload cover image now that we have an event id.
+            // ── 2. Upload cover image (if any) via presigned PUT.
             if (basics.bannerFile) {
                 const { uploadUrl } = await presignCover({
                     eventId: event.id,
@@ -934,6 +1187,19 @@ export default function CreateEventPage() {
                 });
             }
 
+            // ── 3. Create each tier separately. Backend CreateTierRequest:
+            //       - price is Long in kobo (₦ × 100, rounded to int)
+            //       - seatType picks the layout (GENERAL_ADMISSION vs NUMBERED)
+            //       - accessScope FULL_EVENT means the ticket is valid every day
+            //       Invalid tiers (missing name etc.) were already screened by
+            //       validateTier when the user advanced past step 2.
+            for (const t of tiers) {
+                const tierPayload = buildTierPayload(t);
+                if (!tierPayload) continue;
+                await createTier({ eventId: event.id, ...tierPayload }).unwrap();
+            }
+
+            // ── 4. Optionally submit for admin approval (DRAFT → PENDING).
             if (shouldSubmit) {
                 await submitEvent(event.id).unwrap();
                 setSubmitted(true);
@@ -941,7 +1207,17 @@ export default function CreateEventPage() {
 
             setStep(4);
         } catch (err) {
-            setError(err?.data?.message || 'Something went wrong. Please try again.');
+            // Backend's exception handler returns
+            //   { success: false, message: "validation failed", errors: ["field: msg", ...] }
+            // for @Valid failures — surface those field-level messages so the
+            // organiser can fix the actual problem instead of just seeing
+            // "validation failed".
+            const data = err?.data || {};
+            const fieldErrors = Array.isArray(data.errors) ? data.errors : [];
+            const base = data.message || 'Something went wrong. Please try again.';
+            setError(fieldErrors.length
+                ? `${base}: ${fieldErrors.join('; ')}`
+                : base);
         } finally {
             setSubmitting(false);
         }
@@ -949,14 +1225,19 @@ export default function CreateEventPage() {
 
     return (
         <div style={{ background: 'var(--surface-subtle)', minHeight: '100vh' }}>
-            <TopNav />
             <div style={{ maxWidth: 680, margin: '0 auto', padding: '40px 24px 80px' }}>
                 {step < 4 && <StepIndicator currentStep={step} />}
                 {step === 1 && (
                     <BasicsStep data={basics} onChange={setBasics} onNext={() => setStep(2)} />
                 )}
                 {step === 2 && (
-                    <TiersStep tiers={tiers} onTiersChange={setTiers} onNext={() => setStep(3)} onBack={() => setStep(1)} />
+                    <TiersStep
+                        tiers={tiers}
+                        onTiersChange={setTiers}
+                        onNext={() => setStep(3)}
+                        onBack={() => setStep(1)}
+                        seatingMode={basics.seatingMode}
+                    />
                 )}
                 {step === 3 && (
                     <ReviewStep

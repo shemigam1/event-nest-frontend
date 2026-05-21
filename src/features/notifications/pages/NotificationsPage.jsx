@@ -4,7 +4,6 @@ import {
     useGetMyNotificationsQuery,
     useMarkNotificationAsReadMutation,
 } from '../notificationsApi';
-import TopNav from '@/components/ui/TopNav';
 import Button from '@/components/ui/Button';
 import { Icons } from '@/components/ui/Icon';
 import { formatEventDate } from '@/utils/dateFormat';
@@ -27,7 +26,6 @@ export default function NotificationsPage() {
 
     return (
         <div style={{ background: 'var(--surface-subtle)', minHeight: '100vh' }}>
-            <TopNav />
             <div style={{ maxWidth: 760, margin: '0 auto', padding: '32px 24px 80px' }}>
                 <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 24 }}>
                     <div>

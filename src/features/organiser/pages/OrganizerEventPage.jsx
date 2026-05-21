@@ -27,7 +27,6 @@ import {
     useCreateCheckInInviteMutation,
     useRevokeCheckInInviteMutation,
 } from '@/features/checkin/checkinApi';
-import TopNav from '@/components/ui/TopNav';
 import Button from '@/components/ui/Button';
 import CapacityBar from '@/components/ui/CapacityBar';
 import { RoleBadge, StatusBadge } from '@/components/ui/Badge';
@@ -176,7 +175,6 @@ export default function OrganizerEventPage() {
 function PageContainer({ children }) {
     return (
         <div style={{ background: 'var(--surface-subtle)', minHeight: '100vh' }}>
-            <TopNav />
             {children}
         </div>
     );
@@ -186,7 +184,6 @@ function Shell({ children }) {
     // Used by the error/skeleton states only.
     return (
         <div style={{ background: 'var(--surface-subtle)', minHeight: '100vh' }}>
-            <TopNav />
             <div style={{ maxWidth: 1280, margin: '0 auto', padding: '24px 24px 80px' }}>
                 {children}
             </div>

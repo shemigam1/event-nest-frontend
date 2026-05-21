@@ -89,7 +89,7 @@ export default function UserMenu({ onDark = false, onOpenSidebar }) {
                     top: 'calc(100% + 8px)',
                     right: 0,
                     minWidth: 240,
-                    background: 'white',
+                    background: 'var(--surface-elevated)',
                     border: '1px solid var(--border)',
                     borderRadius: 12,
                     boxShadow: 'var(--shadow-elevated)',

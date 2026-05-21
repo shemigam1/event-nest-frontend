@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useSearchParams } from 'react-router';
-import TopNav from '@/components/ui/TopNav';
 import { Icons } from '@/components/ui/Icon';
 import { selectCurrentUserId, selectCurrentUser } from '@/features/auth/authSlice';
 import { useGetConversationsQuery, useGetConversationMessagesQuery, useMarkConversationReadMutation, messagesApi } from '../messagesApi';
@@ -242,14 +241,12 @@ export default function MessagesPage() {
     const threadClass  = `mp-msg-panel mp-msg-thread${mobileView === 'list'   ? ' mp-msg-hide-mobile' : ''}`;
 
     return (
-        <div style={{ minHeight: '100vh', background: 'var(--surface, #F9FAFB)' }}>
-            <TopNav />
-
+        <div style={{ minHeight: '100vh', background: 'var(--surface-subtle)' }}>
             <div style={{
                 maxWidth: 1100,
                 margin: '0 auto',
                 padding: '24px 20px',
-                height: 'calc(100vh - 64px)',
+                height: 'calc(100vh - 56px)',
                 display: 'flex',
                 gap: 16,
                 boxSizing: 'border-box',

@@ -908,9 +908,12 @@ function InquiryModal({ vendorId, onDismiss }) {
 }
 
 function Shell({ children }) {
+    // Anonymous viewers get the marketing top nav; authenticated viewers see
+    // AppShell's sidebar + TopBar wrapping the route.
+    const isAuthenticated = useSelector(selectIsAuthenticated);
     return (
         <div style={{ background: 'var(--surface-subtle)', minHeight: '100vh' }}>
-            <TopNav />
+            {!isAuthenticated && <TopNav />}
             <div style={{ maxWidth: 1100, margin: '0 auto', padding: '24px 24px 80px' }}>
                 {children}
             </div>

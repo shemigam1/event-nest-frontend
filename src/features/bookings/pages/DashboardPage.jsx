@@ -7,7 +7,6 @@ import {
     useCancelBookingMutation,
 } from '../bookingsApi';
 import Button from '@/components/ui/Button';
-import TopNav from '@/components/ui/TopNav';
 import { StatusBadge } from '@/components/ui/Badge';
 import { Icons } from '@/components/ui/Icon';
 import { formatNaira } from '@/utils/currency';
@@ -208,8 +207,6 @@ export default function DashboardPage() {
 
     return (
         <div style={{ background: 'var(--surface-subtle)', minHeight: '100vh' }}>
-            <TopNav />
-
             <div style={{ maxWidth: 1200, margin: '0 auto', padding: '32px 24px 80px' }}>
                 <h1 className="mp-h1" style={{ margin: 0, color: 'var(--text-1)' }}>
                     Welcome back, {firstName}.

@@ -84,7 +84,7 @@ export default function SidebarPanel({ open, onClose }) {
                     left: 0,
                     bottom: 0,
                     width: 'min(360px, 90vw)',
-                    background: 'white',
+                    background: 'var(--surface-elevated)',
                     // Flip the shadow direction so the depth still falls
                     // away from the panel edge that's "in" the page.
                     boxShadow: '12px 0 32px rgba(2, 16, 45, 0.12)',

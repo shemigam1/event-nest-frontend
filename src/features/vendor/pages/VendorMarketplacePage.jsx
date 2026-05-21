@@ -81,7 +81,9 @@ export default function VendorMarketplacePage() {
 
     return (
         <div style={{ background: 'var(--surface-subtle)', minHeight: '100vh' }}>
-            <TopNav />
+            {/* Anonymous viewers get the marketing top nav; authenticated viewers
+                see AppShell's sidebar + TopBar wrapping the route. */}
+            {!isAuthenticated && <TopNav />}
             <div style={{ maxWidth: 1200, margin: '0 auto', padding: '32px 24px 80px' }}>
 
                 {/* Header */}

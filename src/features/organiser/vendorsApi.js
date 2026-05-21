@@ -150,10 +150,10 @@ export const vendorsApi = baseApi.injectEndpoints({
             transformResponse: (r) => r?.data ?? r,
         }),
 
-        // TODO(Phase E): no backend endpoint at /vendor-applications/{id}/rate. The real
-        // organiser-rates-vendor flow lives at POST /events/{eventId}/vendors/{vendorId}/review
-        // (VendorReview, fires POSITIVE_RATING trust event ≥4 stars). Kept here so
-        // VendorsTab still compiles; runtime calls will 404 until rewired in Phase E.
+        // POST /events/{eventId}/vendor-applications/{applicationId}/rate (VendorController#rate).
+        // score is 1–5 (required), comment is optional. Backend rejects unless the event has ended.
+        // A rating of ≥4 fires the POSITIVE_RATING trust event (+3) on the vendor's trust score.
+        // Idempotent — re-calling overwrites the prior rating for this application.
         rateVendor: builder.mutation({
             query: ({ eventId, applicationId, score, comment }) => ({
                 url: `/events/${eventId}/vendor-applications/${applicationId}/rate`,

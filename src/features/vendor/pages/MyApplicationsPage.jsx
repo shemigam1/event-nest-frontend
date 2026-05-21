@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useGetMyVendorApplicationsQuery } from '@/features/organiser/vendorsApi';
 import { formatEventDate } from '@/utils/dateFormat';
-import TopNav from '@/components/ui/TopNav';
 import Button from '@/components/ui/Button';
 import { Icons } from '@/components/ui/Icon';
 
@@ -93,7 +92,6 @@ export default function MyApplicationsPage() {
 
     return (
         <div style={{ background: 'var(--surface-subtle)', minHeight: '100vh' }}>
-            <TopNav />
             <div style={{ maxWidth: 1100, margin: '0 auto', padding: '32px 24px 80px' }}>
 
                 {/* Header */}

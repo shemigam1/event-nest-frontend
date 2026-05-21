@@ -32,7 +32,7 @@ export default function Modal({ open, onClose, children, width = 480, label }) {
                 style={{
                     width: '100%',
                     maxWidth: width,
-                    background: 'white',
+                    background: 'var(--surface-elevated)',
                     borderRadius: 16,
                     boxShadow: 'var(--shadow-modal)',
                     maxHeight: '90vh',

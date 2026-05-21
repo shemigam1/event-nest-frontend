@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router';
 import { useGetMyTicketsQuery } from '../ticketsApi';
 import { formatEventDate } from '@/utils/dateFormat';
 import Button from '@/components/ui/Button';
-import TopNav from '@/components/ui/TopNav';
 import Modal from '@/components/ui/Modal';
 import { QRCode } from 'react-qr-code';
 import TicketCard from '@/components/ui/TicketCard';
@@ -16,7 +15,6 @@ export default function TicketsPage() {
 
     return (
         <div style={{ background: 'var(--surface-subtle)', minHeight: '100vh' }}>
-            <TopNav />
             <div style={{ maxWidth: 880, margin: '0 auto', padding: '32px 24px 80px' }}>
                 <h1 className="mp-h1" style={{ margin: 0, color: 'var(--text-1)' }}>My tickets</h1>
                 <p className="body" style={{ margin: '8px 0 24px', color: 'var(--text-2)' }}>

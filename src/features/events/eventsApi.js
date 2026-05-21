@@ -34,7 +34,8 @@ export const eventsApi = baseApi.injectEndpoints({
             transformResponse: (response) => response.data ?? response,
         }),
         submitEvent: builder.mutation({
-            query: (id) => ({ url: `/events/${id}/submit`, method: 'PATCH' }),
+            // Backend EventController.submitForApproval is @PostMapping, not PATCH.
+            query: (id) => ({ url: `/events/${id}/submit`, method: 'POST' }),
             invalidatesTags: (result, error, id) => [{ type: 'Event', id }],
             transformResponse: (response) => response.data ?? response,
         }),
@@ -42,7 +43,8 @@ export const eventsApi = baseApi.injectEndpoints({
             query: ({ eventId, contentType }) => ({
                 url: `/events/${eventId}/cover-image/presign`,
                 method: 'POST',
-                body: { contentType },
+                // Backend PresignCoverRequest expects `mimeType`, not `contentType`.
+                body: { mimeType: contentType },
             }),
             transformResponse: (response) => response?.data ?? response,
         }),

@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import TopNav from '@/components/ui/TopNav';
 import Button from '@/components/ui/Button';
 import { Icons } from '@/components/ui/Icon';
 
@@ -19,7 +18,6 @@ export default function InviteAdminPage() {
 
     return (
         <div style={{ background: 'var(--surface-subtle)', minHeight: '100vh' }}>
-            <TopNav />
             <div style={{ maxWidth: 680, margin: '0 auto', padding: '32px 24px 80px' }}>
                 <div style={{ marginBottom: 32 }}>
                     <h1 className="mp-h1" style={{ margin: 0, color: 'var(--text-1)' }}>Invite Admin</h1>

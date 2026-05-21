@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router';
 import {
-    logout,
     selectActiveWorkspace,
     selectAuthEmail,
     selectCurrentUser,
@@ -10,32 +9,50 @@ import {
     selectIsCheckinStaff,
     setActiveWorkspace,
 } from '@/features/auth/authSlice';
-import { useGetWorkspacesQuery } from '@/features/organiser/organizerApi';
 import { Icons } from './Icon';
 
-/* Order matches the sidebar's WORKSPACE_PRIORITY so the visible list is stable. */
-const WORKSPACE_ORDER = ['ATTENDEE', 'ORGANISER', 'MANAGER', 'VENDOR'];
+/* ────────────────────────────────────────────────────────────────────────────
+   TopBar — thin (56px) bar at the top of the main content column.
+
+   The avatar dropdown IS the global workspace toggle (Attendee / Organiser /
+   Vendor). Picking a workspace changes what the left sidebar shows and lands
+   the user on that workspace's home. Settings + Sign out live in the left
+   sidebar — they don't repeat here.
+
+   All three workspaces are ALWAYS available — they're contexts the user opts
+   into, not roles derived from existing memberships. A first-time user with
+   zero events should still be able to switch to Organiser mode and create
+   their first event. Backend MANAGER role (co-manage another organiser's
+   event) shares the Organiser console, so it isn't a separate toggle option.
+
+   Hidden entirely for admins and check-in staff — neither has multi-workspace
+   identity.
+   ──────────────────────────────────────────────────────────────────────── */
+
+// Ordered list of workspaces shown in the dropdown.
+const WORKSPACE_ORDER = ['ATTENDEE', 'ORGANISER', 'VENDOR'];
 
 const WORKSPACE_LABEL = {
     ATTENDEE:  'Attendee',
     ORGANISER: 'Organiser',
-    MANAGER:   'Manager',
     VENDOR:    'Vendor',
 };
 
+// Where to land the user when they pick this workspace.
 const WORKSPACE_HOME = {
     ATTENDEE:  '/dashboard',
     ORGANISER: '/organiser',
-    MANAGER:   '/organiser',
     VENDOR:    '/vendor',
 };
 
-/* ────────────────────────────────────────────────────────────────────────────
-   TopBar — thin (56px) bar at the top of the main content column. Its sole
-   job is to host the avatar workspace switcher in the top-right. Sidebar
-   still owns navigation; this is identity + workspace.
-   Hidden for admin + check-in staff (neither has multi-workspace identity).
-   ──────────────────────────────────────────────────────────────────────── */
+// One-line copy below each option in the dropdown — helps the user grok the
+// shift in context before they commit.
+const WORKSPACE_HINT = {
+    ATTENDEE:  'Browse events, manage tickets.',
+    ORGANISER: 'Run your events end-to-end.',
+    VENDOR:    'Apply for gigs, run contracts.',
+};
+
 export default function TopBar() {
     const dispatch = useDispatch();
     const navigate = useNavigate();
@@ -44,10 +61,6 @@ export default function TopBar() {
     const user           = useSelector(selectCurrentUser);
     const email          = useSelector(selectAuthEmail);
     const activeWorkspace = useSelector(selectActiveWorkspace);
-
-    const { data: workspaces = [] } = useGetWorkspacesQuery(undefined, {
-        skip: isAdmin || isCheckinStaff,
-    });
 
     const [open, setOpen] = useState(false);
     const menuRef = useRef(null);
@@ -74,22 +87,18 @@ export default function TopBar() {
     const displayName = firstName || (email ? email.split('@')[0] : 'Account');
     const initial = (firstName[0] || lastName[0] || email?.[0] || '?').toUpperCase();
 
-    const availableWorkspaces = WORKSPACE_ORDER.filter((r) => workspaces.includes(r));
+    // All three workspaces are always available; activeWorkspace seeds from
+    // Redux if set, otherwise defaults to the first option (Attendee).
+    const availableWorkspaces = WORKSPACE_ORDER;
     const currentWorkspace = activeWorkspace && availableWorkspaces.includes(activeWorkspace)
         ? activeWorkspace
-        : availableWorkspaces[0] ?? null;
+        : availableWorkspaces[0];
 
     function switchTo(role) {
         if (!availableWorkspaces.includes(role)) return;
         dispatch(setActiveWorkspace(role));
         setOpen(false);
         navigate(WORKSPACE_HOME[role] ?? '/');
-    }
-
-    function handleLogout() {
-        setOpen(false);
-        dispatch(logout());
-        navigate('/login', { replace: true });
     }
 
     return (
@@ -107,6 +116,7 @@ export default function TopBar() {
                     onClick={() => setOpen((v) => !v)}
                     aria-haspopup="menu"
                     aria-expanded={open}
+                    aria-label="Switch workspace"
                     className="
                         flex items-center gap-2.5
                         py-1 pl-1 pr-2.5
@@ -126,102 +136,68 @@ export default function TopBar() {
                     >
                         {initial}
                     </span>
-                    <span className="text-sm font-medium text-text-1 max-w-[140px] truncate">
-                        {displayName}
+                    {/* Show the active workspace name as the primary label —
+                        the avatar IS the workspace toggle, not an identity menu. */}
+                    <span className="text-sm font-semibold text-text-1 max-w-[160px] truncate">
+                        {currentWorkspace ? WORKSPACE_LABEL[currentWorkspace] : displayName}
                     </span>
-                    {currentWorkspace && availableWorkspaces.length > 0 && (
-                        <span
-                            className="
-                                hidden sm:inline-flex
-                                items-center
-                                px-2 py-0.5
-                                rounded-full
-                                bg-mp-blue-50 text-mp-blue
-                                text-[10px] font-semibold uppercase tracking-wider
-                            "
-                        >
-                            {WORKSPACE_LABEL[currentWorkspace]}
-                        </span>
-                    )}
                     <Icons.chevronD size={14} className="text-text-3" />
                 </button>
 
                 {open && (
                     <div
                         role="menu"
+                        aria-label="Switch workspace"
                         className="
                             absolute right-0 top-[calc(100%+8px)]
-                            min-w-[240px]
+                            min-w-[260px]
                             bg-surface-elevated border border-border
                             rounded-xl shadow-elevated
                             overflow-hidden
                             z-50
                         "
                     >
-                        {availableWorkspaces.length > 0 && (
-                            <>
-                                <div className="px-4 pt-3 pb-1.5 text-[11px] font-semibold uppercase tracking-wider text-text-3">
-                                    Switch workspace
-                                </div>
-                                <div className="pb-1.5">
-                                    {availableWorkspaces.map((role) => {
-                                        const active = role === currentWorkspace;
-                                        return (
-                                            <button
-                                                key={role}
-                                                type="button"
-                                                role="menuitem"
-                                                onClick={() => switchTo(role)}
-                                                className={`
-                                                    flex items-center justify-between
-                                                    w-full px-4 py-2
-                                                    text-sm text-left
-                                                    ${active
-                                                        ? 'bg-mp-blue-50 text-mp-blue font-semibold'
-                                                        : 'text-text-1 hover:bg-surface-subtle font-medium'}
-                                                `}
-                                            >
-                                                <span>{WORKSPACE_LABEL[role]}</span>
-                                                {active && <Icons.check size={14} />}
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-                                <div className="h-px bg-border mx-2" />
-                            </>
-                        )}
-
                         <div className="py-1.5">
-                            <MenuItem icon={<Icons.settings size={16} />} onClick={() => { setOpen(false); navigate('/settings'); }}>
-                                Settings
-                            </MenuItem>
-                            <MenuItem icon={<Icons.x size={16} />} danger onClick={handleLogout}>
-                                Sign out
-                            </MenuItem>
+                            {availableWorkspaces.map((role) => {
+                                const active = role === currentWorkspace;
+                                return (
+                                    <button
+                                        key={role}
+                                        type="button"
+                                        role="menuitem"
+                                        onClick={() => switchTo(role)}
+                                        className={`
+                                            flex items-center gap-3
+                                            w-full px-4 py-2.5
+                                            text-left
+                                            ${active
+                                                ? 'bg-mp-blue-50'
+                                                : 'hover:bg-surface-subtle'}
+                                        `}
+                                    >
+                                        <div className="flex-1 min-w-0">
+                                            <div className={`
+                                                text-sm
+                                                ${active
+                                                    ? 'font-semibold text-mp-blue'
+                                                    : 'font-medium text-text-1'}
+                                            `}>
+                                                {WORKSPACE_LABEL[role]}
+                                            </div>
+                                            <div className="text-xs text-text-3 mt-0.5">
+                                                {WORKSPACE_HINT[role]}
+                                            </div>
+                                        </div>
+                                        {active && (
+                                            <Icons.check size={16} className="text-mp-blue flex-shrink-0" />
+                                        )}
+                                    </button>
+                                );
+                            })}
                         </div>
                     </div>
                 )}
             </div>
         </div>
-    );
-}
-
-function MenuItem({ icon, danger, onClick, children }) {
-    return (
-        <button
-            type="button"
-            role="menuitem"
-            onClick={onClick}
-            className={`
-                flex items-center gap-2.5
-                w-full px-4 py-2
-                text-sm font-medium text-left
-                hover:bg-surface-subtle
-                ${danger ? 'text-error' : 'text-text-1'}
-            `}
-        >
-            <span className="flex-shrink-0 inline-flex items-center">{icon}</span>
-            <span>{children}</span>
-        </button>
     );
 }

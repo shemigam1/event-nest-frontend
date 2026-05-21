@@ -10,7 +10,6 @@ import { selectCurrentUserId } from '@/features/auth/authSlice';
 import { formatEventDate } from '@/utils/dateFormat';
 import { formatNaira } from '@/utils/currency';
 import Button from '@/components/ui/Button';
-import TopNav from '@/components/ui/TopNav';
 import { Icons } from '@/components/ui/Icon';
 
 const MAX_PER_BOOKING = 20;
@@ -186,7 +185,6 @@ export default function BookingPage() {
 function PageShell({ children }) {
     return (
         <div style={{ background: 'var(--surface-subtle)', minHeight: '100vh' }}>
-            <TopNav />
             <div style={{ maxWidth: 720, margin: '0 auto', padding: '32px 24px 80px' }}>
                 {children}
             </div>

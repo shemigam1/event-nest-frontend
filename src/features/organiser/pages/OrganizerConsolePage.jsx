@@ -4,7 +4,6 @@ import { useDispatch, useSelector } from 'react-redux';
 import { logout, selectCurrentUser, selectAuthEmail } from '@/features/auth/authSlice';
 import { useGetOrganizerEventsQuery } from '../organizerApi';
 import { useSubmitEventMutation, useDeleteEventMutation } from '@/features/events/eventsApi';
-import TopNav from '@/components/ui/TopNav';
 import Button from '@/components/ui/Button';
 import { StatusBadge } from '@/components/ui/Badge';
 import { Icons } from '@/components/ui/Icon';
@@ -229,7 +228,6 @@ export default function OrganizerConsolePage() {
 
     return (
         <div style={{ background: 'var(--surface-subtle)', minHeight: '100vh' }}>
-            <TopNav />
             <div style={{ maxWidth: 1100, margin: '0 auto', padding: '32px 24px 80px' }}>
 
                 {/* Header */}

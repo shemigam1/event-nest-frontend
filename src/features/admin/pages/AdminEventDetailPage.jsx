@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router';
-import TopNav from '@/components/ui/TopNav';
 import Button from '@/components/ui/Button';
 import { StatusBadge } from '@/components/ui/Badge';
 import CapacityBar from '@/components/ui/CapacityBar';
@@ -411,7 +410,6 @@ export default function AdminEventDetailPage() {
 function Shell({ children }) {
     return (
         <div style={{ background: 'var(--surface-subtle)', minHeight: '100vh' }}>
-            <TopNav />
             <div style={{ maxWidth: 1100, margin: '0 auto', padding: '32px 24px 80px' }}>
                 {children}
             </div>

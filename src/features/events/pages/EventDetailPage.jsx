@@ -291,9 +291,12 @@ export default function EventDetailPage() {
 
 
 function PageShell({ children }) {
+    // Anonymous viewers get the marketing top nav; authenticated viewers see
+    // AppShell's persistent sidebar + TopBar wrapping the route, so we skip ours.
+    const isAuthenticated = useSelector(selectIsAuthenticated);
     return (
         <div style={{ background: 'var(--surface-subtle)', minHeight: '100vh' }}>
-            <TopNav />
+            {!isAuthenticated && <TopNav />}
             {children}
         </div>
     );

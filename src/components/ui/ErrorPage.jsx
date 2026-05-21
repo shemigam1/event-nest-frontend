@@ -27,7 +27,7 @@ export default function ErrorPage() {
             <div style={{
                 padding: '0 24px', height: 64,
                 display: 'flex', alignItems: 'center',
-                background: 'white', borderBottom: '1px solid var(--border)',
+                background: 'var(--surface-elevated)', borderBottom: '1px solid var(--border)',
             }}>
                 <Brand size={18} />
             </div>
@@ -39,7 +39,7 @@ export default function ErrorPage() {
             }}>
                 <div style={{
                     maxWidth: 480, width: '100%', textAlign: 'center',
-                    background: 'white', border: '1px solid var(--border)',
+                    background: 'var(--surface-elevated)', border: '1px solid var(--border)',
                     borderRadius: 16, padding: 40, boxShadow: 'var(--shadow-card)',
                 }}>
                     <div style={{

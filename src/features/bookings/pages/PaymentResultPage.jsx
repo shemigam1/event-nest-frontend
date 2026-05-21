@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router';
+import { useSelector } from 'react-redux';
 import { useVerifyPaymentMutation } from '../bookingsApi';
+import { selectIsAuthenticated } from '@/features/auth/authSlice';
 import { POLL_INTERVAL_MS, MAX_POLLS } from '../paymentConfig';
 import Button from '@/components/ui/Button';
 import TopNav from '@/components/ui/TopNav';
@@ -9,6 +11,7 @@ import { Icons } from '@/components/ui/Icon';
 export default function PaymentResultPage() {
     const [params] = useSearchParams();
     const navigate = useNavigate();
+    const isAuthenticated = useSelector(selectIsAuthenticated);
     const transactionRef = params.get('transactionReference') ?? '';
     // Stub gateway sets ?status=SUCCESS|FAILED in the redirect URL.
     // In dev we trust it directly — no real Monnify webhook fires to update the DB.
@@ -75,7 +78,9 @@ export default function PaymentResultPage() {
 
     return (
         <div style={{ background: 'var(--surface-subtle)', minHeight: '100vh' }}>
-            <TopNav />
+            {/* Anonymous viewers get the marketing top nav; authenticated viewers
+                see AppShell's sidebar + TopBar wrapping the route. */}
+            {!isAuthenticated && <TopNav />}
             <div style={{ maxWidth: 480, margin: '0 auto', padding: '48px 24px 80px' }}>
                 <div
                     data-testid="payment-result-card"

@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router';
 import { useGetPublishedEventsQuery } from '@/features/events/eventsApi';
 import { useGetMyVendorApplicationsQuery } from '@/features/organiser/vendorsApi';
 import { formatEventDate } from '@/utils/dateFormat';
-import TopNav from '@/components/ui/TopNav';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import { Icons } from '@/components/ui/Icon';
@@ -36,7 +35,6 @@ export default function VendorOpportunitiesPage() {
 
     return (
         <div style={{ background: 'var(--surface-subtle)', minHeight: '100vh' }}>
-            <TopNav />
             <div style={{ maxWidth: 1200, margin: '0 auto', padding: '32px 24px 80px' }}>
                 {/* Header */}
                 <div style={{ marginBottom: 24 }}>

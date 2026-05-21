@@ -6,7 +6,6 @@ import {
     useUpdateMyVendorProfileMutation,
     useSubmitVerificationMutation,
 } from '@/features/organiser/vendorsApi';
-import TopNav from '@/components/ui/TopNav';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import { Icons } from '@/components/ui/Icon';
@@ -541,7 +540,6 @@ function TagList({ label, placeholder, values, onChange, disabled }) {
 function PageShell({ children }) {
     return (
         <div style={{ background: 'var(--surface-subtle)', minHeight: '100vh' }}>
-            <TopNav />
             <div style={{ maxWidth: 1000, margin: '0 auto', padding: '32px 24px 80px' }}>
                 <div style={{ marginBottom: 24 }}>
                     <h1 className="mp-h1" style={{ margin: 0, color: 'var(--text-1)' }}>

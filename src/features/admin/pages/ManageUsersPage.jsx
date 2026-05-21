@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
-import TopNav from '@/components/ui/TopNav';
 import Button from '@/components/ui/Button';
 import { RoleBadge } from '@/components/ui/Badge';
 import { Icons } from '@/components/ui/Icon';
@@ -112,7 +111,6 @@ export default function ManageUsersPage() {
 
     return (
         <div style={{ background: 'var(--surface-subtle)', minHeight: '100vh' }}>
-            <TopNav />
             <div style={{ maxWidth: 1200, margin: '0 auto', padding: '32px 24px 80px' }}>
                 <div style={{ marginBottom: 28 }}>
                     <h1 className="mp-h1" style={{ margin: 0, color: 'var(--text-1)' }}>Manage Users</h1>

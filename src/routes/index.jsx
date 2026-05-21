@@ -24,6 +24,8 @@ import InviteAdminPage from '../features/admin/pages/InviteAdminPage';
 import EventEditsPage from '../features/admin/pages/EventEditsPage';
 import AdminEventDetailPage from '../features/admin/pages/AdminEventDetailPage';
 import AdminEscrowPage from '../features/admin/pages/AdminEscrowPage';
+import AdminVendorsPage from '../features/admin/pages/AdminVendorsPage';
+import AdminVendorDetailPage from '../features/admin/pages/AdminVendorDetailPage';
 import OrganizerConsolePage from '../features/organiser/pages/OrganizerConsolePage';
 import OrganizerEventPage from '../features/organiser/pages/OrganizerEventPage';
 import VendorOpportunitiesPage from '../features/vendor/pages/VendorOpportunitiesPage';
@@ -95,6 +97,8 @@ const router = createBrowserRouter([
                     { path: '/admin/event-edits',        element: <EventEditsPage /> },
                     { path: '/admin/events/:id',             element: <AdminEventDetailPage /> },
                     { path: '/admin/escrow',                 element: <AdminEscrowPage /> },
+                    { path: '/admin/vendors',                element: <AdminVendorsPage /> },
+                    { path: '/admin/vendors/:id',            element: <AdminVendorDetailPage /> },
                 ],
             },
 
