@@ -106,35 +106,8 @@ export default function VendorDetailPage() {
     const { data: existingConversations = [] } = useGetConversationsQuery(undefined, { skip: !isAuthenticated });
     const [inquiryOpen, setInquiryOpen] = useState(false);
 
-    const handleContactVendor = async (vendorName, vendorUserId) => {
-        if (!isAuthenticated) {
-            navigate('/login', { state: { from: `/vendors/${id}` } });
-            return;
-        }
-        if (!vendorUserId) {
-            alert('Could not identify the vendor. Please try again.');
-            return;
-        }
-
-        // Check if a 1-on-1 conversation with this vendor already exists.
-        // Participants carry { userId, email, name } — match on userId or id.
-        const vendorIdStr = String(vendorUserId);
-        const existing = existingConversations.find((conv) => {
-            const participants = conv.participants ?? conv.members ?? [];
-            return participants.some(
-                (p) =>
-                    String(p.userId ?? '') === vendorIdStr ||
-                    String(p.id ?? '')     === vendorIdStr
-            );
-        });
-
-        if (existing) {
-            navigate(`/messages?c=${existing.id}`);
-            return;
-        }
-
-        // No existing conversation — send user to messages to start one
-        navigate('/messages');
+    const handleContactVendor = (existingConvId) => {
+        navigate(`/messages?c=${existingConvId}`);
     };
 
     const profile = useGetVendorProfileQuery(id);
@@ -169,6 +142,16 @@ export default function VendorDetailPage() {
     const completed = v.completedWork    || [];
     const ratedWork = completed.filter((c) => c.ratingScore != null);
     const [bg, fg] = avatarColor(v.vendorName);
+
+    const vendorUserIdStr = String(v.userId || v.id || id);
+    const existingConv = existingConversations.find((conv) => {
+        const participants = conv.participants ?? conv.members ?? [];
+        return participants.some(
+            (p) =>
+                String(p.userId ?? '') === vendorUserIdStr ||
+                String(p.id ?? '')     === vendorUserIdStr
+        );
+    });
 
     return (
         <>
@@ -258,29 +241,32 @@ export default function VendorDetailPage() {
                     </div>
 
                     <div style={{ flexShrink: 0, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                        <Button
-                            variant="secondary"
-                            size="md"
-                            onClick={() => {
-                                if (!isAuthenticated) {
-                                    navigate('/login', { state: { from: `/vendors/${id}` } });
-                                    return;
-                                }
-                                setInquiryOpen(true);
-                            }}
-                            icon={<Icons.send size={15} />}
-                        >
-                            Send inquiry
-                        </Button>
-                        <Button
-                            variant="primary"
-                            size="md"
-                            onClick={() => handleContactVendor(v.vendorName, v.userId || v.id || id)}
-                            disabled={false}
-                            icon={<Icons.message size={15} />}
-                        >
-                            Message vendor
-                        </Button>
+                        {!existingConv && (
+                            <Button
+                                variant="secondary"
+                                size="md"
+                                onClick={() => {
+                                    if (!isAuthenticated) {
+                                        navigate('/login', { state: { from: `/vendors/${id}` } });
+                                        return;
+                                    }
+                                    setInquiryOpen(true);
+                                }}
+                                icon={<Icons.send size={15} />}
+                            >
+                                Send inquiry
+                            </Button>
+                        )}
+                        {existingConv && (
+                            <Button
+                                variant="primary"
+                                size="md"
+                                onClick={() => handleContactVendor(existingConv.id)}
+                                icon={<Icons.message size={15} />}
+                            >
+                                Message vendor
+                            </Button>
+                        )}
                     </div>
                 </div>
 
@@ -750,10 +736,11 @@ function InquiryModal({ vendorId, onDismiss }) {
                 vendorId,
                 openingMessage,
             }).unwrap();
-            if (result?.conversationId) {
-                navigate(`/messages?c=${result.conversationId}`);
+            const convId = result?.conversation?.id ?? result?.conversationId;
+            if (convId) {
+                navigate(`/messages?c=${convId}`);
             } else {
-                onDismiss();
+                navigate('/messages');
             }
         } catch (err) {
             setError(err?.data?.message || 'Could not send inquiry.');

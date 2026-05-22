@@ -47,7 +47,6 @@ const TAG_INVALIDATIONS = {
         ...(p?.eventId ? [{ type: 'Event', id: p.eventId }] : []),
     ],
     'ticket.checked-in': () => ['Ticket', 'Analytics'],
-    'notification.created': () => ['Notification'],
 };
 
 /**

@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(xargs grep -l \"status\\(\\)\\\\.is\")",
-      "Bash(./mvnw clean *)"
+      "Bash(./mvnw clean *)",
+      "Bash(ls -1 \"C:\\\\Users\\\\ALIENWARE\\\\Documents\\\\GitHub\\\\event-nest-backend\\\\src\\\\main\\\\java\\\\group\\\\moniepoint\\\\eventnestbackend\" 2>/dev/null || ls -1 \"/mnt/c/Users/ALIENWARE/Documents/GitHub/event-nest-backend/src/main/java/group/moniepoint/eventnestbackend\")",
+      "Bash(find /mnt/c/Users/ALIENWARE/Documents/GitHub/event-nest-backend -type f -name \"*Seed*\" -o -name \"*Demo*\" | head -20)"
     ]
   }
 }

@@ -133,7 +133,7 @@ function Sidebar() {
     const activeWorkspace  = useSelector(selectActiveWorkspace);
     const vendorModeActive = useSelector(selectVendorModeActive);
 
-    const { data: notifData } = useGetMyNotificationsQuery(undefined, { pollingInterval: 60_000 });
+    const { data: notifData } = useGetMyNotificationsQuery();
     const { data: unreadCount = 0 } = useGetUnreadNotificationCountQuery();
     const [markRead] = useMarkNotificationAsReadMutation();
     const notifications = notifData?.content ?? [];

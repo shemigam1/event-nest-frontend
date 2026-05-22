@@ -276,9 +276,12 @@ function ContractCard({ contract, eventId }) {
             <Badge style={s} label={s.label} />
           </div>
           <div style={{ fontSize: 13, color: "var(--text-2)", marginTop: 3 }}>
-            Vendor: <strong>{contract.vendorName}</strong>
+            {(contract.eventTitle || contract.eventName) && (
+              <>Event: <strong>{contract.eventTitle ?? contract.eventName}</strong>{" · "}</>
+            )}
+            Vendor: <strong>{contract.vendorBusinessName ?? contract.vendorName}</strong>
             {" · "}
-            {ngn(contract.amount)}
+            {ngn(contract.totalValue ?? contract.amount)}
             {fmtDate(contract.createdAt) && (
               <> · Created {fmtDate(contract.createdAt)}</>
             )}
