@@ -208,7 +208,7 @@ function ApplicationsPane({ eventId }) {
             {pendingReject && (
                 <ConfirmDialog
                     title="Reject application?"
-                    body={<>The application from <strong>{pendingReject.applicantName}</strong> for <strong>{pendingReject.serviceType}</strong> will be rejected.</>}
+                    body={<>The application from <strong>{pendingReject.businessName}</strong> for <strong>{pendingReject.vendorCategory}</strong> will be rejected.</>}
                     confirmLabel="Reject"
                     loading={rejectState.isLoading}
                     onConfirm={handleReject}
@@ -450,11 +450,12 @@ function ApplicationRow({ application, isLast, onAccept, onReject, onRate, busy 
     const style = STATUS_STYLE[application.status] || STATUS_STYLE.PENDING;
     const isPending  = application.status === 'PENDING';
     const isAccepted = application.status === 'ACCEPTED';
-    const eventEnded = application.eventEndTime
-        ? new Date(application.eventEndTime) < new Date()
-        : false;
-    const canRate = isAccepted && eventEnded;
-    const amount = ngn(application.proposedAmount);
+    // Show "Rate vendor" for accepted applications — backend enforces the event-ended rule
+    const canRate    = isAccepted;
+    const trust      = application.trustScore != null ? Number(application.trustScore) : null;
+    const completed  = application.completedContracts ?? 0;
+    const total      = application.totalContracts ?? 0;
+
     return (
         <div style={{
             display: 'grid', gridTemplateColumns: '48px 1fr auto',
@@ -467,17 +468,17 @@ function ApplicationRow({ application, isLast, onAccept, onReject, onRate, busy 
                 background: 'var(--surface-subtle)', color: 'var(--text-2)',
                 display: 'grid', placeItems: 'center', fontSize: 14, fontWeight: 700,
             }}>
-                {initials(application.applicantName)}
+                {initials(application.businessName)}
             </div>
             <div style={{ minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
-                    <span style={{ fontWeight: 600, color: 'var(--text-1)' }}>{application.applicantName}</span>
+                    <span style={{ fontWeight: 600, color: 'var(--text-1)' }}>{application.businessName}</span>
                     <span style={{
                         fontSize: 11, padding: '2px 8px',
                         background: 'var(--surface-subtle)', borderRadius: 6,
                         color: 'var(--text-2)', fontWeight: 600,
                     }}>
-                        {application.serviceType}
+                        {application.vendorCategory}
                     </span>
                     <span style={{
                         padding: '2px 9px', background: style.bg, color: style.fg,
@@ -486,23 +487,32 @@ function ApplicationRow({ application, isLast, onAccept, onReject, onRate, busy 
                         {style.label}
                     </span>
                 </div>
-                {application.description && (
+                {application.coverNote && (
                     <p className="body-sm" style={{
                         margin: '0 0 8px', color: 'var(--text-2)',
                         whiteSpace: 'pre-wrap', lineHeight: 1.5,
                     }}>
-                        {application.description}
+                        {application.coverNote}
                     </p>
                 )}
                 <div style={{ display: 'flex', gap: 14, fontSize: 12, color: 'var(--text-3)', flexWrap: 'wrap' }}>
-                    {amount && (
+                    {trust != null && (
                         <span className="mp-num" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                            <Icons.wallet size={12} />
-                            <span style={{ color: 'var(--text-1)', fontWeight: 600 }}>{amount}</span>
-                            <span>proposed</span>
+                            <Icons.shield size={12} />
+                            <span style={{ color: 'var(--text-1)', fontWeight: 600 }}>{trust.toFixed(0)}</span>
+                            <span>trust score</span>
                         </span>
                     )}
-                    <span>· Applied {fmtDate(application.createdAt)}</span>
+                    {total > 0 && (
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                            <span style={{ color: 'var(--text-1)', fontWeight: 600 }}>{completed}/{total}</span>
+                            <span>contracts completed</span>
+                        </span>
+                    )}
+                    <span>· Applied {fmtDate(application.appliedAt)}</span>
+                    {application.vendorEmail && (
+                        <span>· {application.vendorEmail}</span>
+                    )}
                 </div>
             </div>
             <div style={{ display: 'flex', gap: 8, paddingTop: 4, flexWrap: 'wrap' }}>
