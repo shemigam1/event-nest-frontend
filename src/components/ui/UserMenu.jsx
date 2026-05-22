@@ -126,11 +126,14 @@ export default function UserMenu({ onDark = false, onOpenSidebar }) {
                             <MenuItem icon={<Icons.signal size={16} />} onClick={() => go('/admin/moderation')}>
                                 Event moderation
                             </MenuItem>
+                            <MenuItem icon={<Icons.alert size={16} />} onClick={() => go('/admin/reports')}>
+                                Reports
+                            </MenuItem>
+                            <MenuItem icon={<Icons.shield size={16} />} onClick={() => go('/admin/escrow')}>
+                                Escrow disputes
+                            </MenuItem>
                             <MenuItem icon={<Icons.users size={16} />} onClick={() => go('/admin/users')}>
                                 Manage users
-                            </MenuItem>
-                            <MenuItem icon={<Icons.list size={16} />} onClick={() => go('/admin/event-edits')}>
-                                Event edit requests
                             </MenuItem>
                             <MenuItem icon={<Icons.mail size={16} />} onClick={() => go('/admin/invite')}>
                                 Invite admin

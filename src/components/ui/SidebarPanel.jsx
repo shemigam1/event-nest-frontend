@@ -173,11 +173,14 @@ export default function SidebarPanel({ open, onClose }) {
                             <SidebarItem icon={<Icons.signal size={18} />} onClick={() => go('/admin/moderation')}>
                                 Event moderation
                             </SidebarItem>
+                            <SidebarItem icon={<Icons.alert size={18} />} onClick={() => go('/admin/reports')}>
+                                Reports
+                            </SidebarItem>
+                            <SidebarItem icon={<Icons.shield size={18} />} onClick={() => go('/admin/escrow')}>
+                                Escrow disputes
+                            </SidebarItem>
                             <SidebarItem icon={<Icons.users size={18} />} onClick={() => go('/admin/users')}>
                                 Manage users
-                            </SidebarItem>
-                            <SidebarItem icon={<Icons.list size={18} />} onClick={() => go('/admin/event-edits')}>
-                                Event edit requests
                             </SidebarItem>
                             <SidebarItem icon={<Icons.mail size={18} />} onClick={() => go('/admin/invite')}>
                                 Invite admin

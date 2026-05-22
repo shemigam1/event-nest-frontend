@@ -23,7 +23,7 @@ import EventModerationPage from '../features/admin/pages/EventModerationPage';
 import ManageUsersPage from '../features/admin/pages/ManageUsersPage';
 import AdminUserEventsPage from '../features/admin/pages/AdminUserEventsPage';
 import InviteAdminPage from '../features/admin/pages/InviteAdminPage';
-import EventEditsPage from '../features/admin/pages/EventEditsPage';
+import AdminReportsPage from '../features/admin/pages/AdminReportsPage';
 import AdminEventDetailPage from '../features/admin/pages/AdminEventDetailPage';
 import AdminEscrowPage from '../features/admin/pages/AdminEscrowPage';
 import AdminVendorsPage from '../features/admin/pages/AdminVendorsPage';
@@ -54,9 +54,6 @@ import ErrorPage from '../components/ui/ErrorPage';
 
 const router = createBrowserRouter([
     {
-        // Root wrapper — provides the global errorElement AND mounts the
-        // AppShell layout (persistent left sidebar for signed-in users,
-        // full-width passthrough for anonymous routes).
         element: <AppShell />,
         errorElement: <ErrorPage />,
         children: [
@@ -108,10 +105,10 @@ const router = createBrowserRouter([
                 children: [
                     { path: '/admin',                    element: <Navigate to="/admin/moderation" replace /> },
                     { path: '/admin/moderation',         element: <EventModerationPage /> },
+                    { path: '/admin/reports',            element: <AdminReportsPage /> },
                     { path: '/admin/users',              element: <ManageUsersPage /> },
                     { path: '/admin/users/:id/events',   element: <AdminUserEventsPage /> },
                     { path: '/admin/invite',             element: <InviteAdminPage /> },
-                    { path: '/admin/event-edits',        element: <EventEditsPage /> },
                     { path: '/admin/events/:id',             element: <AdminEventDetailPage /> },
                     { path: '/admin/escrow',                 element: <AdminEscrowPage /> },
                     { path: '/admin/vendors',                element: <AdminVendorsPage /> },
