@@ -3,6 +3,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate, useSearchParams } from 'react-router';
 import { Icons } from '@/components/ui/Icon';
 import { selectCurrentUserId, selectCurrentUser } from '@/features/auth/authSlice';
+import { useGetMeQuery } from '@/features/auth/authApi';
 import { useGetConversationsQuery, useGetConversationMessagesQuery, useMarkConversationReadMutation, messagesApi } from '../messagesApi';
 import { stompConnect, stompDisconnect, stompSubscribe, stompSend } from '@/services/stompService';
 
@@ -11,6 +12,9 @@ const TEMP_PREFIX = '__temp__';
 export default function MessagesPage() {
     const myId = useSelector(selectCurrentUserId);
     const currentUser = useSelector(selectCurrentUser);
+    // me.id is the server-assigned NanoID — the same value stored as senderUserId in
+    // messages and userId in conversation participants. This is the ground-truth identifier.
+    const { data: me } = useGetMeQuery();
     const dispatch = useDispatch();
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
@@ -44,17 +48,17 @@ export default function MessagesPage() {
     }, []);
 
     // Check whether a senderId belongs to the current user.
-    // Checks the JWT email (myId), the stored profile id, and the server-resolved short ID.
+    // Primary source: me.id (NanoID from /me endpoint — matches senderUserId exactly).
+    // Fallbacks for edge-cases where /me hasn't resolved yet.
     const isMyMessage = useCallback((senderId) => {
         const id = String(senderId ?? '');
         if (!id) return false;
-        return (
-            id === String(myId ?? '') ||
-            id === String(currentUser?.id ?? '') ||
-            id === String(currentUser?.email ?? '') ||
-            (myServerId !== null && id === myServerId)
-        );
-    }, [myId, currentUser, myServerId]);
+        if (me?.id && id === me.id) return true;
+        if (myServerId !== null && id === myServerId) return true;
+        if (currentUser?.id && id === String(currentUser.id)) return true;
+        if (myId && id === String(myId)) return true;
+        return false;
+    }, [me, myId, currentUser, myServerId]);
 
     const { data: conversations = [], isLoading: loadingConvs } = useGetConversationsQuery();
 
@@ -71,21 +75,14 @@ export default function MessagesPage() {
         });
     }, [conversations]);
 
-    // Derive our server-assigned sender ID from conversation participants.
-    // Each participant has { email, userId } — we match by email (the JWT sub).
+    // Seed myServerId from the /me NanoID as soon as it's available.
+    // Participants only expose userId (NanoID) + name — no email — so me.id is
+    // the only reliable way to identify the current user in participant lists.
     useEffect(() => {
-        for (const conv of conversations) {
-            const participants = conv.participants ?? conv.members ?? [];
-            const me = participants.find(p =>
-                String(p.email ?? '') === String(myId) ||
-                String(p.username ?? '') === String(myId)
-            );
-            if (me) {
-                resolveMyServerId(me.userId ?? me.id);
-                break;
-            }
+        if (me?.id) {
+            resolveMyServerId(me.id);
         }
-    }, [conversations, myId, resolveMyServerId]);
+    }, [me, resolveMyServerId]);
 
     const { data: history, isLoading: loadingHistory } = useGetConversationMessagesQuery(
         { conversationId: selectedId },
@@ -145,9 +142,9 @@ export default function MessagesPage() {
             setMessages(prev => {
                 // Check if this is the echo of one of our optimistic messages.
                 // We detect our own echo by matching the temp-prefixed placeholder —
-                // this is reliable regardless of what format senderId uses.
+                // this is reliable regardless of what format senderUserId uses.
                 const tempIdx = prev.findIndex(
-                    m => String(m.id ?? '').startsWith(TEMP_PREFIX) && m.content === msg.content
+                    m => String(m.id ?? '').startsWith(TEMP_PREFIX) && m.body === msg.body
                 );
                 if (tempIdx >= 0) {
                     return prev.map((m, i) => (i === tempIdx ? msg : m));
@@ -165,7 +162,7 @@ export default function MessagesPage() {
             .map(conv =>
                 stompSubscribe(`/topic/conversation.${conv.id}`, (msg) => {
                     // Only count messages from others, not our own echoes
-                    if (isMyMessage(msg.senderId)) return;
+                    if (isMyMessage(msg.senderUserId)) return;
                     setUnreadCounts(prev => ({
                         ...prev,
                         [conv.id]: (prev[conv.id] ?? 0) + 1,
@@ -199,11 +196,12 @@ export default function MessagesPage() {
         if (!draft.trim() || !selectedId) return;
         const content = draft.trim();
 
-        // Optimistic bubble — visible immediately, dimmed until confirmed
+        // Optimistic bubble — visible immediately, dimmed until confirmed.
+        // senderUserId must be the NanoID so isMyMessage() recognises it as "mine".
         const optimistic = {
             id: `${TEMP_PREFIX}${Date.now()}`,
-            content,
-            senderId: String(currentUser?.id ?? myId),
+            body: content,
+            senderUserId: me?.id ?? myServerId ?? String(currentUser?.id ?? myId),
             sentAt: new Date().toISOString(),
         };
         setMessages(prev => [...prev, optimistic]);
@@ -226,16 +224,18 @@ export default function MessagesPage() {
     // For groups: comma-separated names of all other participants (truncated after 2).
     const convDisplayName = useCallback((conv) => {
         const participants = conv?.participants ?? conv?.members ?? [];
-        const others = participants.filter(p =>
-            p.userId !== myServerId &&
-            String(p.email ?? '') !== String(myId)
-        );
+        // Participants only have { userId (NanoID), name } — no email field.
+        // Use me.id as the primary way to identify and exclude the current user.
+        const myNanoId = me?.id ?? myServerId ?? currentUser?.id;
+        const others = myNanoId
+            ? participants.filter(p => p.userId !== myNanoId)
+            : participants; // me not loaded yet — show all (brief flash only)
         if (others.length === 0) return conv?.title ?? 'Direct message';
         if (others.length === 1) return others[0].name ?? conv?.title ?? 'Direct message';
-        const names = others.map(p => p.name ?? p.email ?? 'Unknown');
+        const names = others.map(p => p.name ?? 'Unknown');
         if (names.length <= 3) return names.join(', ');
         return `${names.slice(0, 2).join(', ')} +${names.length - 2} more`;
-    }, [myServerId, myId]);
+    }, [me, myServerId, currentUser]);
 
     // On mobile: sidebar hidden when viewing thread, thread hidden when viewing list
     const sidebarClass = `mp-msg-panel mp-msg-sidebar${mobileView === 'thread' ? ' mp-msg-hide-mobile' : ''}`;
@@ -384,7 +384,7 @@ export default function MessagesPage() {
                                         <MessageBubble
                                             key={msg.id ?? i}
                                             msg={msg}
-                                            mine={isMyMessage(msg.senderId)}
+                                            mine={isMyMessage(msg.senderUserId)}
                                         />
                                     ))
                                 )}
@@ -596,7 +596,7 @@ function MessageBubble({ msg, mine }) {
                 opacity: pending ? 0.6 : 1,
                 transition: 'opacity 0.3s',
             }}>
-                <div>{msg.content}</div>
+                <div>{msg.body}</div>
                 <div style={{
                     fontSize: 11, marginTop: 3, opacity: 0.65,
                     textAlign: mine ? 'right' : 'left',

@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router";
 import { useDispatch } from "react-redux";
-import { useLoginMutation } from "../authApi";
-import { setCredentials } from "../authSlice";
+import { useLoginMutation, authApi } from "../authApi";
+import { setCredentials, setUser } from "../authSlice";
 import { baseApi } from "@/services/baseApi";
 import { userFromToken } from "@/utils/decodeJwt";
 import AuthLayout from "@/components/ui/AuthLayout";
@@ -32,6 +32,12 @@ export default function LoginPage() {
             const data = await login(formData).unwrap();
             dispatch(baseApi.util.resetApiState());
             dispatch(setCredentials(data));
+            // Fetch and persist the user profile (NanoID etc.) so currentUser.id
+            // is available throughout the app immediately after login.
+            try {
+                const profile = await dispatch(authApi.endpoints.getMe.initiate()).unwrap();
+                dispatch(setUser(profile));
+            } catch { /* non-fatal — profile will load lazily elsewhere */ }
             const tokenUser = userFromToken(data.accessToken);
             const isAdmin   = tokenUser?.roles?.includes('ROLE_ADMIN') ?? false;
             const defaultDest = isAdmin ? '/admin/moderation' : '/events';
