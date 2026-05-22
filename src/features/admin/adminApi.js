@@ -3,7 +3,7 @@ import { baseApi } from '@/services/baseApi';
 export const adminApi = baseApi.injectEndpoints({
     endpoints: (builder) => ({
         getAdminEvents: builder.query({
-            query: (status = 'PENDING_APPROVAL') => `/admin/events?status=${status}`,
+            query: (status = 'PUBLISHED') => `/admin/events?status=${status}`,
             providesTags: ['Event'],
             transformResponse: (r) => {
                 const d = r.data ?? r;
@@ -13,21 +13,6 @@ export const adminApi = baseApi.injectEndpoints({
             },
         }),
 
-        /* Approve or reject a PENDING_APPROVAL event — single review endpoint */
-        approveEvent: builder.mutation({
-            query: (id) => ({ url: `/admin/events/${id}/review`, method: 'POST', body: { approved: true } }),
-            invalidatesTags: ['Event'],
-            transformResponse: (r) => r.data ?? r,
-        }),
-        rejectEvent: builder.mutation({
-            query: ({ id, reason }) => ({
-                url: `/admin/events/${id}/review`,
-                method: 'POST',
-                body: { approved: false, reason },
-            }),
-            invalidatesTags: ['Event'],
-            transformResponse: (r) => r.data ?? r,
-        }),
         cancelEvent: builder.mutation({
             query: (id) => ({ url: `/admin/events/${id}/cancel`, method: 'PATCH' }),
             invalidatesTags: ['Event'],
@@ -82,31 +67,6 @@ export const adminApi = baseApi.injectEndpoints({
         getAnalytics: builder.query({
             query: () => '/admin/analytics',
             providesTags: ['Analytics'],
-            transformResponse: (r) => r.data ?? r,
-        }),
-
-        /* Event change requests (critical-field edits on published events) */
-        getEventEdits: builder.query({
-            query: (status) => status ? `/admin/events/change-requests?status=${status}` : '/admin/events/change-requests',
-            providesTags: ['EventEdit'],
-            transformResponse: (r) => { const d = r.data ?? r; return Array.isArray(d) ? d : (d?.content ?? []); },
-        }),
-        approveEventEdit: builder.mutation({
-            query: (id) => ({
-                url: `/admin/events/changes/${id}/review`,
-                method: 'POST',
-                body: { approved: true },
-            }),
-            invalidatesTags: ['EventEdit', 'Event'],
-            transformResponse: (r) => r.data ?? r,
-        }),
-        rejectEventEdit: builder.mutation({
-            query: ({ id, reason }) => ({
-                url: `/admin/events/changes/${id}/review`,
-                method: 'POST',
-                body: { approved: false, reason },
-            }),
-            invalidatesTags: ['EventEdit', 'Event'],
             transformResponse: (r) => r.data ?? r,
         }),
 
@@ -179,8 +139,6 @@ export const adminApi = baseApi.injectEndpoints({
             transformResponse: (r) => {
                 const d = r.data ?? r;
                 const content = Array.isArray(d) ? d : (d?.content ?? []);
-                // Spring Data 3.x nests pagination under a 'page' sub-object;
-                // fall back to top-level totalElements for older shapes.
                 const totalElements = d?.page?.totalElements ?? d?.totalElements ?? content.length;
                 const totalPages    = d?.page?.totalPages    ?? d?.totalPages    ?? 1;
                 return { content, totalElements, totalPages };
@@ -231,13 +189,42 @@ export const adminApi = baseApi.injectEndpoints({
             invalidatesTags: ['Event'],
             transformResponse: (r) => r.data ?? r,
         }),
+
+        /* Event reports */
+        getAdminReports: builder.query({
+            query: ({ status = 'PENDING', page = 0, size = 20 } = {}) =>
+                `/admin/reports?status=${status}&page=${page}&size=${size}`,
+            providesTags: ['Report'],
+            transformResponse: (r) => {
+                const d = r.data ?? r;
+                const content = Array.isArray(d) ? d : (d?.content ?? []);
+                const totalElements = d?.page?.totalElements ?? d?.totalElements ?? content.length;
+                const totalPages    = d?.page?.totalPages    ?? d?.totalPages    ?? 1;
+                return { content, totalElements, totalPages };
+            },
+        }),
+        reviewAdminReport: builder.mutation({
+            query: ({ reportId, action, adminNote }) => ({
+                url: `/admin/reports/${reportId}/review`,
+                method: 'PATCH',
+                body: { action, adminNote },
+            }),
+            invalidatesTags: ['Report'],
+            transformResponse: (r) => r.data ?? r,
+        }),
+        submitEventReport: builder.mutation({
+            query: ({ eventId, reason, description }) => ({
+                url: `/events/${eventId}/report`,
+                method: 'POST',
+                body: { reason, description },
+            }),
+            transformResponse: (r) => r.data ?? r,
+        }),
     }),
 });
 
 export const {
     useGetAdminEventsQuery,
-    useApproveEventMutation,
-    useRejectEventMutation,
     useCancelEventMutation,
     useGetAdminUsersQuery,
     useUpdateUserStatusMutation,
@@ -248,9 +235,6 @@ export const {
     useGetAnalyticsQuery,
     useGetAdminEventByIdQuery,
     useGetAdminEventBookingsQuery,
-    useGetEventEditsQuery,
-    useApproveEventEditMutation,
-    useRejectEventEditMutation,
     useInviteAdminMutation,
     useCompleteAdminInvitationMutation,
     useGetEscrowDisputesQuery,
@@ -265,4 +249,7 @@ export const {
     useRejectVendorVerificationMutation,
     useGetCapacityRequestsQuery,
     useReviewCapacityRequestMutation,
+    useGetAdminReportsQuery,
+    useReviewAdminReportMutation,
+    useSubmitEventReportMutation,
 } = adminApi;

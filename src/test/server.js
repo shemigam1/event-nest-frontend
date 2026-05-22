@@ -348,6 +348,39 @@ export const MOCK_ANALYTICS = {
     checkInRate: 0.68,
 };
 
+export const MOCK_REPORTS = [
+    {
+        id: 'rpt_001',
+        eventId: 'evt_001',
+        eventTitle: 'Moniepoint Merchant Summit 2026',
+        eventStatus: 'PUBLISHED',
+        reportedById: 'user_002',
+        reportedByName: 'Jane Smith',
+        reportedByEmail: 'jane@example.com',
+        reason: 'FRAUD',
+        description: 'Ticket prices were changed after purchase without notice.',
+        status: 'PENDING',
+        adminNote: null,
+        reportedAt: '2026-05-10T12:00:00',
+        reviewedAt: null,
+    },
+    {
+        id: 'rpt_002',
+        eventId: 'evt_002',
+        eventTitle: 'Agent Onboarding Workshop · Q2',
+        eventStatus: 'PUBLISHED',
+        reportedById: 'user_001',
+        reportedByName: 'John Doe',
+        reportedByEmail: 'john@example.com',
+        reason: 'SPAM',
+        description: 'This event is a duplicate of an existing one.',
+        status: 'REVIEWED',
+        adminNote: 'Investigated — legitimate event.',
+        reportedAt: '2026-05-08T09:30:00',
+        reviewedAt: '2026-05-09T11:00:00',
+    },
+];
+
 export const MOCK_ADMIN_USERS = [
     { id: 'user_001', firstName: 'John', lastName: 'Doe', email: 'john@example.com', role: 'ATTENDEE', enabled: true, createdAt: '2026-01-01T00:00:00' },
     { id: 'user_002', firstName: 'Jane', lastName: 'Smith', email: 'jane@example.com', role: 'ORGANISER', enabled: true, createdAt: '2026-01-02T00:00:00' },
@@ -454,21 +487,11 @@ export const server = setupServer(
         return HttpResponse.json({ success: true, data: event });
     }),
 
-    // Single event (with pendingUpdate if applicable)
+    // Single event
     http.get(`${BASE_URL}/events/:id`, ({ params }) => {
         const event = MOCK_EVENTS.find(e => e.id === params.id);
         if (!event) return HttpResponse.json({ success: false, message: 'Not found' }, { status: 404 });
-        const pendingEdit = MOCK_EVENT_EDITS.find((e) => e.eventId === params.id && e.status === 'PENDING');
-        const rejectedEdit = !pendingEdit && MOCK_EVENT_EDITS.find((e) => e.eventId === params.id && e.status === 'REJECTED');
-        const activeEdit = pendingEdit ?? rejectedEdit ?? null;
-        const pendingUpdate = activeEdit ? {
-            id: activeEdit.id,
-            proposedChanges: activeEdit.proposedChanges,
-            status: activeEdit.status,
-            rejectionReason: activeEdit.rejectionReason,
-            submittedAt: activeEdit.submittedAt,
-        } : null;
-        return HttpResponse.json({ success: true, data: { ...event, pendingUpdate } });
+        return HttpResponse.json({ success: true, data: event });
     }),
 
     // Create tier (must come before GET tiers)
@@ -575,9 +598,8 @@ export const server = setupServer(
         const url = new URL(request.url);
         const status = url.searchParams.get('status');
         const organiserId = url.searchParams.get('organiserId');
-        let events = [...MOCK_EVENTS, ...MOCK_PENDING_EVENTS];
+        let events = [...MOCK_EVENTS];
         if (organiserId) events = events.filter(e => e.createdBy === organiserId);
-        else if (status === 'PENDING_APPROVAL') events = MOCK_PENDING_EVENTS;
         else if (status) events = MOCK_EVENTS.filter(e => e.status === status);
         return HttpResponse.json({
             success: true,
@@ -585,9 +607,9 @@ export const server = setupServer(
         });
     }),
 
-    // Admin: single event detail (tiers + organizer + pendingUpdate embedded)
+    // Admin: single event detail (tiers + organizer embedded)
     http.get(`${BASE_URL}/admin/events/:id`, ({ params }) => {
-        const event = [...MOCK_EVENTS, ...MOCK_PENDING_EVENTS, ...MOCK_ORGANIZER_EVENTS]
+        const event = [...MOCK_EVENTS, ...MOCK_ORGANIZER_EVENTS]
             .find((e) => e.id === params.id);
         if (!event) return HttpResponse.json({ success: false, message: 'Not found' }, { status: 404 });
 
@@ -597,18 +619,7 @@ export const server = setupServer(
             ? { id: organiserUser.id, firstName: organiserUser.firstName, lastName: organiserUser.lastName, email: organiserUser.email }
             : null;
 
-        const pendingEdit   = MOCK_EVENT_EDITS.find((e) => e.eventId === params.id && e.status === 'PENDING');
-        const rejectedEdit  = !pendingEdit && MOCK_EVENT_EDITS.find((e) => e.eventId === params.id && e.status === 'REJECTED');
-        const activeEdit    = pendingEdit ?? rejectedEdit ?? null;
-        const pendingUpdate = activeEdit ? {
-            id: activeEdit.id,
-            proposedChanges: activeEdit.proposedChanges,
-            status: activeEdit.status,
-            rejectionReason: activeEdit.rejectionReason,
-            submittedAt: activeEdit.submittedAt,
-        } : null;
-
-        return HttpResponse.json({ success: true, data: { ...event, tiers, organizer, pendingUpdate } });
+        return HttpResponse.json({ success: true, data: { ...event, tiers, organizer } });
     }),
 
     // Admin: bookings for a specific event
@@ -617,23 +628,6 @@ export const server = setupServer(
         return HttpResponse.json({
             success: true,
             data: { content: bookings, totalElements: bookings.length },
-        });
-    }),
-
-    // Admin: review event (single endpoint that handles both approve & reject)
-    http.post(`${BASE_URL}/admin/events/:id/review`, async ({ params, request }) => {
-        const body = await request.json();
-        if (body.approved) {
-            return HttpResponse.json({
-                success: true,
-                message: 'Event approved and published',
-                data: { id: params.id, status: 'PUBLISHED' },
-            });
-        }
-        return HttpResponse.json({
-            success: true,
-            message: 'Event rejected',
-            data: { id: params.id, status: 'DRAFT', rejectionReason: body.reason },
         });
     }),
 
@@ -669,28 +663,44 @@ export const server = setupServer(
         HttpResponse.json({ success: true, message: 'Event cancelled', data: { id: params.id, status: 'CANCELLED' } })
     ),
 
-    // Admin: event edits list
-    http.get(`${BASE_URL}/admin/event-edits`, ({ request }) => {
+    // Admin: list event reports
+    http.get(`${BASE_URL}/admin/reports`, ({ request }) => {
         const url = new URL(request.url);
-        const status = url.searchParams.get('status');
-        const edits = status ? MOCK_EVENT_EDITS.filter((e) => e.status === status) : MOCK_EVENT_EDITS;
-        return HttpResponse.json({ success: true, data: { content: edits, totalElements: edits.length } });
+        const status = url.searchParams.get('status') ?? 'PENDING';
+        const reports = MOCK_REPORTS.filter((r) => r.status === status);
+        return HttpResponse.json({
+            success: true,
+            data: { content: reports, page: 0, size: 20, totalElements: reports.length, totalPages: 1 },
+        });
     }),
 
-    // Admin: approve event edit
-    http.patch(`${BASE_URL}/admin/event-edits/:id/approve`, ({ params }) => {
-        const edit = MOCK_EVENT_EDITS.find((e) => e.id === params.id);
-        return HttpResponse.json({ success: true, message: 'Edit approved and applied to live event', data: { ...edit, status: 'APPROVED' } });
-    }),
-
-    // Admin: reject event edit
-    http.patch(`${BASE_URL}/admin/event-edits/:id/reject`, async ({ params, request }) => {
+    // Admin: review a report
+    http.patch(`${BASE_URL}/admin/reports/:id/review`, async ({ params, request }) => {
         const body = await request.json();
-        const edit = MOCK_EVENT_EDITS.find((e) => e.id === params.id);
-        return HttpResponse.json({ success: true, message: 'Edit rejected', data: { ...edit, status: 'REJECTED', rejectionReason: body.reason } });
+        const report = MOCK_REPORTS.find((r) => r.id === params.id);
+        return HttpResponse.json({
+            success: true,
+            data: { ...report, status: body.action, adminNote: body.adminNote ?? null, reviewedAt: new Date().toISOString() },
+        });
     }),
 
-    // Events: single event (with pendingUpdate if applicable)
+    // User: submit event report
+    http.post(`${BASE_URL}/events/:eventId/report`, async ({ params, request }) => {
+        const body = await request.json();
+        return HttpResponse.json({
+            success: true,
+            message: 'Report submitted successfully',
+            data: {
+                id: `rpt_new_${Date.now()}`,
+                eventId: params.eventId,
+                reason: body.reason,
+                description: body.description ?? null,
+                status: 'PENDING',
+                reportedAt: new Date().toISOString(),
+            },
+        }, { status: 201 });
+    }),
+
     // Admin: analytics
     http.get(`${BASE_URL}/admin/analytics`, () =>
         HttpResponse.json({ success: true, data: MOCK_ANALYTICS })
@@ -707,17 +717,7 @@ export const server = setupServer(
             MOCK_ORGANIZER_EVENTS.find((e) => e.id === params.id) ??
             MOCK_EVENTS.find((e) => e.id === params.id);
         if (!event) return HttpResponse.json({ success: false, message: 'Not found' }, { status: 404 });
-        const pendingEdit = MOCK_EVENT_EDITS.find((e) => e.eventId === params.id && e.status === 'PENDING');
-        const rejectedEdit = !pendingEdit && MOCK_EVENT_EDITS.find((e) => e.eventId === params.id && e.status === 'REJECTED');
-        const activeEdit = pendingEdit ?? rejectedEdit ?? null;
-        const pendingUpdate = activeEdit ? {
-            id: activeEdit.id,
-            proposedChanges: activeEdit.proposedChanges,
-            status: activeEdit.status,
-            rejectionReason: activeEdit.rejectionReason,
-            submittedAt: activeEdit.submittedAt,
-        } : null;
-        return HttpResponse.json({ success: true, data: { ...event, pendingUpdate } });
+        return HttpResponse.json({ success: true, data: event });
     }),
 
     // Organizer: bookings for an event

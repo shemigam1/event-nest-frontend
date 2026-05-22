@@ -8,57 +8,8 @@ import { formatEventDate } from '@/utils/dateFormat';
 import {
     useGetAdminEventByIdQuery,
     useGetAdminEventBookingsQuery,
-    useApproveEventMutation,
-    useRejectEventMutation,
     useCancelEventMutation,
 } from '../adminApi';
-
-/* ── Reject dialog ───────────────────────────────── */
-function RejectDialog({ title, onConfirm, onDismiss, loading }) {
-    const [reason, setReason] = useState('');
-    const [error, setError]   = useState('');
-
-    function submit() {
-        if (!reason.trim()) { setError('A rejection reason is required'); return; }
-        onConfirm(reason.trim());
-    }
-
-    return (
-        <div
-            role="dialog"
-            onClick={onDismiss}
-            style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(2,16,45,0.55)', display: 'grid', placeItems: 'center', padding: 20 }}
-        >
-            <div
-                onClick={(e) => e.stopPropagation()}
-                style={{ width: '100%', maxWidth: 440, background: 'white', borderRadius: 16, boxShadow: 'var(--shadow-modal)', padding: 28 }}
-            >
-                <h2 className="mp-h3" style={{ margin: '0 0 6px', color: 'var(--text-1)' }}>Reject event</h2>
-                <p className="body-sm" style={{ margin: '0 0 16px', color: 'var(--text-2)' }}>
-                    Tell the organiser why <strong>{title}</strong> was rejected. They&apos;ll see this reason.
-                </p>
-                <textarea
-                    value={reason}
-                    onChange={(e) => { setReason(e.target.value); setError(''); }}
-                    placeholder="e.g. Incomplete details, inappropriate content…"
-                    style={{
-                        width: '100%', minHeight: 100, padding: '10px 14px',
-                        background: 'white', border: `1px solid ${error ? 'var(--error)' : 'var(--border)'}`,
-                        borderRadius: 12, fontSize: 15, color: 'var(--text-1)',
-                        resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box',
-                    }}
-                />
-                {error && <span style={{ display: 'block', fontSize: 12, color: 'var(--error)', marginTop: 4 }}>{error}</span>}
-                <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 20 }}>
-                    <Button variant="ghost" size="md" onClick={onDismiss} disabled={loading}>Cancel</Button>
-                    <Button variant="destructive" size="md" onClick={submit} disabled={loading}>
-                        {loading ? 'Rejecting…' : 'Reject event'}
-                    </Button>
-                </div>
-            </div>
-        </div>
-    );
-}
 
 /* ── Skeleton ────────────────────────────────────── */
 function Skeleton() {
@@ -131,38 +82,17 @@ export default function AdminEventDetailPage() {
     const isPublished   = eventQuery.data?.status === 'PUBLISHED';
     const bookingsQuery = useGetAdminEventBookingsQuery(eventId, { skip: !isPublished });
 
-    const [approveEvent, approveState] = useApproveEventMutation();
-    const [rejectEvent,  rejectState]  = useRejectEventMutation();
-    const [cancelEvent,  cancelState]  = useCancelEventMutation();
+    const [cancelEvent, cancelState] = useCancelEventMutation();
 
-    const [tab, setTab]                 = useState('details');
-    const [showReject, setShowReject]   = useState(false);
-    const [showCancel, setShowCancel]   = useState(false);
+    const [tab, setTab]               = useState('details');
+    const [showCancel, setShowCancel] = useState(false);
     const [actionError, setActionError] = useState('');
-
-    async function handleApprove() {
-        setActionError('');
-        try {
-            await approveEvent(eventId).unwrap();
-        } catch (err) {
-            setActionError(err?.data?.message || 'Could not approve. Please try again.');
-        }
-    }
-
-    async function handleRejectConfirm(reason) {
-        setActionError('');
-        try {
-            await rejectEvent({ id: eventId, reason }).unwrap();
-            setShowReject(false);
-        } catch (err) {
-            setActionError(err?.data?.message || 'Could not reject. Please try again.');
-        }
-    }
 
     async function handleCancel() {
         setActionError('');
         try {
             await cancelEvent(eventId).unwrap();
+            setShowCancel(false);
         } catch (err) {
             setActionError(err?.data?.message || 'Could not cancel. Please try again.');
         }
@@ -189,9 +119,6 @@ export default function AdminEventDetailPage() {
     const tiers    = event?.tiers ?? [];
     const bookings = bookingsQuery.data ?? [];
 
-    const isPending = event.status === 'PENDING_APPROVAL';
-    const busy      = approveState.isLoading || rejectState.isLoading || cancelState.isLoading;
-
     const totalCapacity = tiers.reduce((s, t) => s + (t.totalCapacity ?? 0), 0);
     const totalSold     = tiers.reduce((s, t) => s + ((t.totalCapacity ?? 0) - (t.availableCapacity ?? 0)), 0);
     const totalRevenue  = tiers.reduce((s, t) => {
@@ -214,7 +141,7 @@ export default function AdminEventDetailPage() {
                 </div>
             )}
 
-            {/* Event header — always visible above tabs */}
+            {/* Event header */}
             <div style={{
                 background: 'white', border: '1px solid var(--border)',
                 borderRadius: 16, padding: 28, marginBottom: 24, boxShadow: 'var(--shadow-card)',
@@ -253,54 +180,16 @@ export default function AdminEventDetailPage() {
                                 {event.description}
                             </p>
                         )}
-                        {event.rejectionReason && (
-                            <div style={{ marginTop: 14, padding: '10px 14px', borderRadius: 8, background: 'var(--error-bg)', fontSize: 13, color: 'var(--error)' }}>
-                                <strong>Rejection reason:</strong> {event.rejectionReason}
-                            </div>
-                        )}
-                        {event.pendingUpdate && (
-                            <div style={{
-                                marginTop: 14, padding: '10px 14px', borderRadius: 8,
-                                background: '#EFF6FF', border: '1px solid #BFDBFE',
-                                fontSize: 13, color: '#1E40AF',
-                                display: 'flex', alignItems: 'flex-start', gap: 8,
-                            }}>
-                                <Icons.clock size={14} style={{ color: '#3B82F6', flexShrink: 0, marginTop: 1 }} />
-                                <div>
-                                    <strong>Pending edit request</strong> — organiser has submitted changes for review.
-                                    {event.pendingUpdate.proposedChanges?.description && (
-                                        <div style={{ marginTop: 6, color: '#1D4ED8' }}>
-                                            Proposed description: &ldquo;{event.pendingUpdate.proposedChanges.description}&rdquo;
-                                        </div>
-                                    )}
-                                    <div style={{ marginTop: 4 }}>
-                                        <a href="/admin/event-edits" style={{ color: '#2563EB', fontWeight: 600, textDecoration: 'none' }}>
-                                            Review in Event Edits →
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
                     </div>
 
-                    {/* Admin actions */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flexShrink: 0 }}>
-                        {isPending && (
-                            <>
-                                <Button variant="primary" size="md" icon={<Icons.check size={15} />} onClick={handleApprove} disabled={busy}>
-                                    {approveState.isLoading ? 'Approving…' : 'Approve'}
-                                </Button>
-                                <Button variant="destructive" size="md" onClick={() => setShowReject(true)} disabled={busy}>
-                                    Reject
-                                </Button>
-                            </>
-                        )}
-                        {isPublished && (
-                            <Button variant="destructive" size="md" onClick={() => setShowCancel(true)} disabled={busy}>
+                    {/* Admin actions — take-down only for published events */}
+                    {isPublished && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flexShrink: 0 }}>
+                            <Button variant="destructive" size="md" onClick={() => setShowCancel(true)} disabled={cancelState.isLoading}>
                                 Force cancel
                             </Button>
-                        )}
-                    </div>
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -310,7 +199,6 @@ export default function AdminEventDetailPage() {
             {/* Details tab */}
             {tab === 'details' && (
                 <>
-                    {/* Stats row */}
                     {tiers.length > 0 && (
                         <div className="mp-stat-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginBottom: 20 }}>
                             {[
@@ -329,7 +217,6 @@ export default function AdminEventDetailPage() {
                         </div>
                     )}
 
-                    {/* Ticket tiers */}
                     {tiers.length > 0 ? (
                         <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden', boxShadow: 'var(--shadow-card)' }}>
                             <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', fontWeight: 600, color: 'var(--text-1)', fontSize: 14 }}>
@@ -433,15 +320,6 @@ export default function AdminEventDetailPage() {
                         );
                     })}
                 </div>
-            )}
-
-            {showReject && (
-                <RejectDialog
-                    title={event.title}
-                    onConfirm={handleRejectConfirm}
-                    onDismiss={() => setShowReject(false)}
-                    loading={rejectState.isLoading}
-                />
             )}
 
             {showCancel && (

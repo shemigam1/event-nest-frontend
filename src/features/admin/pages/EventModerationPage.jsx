@@ -10,26 +10,9 @@ import {
     useGetAnalyticsQuery,
 } from '../adminApi';
 
-/* ────────────────────────────────────────────────────────────────────────────
-   Admin event moderation.
-
-   The platform retired pre-publish approval: events created with a verified
-   host profile go live immediately. This page is now a REACTIVE tool — admin
-   reviews live events and takes them down when they violate policy (using the
-   existing forceCancel endpoint, which marks the event CANCELLED).
-
-   Tabs:
-     · Live      — PUBLISHED events; primary surface, where take-downs happen
-     · Cancelled — taken-down or organiser-cancelled events
-     · Pending   — legacy backlog (PENDING_APPROVAL) from before auto-publish.
-                   On a fresh install this is always empty. Kept so any
-                   stragglers from the migration can still be cleared.
-   ──────────────────────────────────────────────────────────────────────── */
-
 const FILTERS = [
-    { id: 'PUBLISHED',        label: 'Live',      analyticsKey: 'PUBLISHED' },
-    { id: 'CANCELLED',        label: 'Cancelled', analyticsKey: 'CANCELLED' },
-    { id: 'PENDING_APPROVAL', label: 'Legacy queue', analyticsKey: 'PENDING_APPROVAL' },
+    { id: 'PUBLISHED', label: 'Live',      analyticsKey: 'PUBLISHED' },
+    { id: 'CANCELLED', label: 'Cancelled', analyticsKey: 'CANCELLED' },
 ];
 
 /* ── Stat tile ───────────────────────────────────── */
@@ -50,8 +33,7 @@ function StatTile({ label, value, icon, sub }) {
     );
 }
 
-/* ── Take-down dialog (a confirm modal, no reason field — we don't have a
-   take-down-reason column yet and forceCancel doesn't accept one) ─────────── */
+/* ── Take-down dialog ────────────────────────────── */
 function TakeDownDialog({ event, onConfirm, onDismiss, loading }) {
     if (!event) return null;
     return (
@@ -152,7 +134,6 @@ function Skeleton() {
 
 /* ── Page ────────────────────────────────────────── */
 export default function EventModerationPage() {
-    // Default to the live queue — that's where reactive moderation happens now.
     const [filter, setFilter] = useState('PUBLISHED');
 
     const { data: analytics, isLoading: analyticsLoading } = useGetAnalyticsQuery();
@@ -160,13 +141,12 @@ export default function EventModerationPage() {
     const [cancelEvent, cancelState] = useCancelEventMutation();
 
     const [pendingTakeDown, setPendingTakeDown] = useState(null);
-    const [actionError, setActionError]        = useState('');
+    const [actionError, setActionError]         = useState('');
 
     const events    = data?.content ?? [];
     const byStatus  = analytics?.eventsByStatus ?? {};
     const published = byStatus.PUBLISHED ?? 0;
     const cancelled = byStatus.CANCELLED ?? 0;
-    const legacy    = byStatus.PENDING_APPROVAL ?? 0;
     const total     = Object.values(byStatus).reduce((s, n) => s + n, 0);
 
     async function handleTakeDownConfirm() {
@@ -180,9 +160,8 @@ export default function EventModerationPage() {
     }
 
     const emptyMessages = {
-        PUBLISHED:        { icon: <Icons.bolt  size={28} style={{ color: 'var(--text-3)' }} />, title: 'No live events',     body: 'Live events appear here so you can step in if needed.' },
-        CANCELLED:        { icon: <Icons.x     size={28} style={{ color: 'var(--text-3)' }} />, title: 'No cancelled events', body: 'Events taken down by admin or organisers will appear here.' },
-        PENDING_APPROVAL: { icon: <Icons.check size={28} style={{ color: 'var(--text-3)' }} />, title: 'No legacy queue',    body: 'Older events from before auto-publish all cleared.' },
+        PUBLISHED: { icon: <Icons.bolt  size={28} style={{ color: 'var(--text-3)' }} />, title: 'No live events',     body: 'Live events appear here so you can step in if needed.' },
+        CANCELLED: { icon: <Icons.x     size={28} style={{ color: 'var(--text-3)' }} />, title: 'No cancelled events', body: 'Events taken down by admin or organisers will appear here.' },
     };
     const empty = emptyMessages[filter];
 
@@ -194,16 +173,15 @@ export default function EventModerationPage() {
                 <div style={{ marginBottom: 28 }}>
                     <h1 className="mp-h1" style={{ margin: 0, color: 'var(--text-1)' }}>Event moderation</h1>
                     <p className="body" style={{ margin: '6px 0 0', color: 'var(--text-2)' }}>
-                        Events publish immediately on create — moderation is reactive. Take down any live event that violates policy.
+                        Events publish immediately — moderation is reactive. Take down any live event that violates policy.
                     </p>
                 </div>
 
                 {/* Stats strip */}
-                <div className="mp-stat-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 28 }}>
-                    <StatTile label="Live"          value={analyticsLoading ? '—' : published} icon={<Icons.bolt size={16} />} sub="currently published" />
-                    <StatTile label="Cancelled"     value={analyticsLoading ? '—' : cancelled} icon={<Icons.x size={16} />} />
-                    <StatTile label="Legacy queue"  value={analyticsLoading ? '—' : legacy}    icon={<Icons.clock size={16} />} sub="pre-auto-publish stragglers" />
-                    <StatTile label="Total events"  value={analyticsLoading ? '—' : total}     icon={<Icons.calendar size={16} />} />
+                <div className="mp-stat-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 28 }}>
+                    <StatTile label="Live"         value={analyticsLoading ? '—' : published} icon={<Icons.bolt size={16} />} sub="currently published" />
+                    <StatTile label="Cancelled"    value={analyticsLoading ? '—' : cancelled} icon={<Icons.x size={16} />} />
+                    <StatTile label="Total events" value={analyticsLoading ? '—' : total}     icon={<Icons.calendar size={16} />} />
                 </div>
 
                 {actionError && (
