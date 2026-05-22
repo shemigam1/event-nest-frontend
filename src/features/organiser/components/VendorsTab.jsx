@@ -261,13 +261,13 @@ function MarketplacePane() {
         const q = search.trim().toLowerCase();
         if (!q) return items;
         return items.filter((v) => {
-            const hay = `${v.vendorName || ''} ${v.serviceType || ''} ${v.profileDescription || ''}`.toLowerCase();
+            const hay = `${v.businessName || ''} ${v.category || ''} ${v.bio || ''}`.toLowerCase();
             return hay.includes(q);
         });
     }, [rawVendors, search]);
 
     function viewVendor(v) {
-        navigate(`/vendors/${v.vendorId}`);
+        navigate(`/vendors/${v.id}`);
     }
 
     return (
@@ -322,7 +322,7 @@ function MarketplacePane() {
                     gap: 14,
                 }}>
                     {vendors.map((v) => (
-                        <MiniVendorCard key={v.vendorId} vendor={v} onView={() => viewVendor(v)} />
+                        <MiniVendorCard key={v.id} vendor={v} onView={() => viewVendor(v)} />
                     ))}
                 </div>
             )}
@@ -331,12 +331,12 @@ function MarketplacePane() {
 }
 
 function MiniVendorCard({ vendor, onView }) {
-    const name     = vendor.vendorName || '';
-    const verified = vendor.vendorVerified === true;
-    const service  = vendor.serviceType  || '';
-    const bio      = vendor.profileDescription || '';
-    const rating   = vendor.averageRating;
-    const events   = vendor.completedEvents;
+    const name     = vendor.businessName || '';
+    const verified = vendor.verifiedAt != null;
+    const service  = vendor.category || '';
+    const bio      = vendor.bio || '';
+    const rating   = vendor.trustScore;
+    const events   = vendor.completedContracts;
 
     return (
         <div style={{

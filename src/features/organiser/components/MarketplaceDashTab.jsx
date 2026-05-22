@@ -160,9 +160,9 @@ export default function MarketplaceDashTab() {
                 }}>
                     {vendors.map((v) => (
                         <VendorCard
-                            key={v.vendorId ?? v.id}
+                            key={v.id}
                             vendor={v}
-                            onView={() => navigate(`/vendors/${v.vendorId ?? v.id}`)}
+                            onView={() => navigate(`/vendors/${v.id}`)}
                         />
                     ))}
                 </div>
@@ -173,12 +173,12 @@ export default function MarketplaceDashTab() {
 
 /* ── Vendor card ─────────────────────────────────── */
 function VendorCard({ vendor: v, onView }) {
-    const name     = v.vendorName || '';
-    const verified = v.vendorVerified === true;
-    const service  = v.serviceType || '';
-    const bio      = v.profileDescription || '';
-    const rating   = v.averageRating;
-    const events   = v.completedEvents;
+    const name     = v.businessName || '';
+    const verified = v.verifiedAt != null;
+    const service  = v.category || '';
+    const bio      = v.bio || '';
+    const rating   = v.trustScore;
+    const events   = v.completedContracts;
 
     return (
         <div style={{
