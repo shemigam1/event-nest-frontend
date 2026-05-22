@@ -19,6 +19,7 @@ export default function Input({
   hint,
   error,
   icon,
+  prefix,
   style,
   type = 'text',
   noToggle = false,
@@ -30,6 +31,12 @@ export default function Input({
   // When revealed, swap the underlying input to type=text so the browser
   // actually renders the characters.
   const effectiveType = isPassword && revealed ? 'text' : type;
+
+  // Measure the prefix length to know how far to indent the input. This is a
+  // rough character-width estimate (~7.5px per char at our 14px font) so we
+  // don't need a layout-effect to measure DOM nodes.
+  const prefixIndent = prefix ? Math.round(7.5 * prefix.length) + 12 : 0;
+  const leftPad = icon ? 42 : (prefix ? 14 + prefixIndent : 14);
 
   return (
     <label style={{ display: 'block' }}>
@@ -58,6 +65,21 @@ export default function Input({
             {icon}
           </span>
         )}
+        {prefix && !icon && (
+          <span style={{
+            position: 'absolute',
+            left: 14,
+            top: '50%',
+            transform: 'translateY(-50%)',
+            color: 'var(--mp-blue)',
+            fontWeight: 600,
+            fontSize: 14,
+            pointerEvents: 'none',
+            fontFamily: 'inherit',
+          }}>
+            {prefix}
+          </span>
+        )}
         <input
           type={effectiveType}
           {...rest}
@@ -66,7 +88,7 @@ export default function Input({
             height: 44,
             // Pad the right edge when the toggle button is shown so the eye
             // doesn't overlap the user's typed characters.
-            padding: `0 ${showToggle ? 44 : 14}px 0 ${icon ? 42 : 14}px`,
+            padding: `0 ${showToggle ? 44 : 14}px 0 ${leftPad}px`,
             background: 'var(--surface-elevated)',
             border: `1px solid ${error ? 'var(--error)' : 'var(--border)'}`,
             borderRadius: 12,
