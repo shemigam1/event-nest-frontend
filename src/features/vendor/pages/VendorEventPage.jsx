@@ -152,14 +152,16 @@ export default function VendorEventPage() {
                         </h1>
                     </div>
                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                        <Button
-                            variant="secondary"
-                            size="md"
-                            iconLeft={<Icons.message size={14} />}
-                            onClick={() => navigate('/messages')}
-                        >
-                            Message organiser
-                        </Button>
+                        {application.status === 'ACCEPTED' && (
+                            <Button
+                                variant="secondary"
+                                size="md"
+                                iconLeft={<Icons.message size={14} />}
+                                onClick={() => navigate('/messages')}
+                            >
+                                Message organiser
+                            </Button>
+                        )}
                         <Button
                             variant="ghost"
                             size="md"

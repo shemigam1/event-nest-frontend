@@ -42,6 +42,9 @@ function PublishedTierRow({ tier, eventId, isLast }) {
     const [name, setName] = useState(tier.name);
     const [isFree, setIsFree] = useState(Number(tier.price) === 0);
     const [price, setPrice] = useState(String(tier.price));
+    const [maxPerPerson, setMaxPerPerson] = useState(
+        tier.maxPerPerson != null ? String(tier.maxPerPerson) : ''
+    );
     const [updateTier, { isLoading }] = useUpdateTierMutation();
     const [error, setError] = useState('');
 
@@ -49,8 +52,12 @@ function PublishedTierRow({ tier, eventId, isLast }) {
         const finalPrice = isFree ? 0 : parseFloat(price);
         if (!name.trim()) { setError('Name is required'); return; }
         if (!isFree && (isNaN(finalPrice) || finalPrice < 0)) { setError('Enter a valid price'); return; }
+        const mpp = maxPerPerson !== '' ? parseInt(maxPerPerson, 10) : null;
+        const payload = { eventId, tierId: tier.id, name: name.trim(), price: finalPrice };
+        if (mpp != null && mpp >= 1) payload.maxPerPerson = mpp;
+        else payload.clearMaxPerPerson = true;
         try {
-            await updateTier({ eventId, tierId: tier.id, name: name.trim(), price: finalPrice }).unwrap();
+            await updateTier(payload).unwrap();
             setEditing(false);
             setError('');
         } catch (err) {
@@ -62,6 +69,7 @@ function PublishedTierRow({ tier, eventId, isLast }) {
         setName(tier.name);
         setIsFree(Number(tier.price) === 0);
         setPrice(String(tier.price));
+        setMaxPerPerson(tier.maxPerPerson != null ? String(tier.maxPerPerson) : '');
         setEditing(false);
         setError('');
     }
@@ -74,9 +82,12 @@ function PublishedTierRow({ tier, eventId, isLast }) {
             }}>
                 <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: 600, color: 'var(--text-1)' }}>{tier.name}</div>
-                    <div style={{ fontSize: 13, color: 'var(--text-2)', marginTop: 3, display: 'flex', gap: 16 }}>
+                    <div style={{ fontSize: 13, color: 'var(--text-2)', marginTop: 3, display: 'flex', gap: 16, flexWrap: 'wrap' }}>
                         <span>{Number(tier.price) === 0 ? 'Free' : `₦${Number(tier.price).toLocaleString()}`}</span>
                         <span>{tier.totalCapacity?.toLocaleString()} seats</span>
+                        <span style={{ color: 'var(--text-3)' }}>
+                            {tier.maxPerPerson != null ? `Max ${tier.maxPerPerson}/person` : 'Unlimited per person'}
+                        </span>
                         {hasSales && (
                             <span style={{ color: 'var(--text-3)' }}>{sold} sold</span>
                         )}
@@ -149,6 +160,41 @@ function PublishedTierRow({ tier, eventId, isLast }) {
                             />
                         )}
                     </div>
+                    {/* Max per person */}
+                    <div>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                            <label style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-1)' }}>
+                                Max tickets per person
+                            </label>
+                            <button
+                                type="button"
+                                onClick={() => setMaxPerPerson(maxPerPerson !== '' ? '' : '2')}
+                                style={{
+                                    fontSize: 12, fontWeight: 500, padding: '2px 8px',
+                                    borderRadius: 6, border: '1px solid var(--border)',
+                                    background: maxPerPerson === '' ? 'var(--mp-blue)' : 'white',
+                                    color: maxPerPerson === '' ? 'white' : 'var(--text-2)',
+                                    cursor: 'pointer',
+                                }}
+                            >
+                                Unlimited
+                            </button>
+                        </div>
+                        {maxPerPerson !== '' ? (
+                            <input
+                                type="number" min="1" placeholder="e.g. 4"
+                                value={maxPerPerson}
+                                onChange={(e) => setMaxPerPerson(e.target.value)}
+                                style={{
+                                    width: 120, height: 38, padding: '0 12px',
+                                    background: 'white', border: '1px solid var(--border)',
+                                    borderRadius: 8, fontSize: 14, color: 'var(--text-1)',
+                                }}
+                            />
+                        ) : (
+                            <p style={{ margin: 0, fontSize: 12, color: 'var(--text-3)' }}>No per-person limit.</p>
+                        )}
+                    </div>
                     {error && <p style={{ margin: 0, fontSize: 12, color: 'var(--error)' }}>{error}</p>}
                     <div style={{ display: 'flex', gap: 8 }}>
                         <Button size="sm" variant="primary" onClick={save} disabled={isLoading}>
@@ -172,6 +218,7 @@ function DraftTierCard({ tier, eventId, onDelete, isLast }) {
         rowCount: String(tier.rowCount ?? tier.rowPrefix ?? ''),
         seatsPerRow: String(tier.seatsPerRow ?? ''),
         rowPrefix: tier.rowPrefix ?? '',
+        maxPerPerson: tier.maxPerPerson != null ? String(tier.maxPerPerson) : '',
     });
     const [updateTier, { isLoading: saving }] = useUpdateTierMutation();
     const [deleteTier, { isLoading: deleting }] = useDeleteTierMutation();
@@ -187,8 +234,12 @@ function DraftTierCard({ tier, eventId, onDelete, isLast }) {
         const spr = parseInt(draft.seatsPerRow, 10);
         if (isNaN(rc) || rc < 1 || isNaN(spr) || spr < 1) { setError('Rows and seats per row must be at least 1'); return; }
         const finalPrice = draft.isFree ? 0 : parseFloat(draft.price) || 0;
+        const mpp = draft.maxPerPerson !== '' ? parseInt(draft.maxPerPerson, 10) : null;
+        const payload = { eventId, tierId: tier.id, name: draft.name.trim(), price: finalPrice, rowPrefix: draft.rowPrefix.trim(), rowCount: rc, seatsPerRow: spr };
+        if (mpp != null && mpp >= 1) payload.maxPerPerson = mpp;
+        else payload.clearMaxPerPerson = true;
         try {
-            await updateTier({ eventId, tierId: tier.id, name: draft.name.trim(), price: finalPrice, rowPrefix: draft.rowPrefix.trim(), rowCount: rc, seatsPerRow: spr }).unwrap();
+            await updateTier(payload).unwrap();
             setEditing(false);
             setError('');
         } catch (err) {
@@ -212,8 +263,12 @@ function DraftTierCard({ tier, eventId, onDelete, isLast }) {
             <div style={{ padding: '14px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
                     <div style={{ fontWeight: 600, color: 'var(--text-1)' }}>{tier.name}</div>
-                    <div style={{ fontSize: 13, color: 'var(--text-2)', marginTop: 2 }}>
-                        {Number(tier.price) === 0 ? 'Free' : `₦${Number(tier.price).toLocaleString()}`} · {(tier.totalCapacity ?? 0).toLocaleString()} seats
+                    <div style={{ fontSize: 13, color: 'var(--text-2)', marginTop: 2, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                        <span>{Number(tier.price) === 0 ? 'Free' : `₦${Number(tier.price).toLocaleString()}`}</span>
+                        <span>{(tier.totalCapacity ?? 0).toLocaleString()} seats</span>
+                        <span style={{ color: 'var(--text-3)' }}>
+                            {tier.maxPerPerson != null ? `Max ${tier.maxPerPerson}/person` : 'Unlimited per person'}
+                        </span>
                     </div>
                 </div>
                 <div style={{ display: 'flex', gap: 8 }}>
@@ -274,6 +329,38 @@ function DraftTierCard({ tier, eventId, onDelete, isLast }) {
                         </div>
                         {!draft.isFree && (
                             <input type="number" min="0" placeholder="₦" value={draft.price} onChange={field('price')} style={inputStyle} />
+                        )}
+                    </div>
+
+                    {/* Max per person */}
+                    <div>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                            <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-1)' }}>
+                                Max tickets per person
+                            </label>
+                            <button
+                                type="button"
+                                onClick={() => setDraft((d) => ({ ...d, maxPerPerson: d.maxPerPerson !== '' ? '' : (d.isFree ? '2' : '1') }))}
+                                style={{
+                                    fontSize: 11, fontWeight: 500, padding: '2px 8px',
+                                    borderRadius: 6, border: '1px solid var(--border)',
+                                    background: draft.maxPerPerson === '' ? 'var(--mp-blue)' : 'white',
+                                    color: draft.maxPerPerson === '' ? 'white' : 'var(--text-2)',
+                                    cursor: 'pointer',
+                                }}
+                            >
+                                Unlimited
+                            </button>
+                        </div>
+                        {draft.maxPerPerson !== '' ? (
+                            <input
+                                type="number" min="1" placeholder="e.g. 4"
+                                value={draft.maxPerPerson}
+                                onChange={field('maxPerPerson')}
+                                style={{ ...inputStyle, width: 120 }}
+                            />
+                        ) : (
+                            <p style={{ margin: 0, fontSize: 11, color: 'var(--text-3)' }}>No per-person limit.</p>
                         )}
                     </div>
 

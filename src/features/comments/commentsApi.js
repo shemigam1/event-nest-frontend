@@ -30,7 +30,7 @@ export const commentsApi = baseApi.injectEndpoints({
             query: ({ eventId, body, parentId }) => ({
                 url: `/events/${eventId}/comments`,
                 method: 'POST',
-                body: { body, parentId },
+                body: { body, parentCommentId: parentId },
             }),
             invalidatesTags: (result, error, { eventId, parentId }) => {
                 const tags = [{ type: 'Comment', id: `event-${eventId}` }];
