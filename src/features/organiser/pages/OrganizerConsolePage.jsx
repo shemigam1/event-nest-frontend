@@ -9,16 +9,18 @@ import { StatusBadge } from '@/components/ui/Badge';
 import { Icons } from '@/components/ui/Icon';
 import { formatEventDate } from '@/utils/dateFormat';
 import { formatNaira, formatNairaCompact } from '@/utils/currency';
-import MessagesTab      from '../components/MessagesTab';
-import EscrowTab        from '../components/EscrowTab';
+import MessagesTab        from '../components/MessagesTab';
+import EscrowTab          from '../components/EscrowTab';
 import MarketplaceDashTab from '../components/MarketplaceDashTab';
-import PaymentsTab      from '../components/PaymentsTab';
+import PaymentsTab        from '../components/PaymentsTab';
+import ContractsDashTab   from '../components/ContractsDashTab';
 
 const DASH_TABS = [
-    { id: 'events',      label: 'Events',      icon: <Icons.calendar size={14} /> },
+    { id: 'events',      label: 'My Events',   icon: <Icons.calendar size={14} /> },
+    { id: 'marketplace', label: 'Marketplace', icon: <Icons.users    size={14} /> },
     { id: 'messages',    label: 'Messages',    icon: <Icons.message  size={14} /> },
     { id: 'escrow',      label: 'Escrow',      icon: <Icons.shield   size={14} /> },
-    { id: 'marketplace', label: 'Marketplace', icon: <Icons.users    size={14} /> },
+    { id: 'contracts',   label: 'Contracts',   icon: <Icons.list     size={14} /> },
     { id: 'payments',    label: 'Payments',    icon: <Icons.wallet   size={14} /> },
 ];
 
@@ -402,6 +404,9 @@ export default function OrganizerConsolePage() {
 
                 {/* ── Marketplace tab ───────────────────────────── */}
                 {activeTab === 'marketplace' && <MarketplaceDashTab />}
+
+                {/* ── Contracts tab ─────────────────────────────── */}
+                {activeTab === 'contracts' && <ContractsDashTab />}
 
                 {/* ── Payments tab ──────────────────────────────── */}
                 {activeTab === 'payments' && (

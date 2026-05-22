@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { useSearchParams } from 'react-router';
+import { useNavigate, useSearchParams } from 'react-router';
 import { Icons } from '@/components/ui/Icon';
 import { selectCurrentUserId, selectCurrentUser } from '@/features/auth/authSlice';
 import { useGetConversationsQuery, useGetConversationMessagesQuery, useMarkConversationReadMutation, messagesApi } from '../messagesApi';
@@ -12,6 +12,7 @@ export default function MessagesPage() {
     const myId = useSelector(selectCurrentUserId);
     const currentUser = useSelector(selectCurrentUser);
     const dispatch = useDispatch();
+    const navigate = useNavigate();
     const [searchParams] = useSearchParams();
 
     const [selectedId, setSelectedId] = useState(() => searchParams.get('c') ?? null);
@@ -242,11 +243,25 @@ export default function MessagesPage() {
 
     return (
         <div style={{ minHeight: '100vh', background: 'var(--surface-subtle)' }}>
+            <div style={{ maxWidth: 1100, margin: '0 auto', padding: '16px 20px 0' }}>
+                <button
+                    onClick={() => navigate(-1)}
+                    style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 6,
+                        background: 'none', border: 0, padding: 0,
+                        cursor: 'pointer', color: 'var(--text-2)',
+                        fontSize: 13, fontFamily: 'inherit',
+                    }}
+                >
+                    <Icons.arrowL size={14} />
+                    Back
+                </button>
+            </div>
             <div style={{
                 maxWidth: 1100,
                 margin: '0 auto',
-                padding: '24px 20px',
-                height: 'calc(100vh - 56px)',
+                padding: '8px 20px 24px',
+                height: 'calc(100vh - 96px)',
                 display: 'flex',
                 gap: 16,
                 boxSizing: 'border-box',
