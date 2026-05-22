@@ -17,6 +17,8 @@ import { getTheme, setTheme, resolveTheme, subscribeTheme } from '@/utils/theme'
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
 import { Icons } from '@/components/ui/Icon';
+import KycSection from '../sections/KycSection';
+import HostProfilesSection from '../sections/HostProfilesSection';
 
 /* ────────────────────────────────────────────────────────────────────────────
    SettingsPage — single-column hub for everything tied to the signed-in account
@@ -544,6 +546,18 @@ export default function SettingsPage() {
                 ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
                         <ProfileSection profile={displayProfile} />
+                        <Section
+                            title="Identity verification"
+                            subtitle="Verify your BVN once to unlock host profiles and public events."
+                        >
+                            <KycSection />
+                        </Section>
+                        <Section
+                            title="Host profiles"
+                            subtitle="Business identities you use to host public events."
+                        >
+                            <HostProfilesSection />
+                        </Section>
                         <PasswordSection />
                         <AppearanceSection />
                         <AccountSection profile={displayProfile} />

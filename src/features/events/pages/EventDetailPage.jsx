@@ -134,6 +134,15 @@ export default function EventDetailPage() {
                                 {e.description || 'Details to be announced.'}
                             </p>
                         </div>
+
+                        {/* Refund policy — only rendered for paid events (backend sets
+                            refundPolicy to null on free events). */}
+                        {e.refundPolicy && (
+                            <RefundPolicyNotice
+                                policy={e.refundPolicy}
+                                contactEmail={e.refundContactEmail}
+                            />
+                        )}
                     </div>
 
                     {/* Right: booking aside */}
@@ -487,6 +496,52 @@ function LinkIcon() {
             <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71" />
             <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" />
         </svg>
+    );
+}
+
+/**
+ * Refund policy callout shown on paid events.
+ *
+ * Designed to be quietly informative rather than alarming — the goal is to set
+ * the right expectation BEFORE the user buys a ticket, not to scare them off.
+ * For CONTACT_ORGANISER we render the contact email as a mailto: link with the
+ * event title pre-filled in the subject so the organiser can route it.
+ */
+function RefundPolicyNotice({ policy, contactEmail }) {
+    const noRefunds = policy === 'NO_REFUNDS';
+    return (
+        <div style={{
+            marginTop: 24, padding: 16,
+            background: 'var(--surface-subtle)',
+            border: '1px solid var(--border)',
+            borderRadius: 12,
+            display: 'flex', gap: 12, alignItems: 'flex-start',
+        }}>
+            <span style={{
+                width: 32, height: 32, borderRadius: 99,
+                background: 'var(--surface-elevated, white)',
+                border: '1px solid var(--border)',
+                color: noRefunds ? 'var(--error)' : 'var(--mp-blue)',
+                display: 'grid', placeItems: 'center', flexShrink: 0,
+            }}>
+                {noRefunds ? <Icons.x size={16} /> : <Icons.mail size={16} />}
+            </span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-1)' }}>
+                    {noRefunds ? 'No refunds' : 'Refunds handled by the organiser'}
+                </div>
+                <div style={{ fontSize: 13, color: 'var(--text-2)', marginTop: 4 }}>
+                    {noRefunds
+                        ? 'All ticket sales are final. Please check the details before booking.'
+                        : contactEmail
+                            ? <>To request a refund, email <a
+                                href={`mailto:${contactEmail}?subject=Refund%20request`}
+                                style={{ color: 'var(--mp-blue)', fontWeight: 600 }}
+                            >{contactEmail}</a>.</>
+                            : 'Contact the organiser to request a refund.'}
+                </div>
+            </div>
+        </div>
     );
 }
 

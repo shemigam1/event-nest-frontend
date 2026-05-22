@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router';
+import { useNavigate, Link } from 'react-router';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import VenueAutocomplete from '@/components/ui/VenueAutocomplete';
 import { Icons } from '@/components/ui/Icon';
 import { useCreateEventMutation, useSubmitEventMutation, usePresignCoverImageMutation } from '../eventsApi';
 import { useCreateTierMutation } from '../tiersApi';
+import { useGetMyHostProfilesQuery } from '@/features/host/hostProfilesApi';
 import CoverImageField from '../components/CoverImageField';
 
 /* EventCategory enum from backend (event-nest-backend). Keep this list
@@ -89,8 +90,10 @@ function validateBasics(b) {
     const errs = {};
     if (!b.title.trim()) errs.title = 'Title is required';
     if (!b.category) errs.category = 'Category is required';
-    if (!b.bannerFile) errs.bannerFile = 'A cover image is required';
+    // Cover image is optional — organisers can add one later from the edit page.
     // venue is optional — no validation here
+    // Refund policy is validated on the Tiers step (it only matters when at
+    // least one tier is paid, which we don't know yet on this step).
     if (!b.startDate) errs.startDate = 'Required';
     if (!b.startTime) errs.startTime = 'Required';
     if (!b.endDate) errs.endDate = 'Required';
@@ -236,25 +239,32 @@ function StepIndicator({ currentStep }) {
 }
 
 /* ── Shared toggle-card style ────────────────────── */
-function ToggleCard({ selected, onClick, icon, label, desc }) {
+function ToggleCard({ selected, onClick, icon, label, desc, disabled = false }) {
     return (
         <button
             type="button"
             aria-pressed={selected}
-            onClick={onClick}
+            aria-disabled={disabled}
+            onClick={disabled ? undefined : onClick}
+            disabled={disabled}
             style={{
                 flex: 1,
                 padding: '12px 14px',
                 borderRadius: 10,
                 border: `1.5px solid ${selected ? 'var(--mp-blue)' : 'var(--border)'}`,
-                background: selected ? '#eff6ff' : 'white',
+                background: selected
+                    ? 'var(--mp-blue-50, #eff6ff)'
+                    : disabled
+                        ? 'var(--surface-subtle)'
+                        : 'var(--surface-elevated, white)',
                 color: selected ? 'var(--mp-blue)' : 'var(--text-2)',
                 textAlign: 'left',
-                cursor: 'pointer',
+                cursor: disabled ? 'not-allowed' : 'pointer',
+                opacity: disabled ? 0.55 : 1,
                 display: 'flex',
                 alignItems: 'flex-start',
                 gap: 10,
-                transition: 'border-color 0.15s, background 0.15s',
+                transition: 'border-color 0.15s, background 0.15s, opacity 0.15s',
             }}
         >
             <span style={{ marginTop: 2, flexShrink: 0 }}>{icon}</span>
@@ -271,8 +281,82 @@ function ToggleCard({ selected, onClick, icon, label, desc }) {
     );
 }
 
+/* ── Refund policy sub-block (rendered inside BasicsStep for paid events) ──
+   Two radio options:
+     · NO_REFUNDS         — explicit no-refunds stance
+     · CONTACT_ORGANISER  — refunds handled off-platform; we surface a contact
+                            email that attendees can reach the organiser at.
+   The email seeds from the selected host profile (if any), with the user able
+   to override. The backend also falls back to the organiser's account email
+   when nothing is supplied, so this is purely a UX nicety.
+   ─────────────────────────────────────────────────────────────────────── */
+function RefundPolicyBlock({
+    refundPolicy,
+    refundContactEmail,
+    onChange,         // ({ refundPolicy?, refundContactEmail? }) → void
+    seedContactEmail, // optional fallback when user switches to CONTACT_ORGANISER
+    errors,
+}) {
+    const policy = refundPolicy ?? 'NO_REFUNDS';
+
+    function selectContact() {
+        // Pre-fill the email field if blank using the seed (host profile email
+        // or account email). User can still edit.
+        const seed = refundContactEmail || seedContactEmail || '';
+        onChange({ refundPolicy: 'CONTACT_ORGANISER', refundContactEmail: seed });
+    }
+
+    return (
+        <div>
+            <span style={{ display: 'block', fontSize: 14, fontWeight: 500, color: 'var(--text-1)', marginBottom: 8 }}>
+                Refund policy
+            </span>
+            <div style={{ display: 'flex', gap: 10 }}>
+                <ToggleCard
+                    selected={policy === 'NO_REFUNDS'}
+                    onClick={() => onChange({
+                        refundPolicy: 'NO_REFUNDS',
+                        refundContactEmail: '',
+                    })}
+                    icon={<Icons.x size={15} />}
+                    label="No refunds"
+                    desc="All sales are final"
+                />
+                <ToggleCard
+                    selected={policy === 'CONTACT_ORGANISER'}
+                    onClick={selectContact}
+                    icon={<Icons.mail size={15} />}
+                    label="Contact me for refunds"
+                    desc="Attendees email you to request a refund"
+                />
+            </div>
+
+            {policy === 'CONTACT_ORGANISER' && (
+                <div style={{ marginTop: 12 }}>
+                    <Input
+                        label="Refund contact email"
+                        type="email"
+                        icon={<Icons.mail size={16} />}
+                        value={refundContactEmail || ''}
+                        onChange={(e) => onChange({ refundContactEmail: e.target.value })}
+                        placeholder="refunds@yourbusiness.com"
+                        hint="Shown to attendees on the event page so they can request refunds."
+                        error={errors?.refundContactEmail}
+                    />
+                </div>
+            )}
+
+            {errors?.refundPolicy && (
+                <p role="alert" style={{ margin: '6px 0 0', fontSize: 13, color: 'var(--error)' }}>
+                    {errors.refundPolicy}
+                </p>
+            )}
+        </div>
+    );
+}
+
 /* ── Step 1: Event basics ────────────────────────── */
-function BasicsStep({ data, onChange, onNext }) {
+function BasicsStep({ data, onChange, onNext, hostProfiles, hostProfilesLoading }) {
     const [errors, setErrors] = useState({});
     const today = new Date().toISOString().split('T')[0];
 
@@ -357,26 +441,14 @@ function BasicsStep({ data, onChange, onNext }) {
                     )}
                 </div>
 
-                {/* Cover image — required */}
-                <div>
-                    <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-1)', marginBottom: 6 }}>
-                        Cover image
-                        <span style={{ marginLeft: 6, fontSize: 12, fontWeight: 400, color: 'var(--error)' }}>
-                            Required
-                        </span>
-                    </div>
-                    <CoverImageField
-                        onPickFile={(file) => {
-                            onChange({ ...data, bannerFile: file });
-                            setErrors((prev) => { const { bannerFile: _, ...rest } = prev; return rest; });
-                        }}
-                    />
-                    {errors.bannerFile && (
-                        <p role="alert" style={{ margin: '6px 0 0', fontSize: 13, color: 'var(--error)' }}>
-                            {errors.bannerFile}
-                        </p>
-                    )}
-                </div>
+                {/* Cover image — optional. CoverImageField renders its own
+                    "Cover image" label + hint, so we don't double up here. */}
+                <CoverImageField
+                    onPickFile={(file) => {
+                        onChange({ ...data, bannerFile: file });
+                        setErrors((prev) => { const { bannerFile: _, ...rest } = prev; return rest; });
+                    }}
+                />
 
                 {/* Description */}
                 <label style={{ display: 'block' }}>
@@ -476,7 +548,9 @@ function BasicsStep({ data, onChange, onNext }) {
                     </div>
                 </div>
 
-                {/* Visibility */}
+                {/* Visibility — public events require a host profile.
+                    If the user has none, the Public option is greyed out and
+                    we point them at Settings to create one. */}
                 <div>
                     <span style={{ display: 'block', fontSize: 14, fontWeight: 500, color: 'var(--text-1)', marginBottom: 8 }}>
                         Visibility
@@ -484,19 +558,86 @@ function BasicsStep({ data, onChange, onNext }) {
                     <div style={{ display: 'flex', gap: 10 }}>
                         <ToggleCard
                             selected={data.visibility === 'PUBLIC'}
-                            onClick={() => onChange({ ...data, visibility: 'PUBLIC' })}
+                            disabled={!hostProfilesLoading && !(hostProfiles?.length)}
+                            onClick={() => {
+                                if (!hostProfiles?.length) return;
+                                const next = { ...data, visibility: 'PUBLIC' };
+                                // Default the picker to the first profile if nothing is selected.
+                                if (!next.hostProfileId) next.hostProfileId = hostProfiles[0].id;
+                                onChange(next);
+                            }}
                             icon={<Icons.users size={15} />}
                             label="Public"
                             desc="Anyone can discover and register"
                         />
                         <ToggleCard
                             selected={data.visibility === 'PRIVATE'}
-                            onClick={() => onChange({ ...data, visibility: 'PRIVATE' })}
+                            onClick={() => onChange({ ...data, visibility: 'PRIVATE', hostProfileId: null })}
                             icon={<Icons.lock size={15} />}
                             label="Private"
                             desc="Invite-only — not listed publicly"
                         />
                     </div>
+
+                    {/* No-host-profile state — block Public + link to Settings. */}
+                    {!hostProfilesLoading && !(hostProfiles?.length) && (
+                        <div role="note" style={{
+                            marginTop: 10,
+                            padding: '10px 14px',
+                            background: 'var(--warning-bg)',
+                            color: 'var(--warning)',
+                            borderRadius: 10,
+                            fontSize: 13,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 8,
+                        }}>
+                            <Icons.shield size={14} />
+                            <span>
+                                You need a host profile to publish a public event.{' '}
+                                <Link
+                                    to="/settings"
+                                    style={{ color: 'inherit', fontWeight: 600, textDecoration: 'underline' }}
+                                >
+                                    Set one up in Settings
+                                </Link>.
+                            </span>
+                        </div>
+                    )}
+
+                    {/* Host picker — only when user opted PUBLIC and has 1+ profiles. */}
+                    {data.visibility === 'PUBLIC' && hostProfiles?.length > 0 && (
+                        <div style={{ marginTop: 12 }}>
+                            <label style={{
+                                display: 'block', fontSize: 13, fontWeight: 500,
+                                color: 'var(--text-2)', marginBottom: 6,
+                            }}>
+                                Host profile
+                            </label>
+                            <select
+                                value={data.hostProfileId || hostProfiles[0].id}
+                                onChange={(e) => onChange({ ...data, hostProfileId: e.target.value })}
+                                aria-label="Host profile"
+                                style={{
+                                    width: '100%', height: 44, padding: '0 14px',
+                                    background: 'var(--surface-elevated, white)',
+                                    border: '1px solid var(--border)',
+                                    borderRadius: 12, fontSize: 15,
+                                    color: 'var(--text-1)',
+                                    fontFamily: 'inherit',
+                                }}
+                            >
+                                {hostProfiles.map((p) => (
+                                    <option key={p.id} value={p.id}>
+                                        {p.businessName} · {p.businessEmail}
+                                    </option>
+                                ))}
+                            </select>
+                            <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 6 }}>
+                                Attendees will see this business as the host of your event.
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* Seating model — drives whether the next step asks for
@@ -523,28 +664,10 @@ function BasicsStep({ data, onChange, onNext }) {
                     </div>
                 </div>
 
-                {/* Pricing */}
-                <div>
-                    <span style={{ display: 'block', fontSize: 14, fontWeight: 500, color: 'var(--text-1)', marginBottom: 8 }}>
-                        Pricing
-                    </span>
-                    <div style={{ display: 'flex', gap: 10 }}>
-                        <ToggleCard
-                            selected={data.isFree === true}
-                            onClick={() => onChange({ ...data, isFree: true })}
-                            icon={<Icons.check size={15} />}
-                            label="Free"
-                            desc="No ticket cost for attendees"
-                        />
-                        <ToggleCard
-                            selected={data.isFree === false}
-                            onClick={() => onChange({ ...data, isFree: false })}
-                            icon={<Icons.wallet size={15} />}
-                            label="Paid"
-                            desc="Set ticket prices in the next step"
-                        />
-                    </div>
-                </div>
+                {/* Pricing and refund policy live on the Tiers step — pricing is
+                    per-tier (different tiers can be priced differently), so a
+                    single event-level Free/Paid toggle would just duplicate the
+                    per-tier control. */}
 
             </div>
 
@@ -706,8 +829,16 @@ function TierCard({ tier, onChange, onRemove, errors = {} }) {
 }
 
 /* ── Step 2: Ticket tiers ────────────────────────── */
-function TiersStep({ tiers, onTiersChange, onNext, onBack, seatingMode }) {
+function TiersStep({
+    tiers, onTiersChange, onNext, onBack, seatingMode,
+    refundPolicy, refundContactEmail, onChangeRefund, hostProfiles,
+}) {
     const [tierErrors, setTierErrors] = useState({});
+    const [refundErrors, setRefundErrors] = useState({});
+
+    // Whether any tier is paid — derived, not toggled at the event level.
+    // Drives whether the refund-policy block is visible + validated.
+    const hasPaidTier = tiers.some((t) => !t.isFree);
 
     // Keep each tier's seatingMode in lockstep with the event-level choice —
     // organisers who toggle the basics step (e.g. flipped from Seated to GA
@@ -721,6 +852,18 @@ function TiersStep({ tiers, onTiersChange, onNext, onBack, seatingMode }) {
         // tier edit would cause an infinite update loop.
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [seatingMode]);
+
+    // Auto-seed / auto-clear the refund policy as the user toggles tiers
+    // between Free and Paid. Mirrors the old basics-step UX where flipping
+    // Free→Paid defaulted to NO_REFUNDS and flipping Paid→Free cleared it.
+    useEffect(() => {
+        if (hasPaidTier && !refundPolicy) {
+            onChangeRefund?.({ refundPolicy: 'NO_REFUNDS' });
+        } else if (!hasPaidTier && refundPolicy) {
+            onChangeRefund?.({ refundPolicy: null, refundContactEmail: '' });
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [hasPaidTier]);
 
     function addTier() {
         // Inherit the event-level seating mode so the new row renders the
@@ -747,7 +890,23 @@ function TiersStep({ tiers, onTiersChange, onNext, onBack, seatingMode }) {
                 hasError = true;
             }
         }
-        if (hasError) { setTierErrors(allErrors); return; }
+        setTierErrors(allErrors);
+
+        // Refund policy is only relevant when at least one tier is paid.
+        const refErrs = {};
+        if (hasPaidTier) {
+            if (!refundPolicy) {
+                refErrs.refundPolicy = 'Pick a refund policy';
+            } else if (refundPolicy === 'CONTACT_ORGANISER') {
+                const email = (refundContactEmail || '').trim();
+                if (!email) refErrs.refundContactEmail = 'A contact email is required';
+                else if (!/^\S+@\S+\.\S+$/.test(email)) refErrs.refundContactEmail = 'Enter a valid email';
+            }
+        }
+        setRefundErrors(refErrs);
+        if (Object.keys(refErrs).length) hasError = true;
+
+        if (hasError) return;
         onNext();
     }
 
@@ -818,6 +977,27 @@ function TiersStep({ tiers, onTiersChange, onNext, onBack, seatingMode }) {
                 <Icons.plus size={16} /> Add ticket tier
             </button>
 
+            {/* Refund policy — only relevant when at least one tier is paid. */}
+            {hasPaidTier && (
+                <div style={{
+                    marginTop: 32,
+                    paddingTop: 24,
+                    borderTop: '1px solid var(--border)',
+                }}>
+                    <RefundPolicyBlock
+                        refundPolicy={refundPolicy}
+                        refundContactEmail={refundContactEmail}
+                        onChange={(patch) => {
+                            onChangeRefund?.(patch);
+                            // Clear stale errors as the user edits.
+                            if (Object.keys(refundErrors).length) setRefundErrors({});
+                        }}
+                        seedContactEmail={defaultRefundEmail(hostProfiles)}
+                        errors={refundErrors}
+                    />
+                </div>
+            )}
+
             <div style={{ marginTop: 32, display: 'flex', justifyContent: 'space-between' }}>
                 <Button type="button" variant="secondary" size="lg" icon={<Icons.arrowL size={16} />} onClick={onBack}>
                     Back
@@ -828,6 +1008,13 @@ function TiersStep({ tiers, onTiersChange, onNext, onBack, seatingMode }) {
             </div>
         </form>
     );
+}
+
+/** First host profile's business email if one exists — used to pre-fill the
+ *  refund contact email when the organiser flips to CONTACT_ORGANISER. */
+function defaultRefundEmail(hostProfiles) {
+    const hp = (hostProfiles ?? []).find((p) => p.businessEmail);
+    return hp?.businessEmail ?? '';
 }
 
 /* ── Step 3: Review ──────────────────────────────── */
@@ -896,15 +1083,15 @@ function ReviewStep({ basics, tiers, onBack, onSaveDraft, onSubmitForApproval, s
                                 ? <><Icons.lock size={11} /> Private</>
                                 : <><Icons.users size={11} /> Public</>}
                         </span>
-                        {/* Pricing badge */}
+                        {/* Pricing badge — derived from tiers, not an event-level flag. */}
                         <span style={{
                             display: 'inline-flex', alignItems: 'center', gap: 4,
                             fontSize: 12, fontWeight: 600, padding: '3px 10px', borderRadius: 99,
-                            background: basics.isFree ? '#f0fdf4' : '#fff7ed',
-                            color: basics.isFree ? '#16a34a' : '#ea580c',
+                            background: allFree ? '#f0fdf4' : '#fff7ed',
+                            color: allFree ? '#16a34a' : '#ea580c',
                             border: '1px solid var(--border)',
                         }}>
-                            {basics.isFree ? <><Icons.check size={11} /> Free</> : <><Icons.wallet size={11} /> Paid</>}
+                            {allFree ? <><Icons.check size={11} /> Free</> : <><Icons.wallet size={11} /> Paid</>}
                         </span>
                     </div>
                     {basics.description && (
@@ -1034,6 +1221,10 @@ function ReviewStep({ basics, tiers, onBack, onSaveDraft, onSubmitForApproval, s
                     Back
                 </Button>
                 <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                    {/* Admin approval has been retired — events publish immediately on
+                        create. We keep "Save as draft" for the unfinished case (drafts
+                        stay hidden from public browse), but the primary action is now
+                        plainly "Publish event". */}
                     <Button
                         type="button"
                         variant="secondary"
@@ -1051,7 +1242,7 @@ function ReviewStep({ basics, tiers, onBack, onSaveDraft, onSubmitForApproval, s
                         disabled={submitting}
                         iconRight={<Icons.arrowR size={16} />}
                     >
-                        {submitting ? 'Submitting…' : 'Submit for approval'}
+                        {submitting ? 'Publishing…' : 'Publish event'}
                     </Button>
                 </div>
             </div>
@@ -1078,12 +1269,12 @@ function SuccessStep({ submitted, navigate }) {
             </div>
 
             <h2 className="mp-h1" style={{ margin: '0 0 10px', color: 'var(--text-1)' }}>
-                {submitted ? 'Event submitted!' : 'Draft saved!'}
+                {submitted ? 'Event published!' : 'Draft saved!'}
             </h2>
             <p className="body" style={{ margin: '0 0 32px', color: 'var(--text-2)', maxWidth: 420, marginLeft: 'auto', marginRight: 'auto' }}>
                 {submitted
-                    ? 'Your event is under review. We\'ll notify you once it\'s approved and live.'
-                    : 'Your event draft has been saved. Come back to add tiers and submit for approval.'
+                    ? 'Your event is live and ready to receive bookings.'
+                    : 'Your event draft has been saved. Come back any time to finish setting it up and publish.'
                 }
             </p>
 
@@ -1100,38 +1291,67 @@ function SuccessStep({ submitted, navigate }) {
 }
 
 /* ── Page ────────────────────────────────────────── */
+// sessionStorage key for in-progress basics. We deliberately use sessionStorage
+// (not localStorage) so the draft is wiped when the user closes the tab — it
+// only protects against accidental in-tab navigation, not cross-session leaks.
+const DRAFT_KEY = 'create-event:basics';
+
+const INITIAL_BASICS = {
+    title: '',
+    description: '',
+    category: '',          // required, EventCategory enum
+    // Location — venue is one logical concept in the UI but the backend
+    // wants venueName + city + country (+ optional address/placeId/lat/lng).
+    // The VenueAutocomplete fills these in via onPlaceSelect; manual typing
+    // populates only venueName and falls back to VENUE_DEFAULTS for the rest.
+    venue: '',             // free-text display value (driven by autocomplete)
+    venueName: '',
+    city: '',
+    country: '',
+    placeId: '',
+    address: '',
+    latitude: null,
+    longitude: null,
+    // Schedule
+    startDate: '',
+    startTime: '',
+    endDate: '',
+    endTime: '',
+    timezone: detectTimezone(),
+    bannerFile: null,
+    visibility: 'PUBLIC',
+    // Which host profile to publish the event under. Required for PUBLIC
+    // events; ignored for PRIVATE. We seed it from the user's first profile
+    // once it loads (see effect below).
+    hostProfileId: null,
+    // Refund policy — only required when at least one tier is paid. Lives on
+    // the basics object because it's an event-wide stance, but is set via the
+    // Tiers step (where pricing is decided).
+    refundPolicy: null,
+    refundContactEmail: '',
+    // Default to seated so existing organisers using assigned-seating
+    // venues get the familiar layout.
+    seatingMode: SEATING_MODES.SEATED,
+};
+
+// Rehydrate from sessionStorage so a brief navigation-away doesn't lose the
+// half-typed form. File objects can't be serialised — we restore everything
+// else and the user re-picks the cover image if they had one staged.
+function loadDraft() {
+    try {
+        const raw = sessionStorage.getItem(DRAFT_KEY);
+        if (!raw) return INITIAL_BASICS;
+        const parsed = JSON.parse(raw);
+        return { ...INITIAL_BASICS, ...parsed, bannerFile: null };
+    } catch {
+        return INITIAL_BASICS;
+    }
+}
+
 export default function CreateEventPage() {
     const navigate = useNavigate();
     const [step, setStep] = useState(1);
-    const [basics, setBasics] = useState({
-        title: '',
-        description: '',
-        category: '',          // required, EventCategory enum
-        // Location — venue is one logical concept in the UI but the backend
-        // wants venueName + city + country (+ optional address/placeId/lat/lng).
-        // The VenueAutocomplete fills these in via onPlaceSelect; manual typing
-        // populates only venueName and falls back to VENUE_DEFAULTS for the rest.
-        venue: '',             // free-text display value (driven by autocomplete)
-        venueName: '',
-        city: '',
-        country: '',
-        placeId: '',
-        address: '',
-        latitude: null,
-        longitude: null,
-        // Schedule
-        startDate: '',
-        startTime: '',
-        endDate: '',
-        endTime: '',
-        timezone: detectTimezone(),
-        bannerFile: null,
-        visibility: 'PUBLIC',
-        isFree: true,
-        // Default to seated so existing organisers using assigned-seating
-        // venues get the familiar layout.
-        seatingMode: SEATING_MODES.SEATED,
-    });
+    const [basics, setBasics] = useState(loadDraft);
     const [tiers, setTiers] = useState([]);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState('');
@@ -1141,6 +1361,32 @@ export default function CreateEventPage() {
     const [submitEvent] = useSubmitEventMutation();
     const [presignCover] = usePresignCoverImageMutation();
     const [createTier] = useCreateTierMutation();
+    const { data: hostProfiles, isLoading: hostProfilesLoading } = useGetMyHostProfilesQuery();
+
+    // When host profiles load, seed the picker with the first one if the user
+    // currently has PUBLIC visibility selected (the default) and hasn't picked
+    // one yet. If they have no profiles, we leave hostProfileId null — the
+    // BasicsStep disables PUBLIC in that case and the submit handler refuses.
+    useEffect(() => {
+        if (basics.hostProfileId) return;
+        if (basics.visibility !== 'PUBLIC') return;
+        if (!hostProfiles?.length) return;
+        setBasics((b) => ({ ...b, hostProfileId: hostProfiles[0].id }));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [hostProfiles]);
+
+    // Persist the in-progress basics so a brief navigation-away (e.g. clicking
+    // the sidebar by accident) doesn't wipe what the user typed. File objects
+    // aren't JSON-safe, so we skip bannerFile in the snapshot.
+    useEffect(() => {
+        try {
+            // eslint-disable-next-line no-unused-vars
+            const { bannerFile, ...persistable } = basics;
+            sessionStorage.setItem(DRAFT_KEY, JSON.stringify(persistable));
+        } catch {
+            /* sessionStorage full or unavailable — non-fatal, just lose the cache */
+        }
+    }, [basics]);
 
     async function createEventSequence(shouldSubmit) {
         setSubmitting(true);
@@ -1155,6 +1401,13 @@ export default function CreateEventPage() {
             const city       = (basics.city    || '').trim() || VENUE_DEFAULTS.city;
             const country    = (basics.country || '').trim() || VENUE_DEFAULTS.country;
 
+            // Defensive guard: PUBLIC events need a host profile. The UI
+            // disables this path when the user has none, but a stale state
+            // could still slip through — fail fast with a useful message.
+            if (basics.visibility === 'PUBLIC' && !basics.hostProfileId) {
+                throw new Error('Pick a host profile before publishing a public event.');
+            }
+
             const payload = {
                 title:     basics.title.trim(),
                 category:  basics.category,
@@ -1166,11 +1419,26 @@ export default function CreateEventPage() {
                 endTime:   toISO(basics.endDate, basics.endTime),
                 visibility: basics.visibility,
             };
+            // Only send hostProfileId when applicable so PRIVATE events stay
+            // unbranded by default.
+            if (basics.visibility === 'PUBLIC' && basics.hostProfileId) {
+                payload.hostProfileId = basics.hostProfileId;
+            }
             if (basics.description.trim())   payload.description = basics.description.trim();
             if (basics.address?.trim())      payload.address     = basics.address.trim();
             if (basics.placeId?.trim())      payload.placeId     = basics.placeId.trim();
             if (Number.isFinite(basics.latitude))  payload.latitude  = basics.latitude;
             if (Number.isFinite(basics.longitude)) payload.longitude = basics.longitude;
+
+            // Refund policy. Only sent when at least one tier is paid; the
+            // backend treats a null refundPolicy as "free / not applicable".
+            const hasPaidTier = tiers.some((t) => !t.isFree);
+            if (hasPaidTier && basics.refundPolicy) {
+                payload.refundPolicy = basics.refundPolicy;
+                if (basics.refundPolicy === 'CONTACT_ORGANISER' && basics.refundContactEmail?.trim()) {
+                    payload.refundContactEmail = basics.refundContactEmail.trim();
+                }
+            }
 
             const event = await createEvent(payload).unwrap();
 
@@ -1199,11 +1467,19 @@ export default function CreateEventPage() {
                 await createTier({ eventId: event.id, ...tierPayload }).unwrap();
             }
 
-            // ── 4. Optionally submit for admin approval (DRAFT → PENDING).
+            // ── 4. Optionally publish. Admin approval has been retired — the
+            //       create endpoint already returns a PUBLISHED event. We keep
+            //       calling submitEvent for back-compat (it's a no-op on a
+            //       PUBLISHED event) and flip the submitted flag so the success
+            //       screen says "published" instead of "draft saved".
             if (shouldSubmit) {
                 await submitEvent(event.id).unwrap();
                 setSubmitted(true);
             }
+
+            // Wipe the cached draft now that the event is on the server — keeping
+            // it around would re-hydrate stale data on the next visit.
+            try { sessionStorage.removeItem(DRAFT_KEY); } catch { /* non-fatal */ }
 
             setStep(4);
         } catch (err) {
@@ -1228,7 +1504,13 @@ export default function CreateEventPage() {
             <div style={{ maxWidth: 680, margin: '0 auto', padding: '40px 24px 80px' }}>
                 {step < 4 && <StepIndicator currentStep={step} />}
                 {step === 1 && (
-                    <BasicsStep data={basics} onChange={setBasics} onNext={() => setStep(2)} />
+                    <BasicsStep
+                        data={basics}
+                        onChange={setBasics}
+                        onNext={() => setStep(2)}
+                        hostProfiles={hostProfiles}
+                        hostProfilesLoading={hostProfilesLoading}
+                    />
                 )}
                 {step === 2 && (
                     <TiersStep
@@ -1237,6 +1519,10 @@ export default function CreateEventPage() {
                         onNext={() => setStep(3)}
                         onBack={() => setStep(1)}
                         seatingMode={basics.seatingMode}
+                        refundPolicy={basics.refundPolicy}
+                        refundContactEmail={basics.refundContactEmail}
+                        onChangeRefund={(patch) => setBasics((b) => ({ ...b, ...patch }))}
+                        hostProfiles={hostProfiles}
                     />
                 )}
                 {step === 3 && (

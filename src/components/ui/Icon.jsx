@@ -11,20 +11,7 @@ const Icon = ({ d, size = 20, fill = false, strokeWidth = 1.5, style, ...rest })
     style={{ flexShrink: 0, ...style }}
     {...rest}
   >
-    {typeof d === 'string' ? <path d={d} /> : d}
-  </svg>
-);
-
-export const Icons = {
-  search:    p => <Icon {...p} d="M21 21l-4.3-4.3M11 19a8 8 0 110-16 8 8 0 010 16z" />,
-  arrowR:    p => <Icon {...p} d="M5 12h14M13 5l7 7-7 7" />,
-  arrowL:    p => <Icon {...p} d="M19 12H5M11 5l-7 7 7 7" />,
-  check:     p => <Icon {...p} d="M5 13l4 4L19 7" />,
-  x:         p => <Icon {...p} d="M18 6L6 18M6 6l12 12" />,
-  pin:       p => <Icon {...p} d={<><path d="M12 22s7-7.5 7-13a7 7 0 10-14 0c0 5.5 7 13 7 13z" /><circle cx="12" cy="9" r="2.5" /></>} />,
-  calendar:  p => <Icon {...p} d={<><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M3 10h18M8 3v4M16 3v4" /></>} />,
-  clock:     p => <Icon {...p} d={<><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></>} />,
-  ticket:    p => <Icon {...p} d="M3 9a2 2 0 012-2h14a2 2 0 012 2v2a2 2 0 100 4v2a2 2 0 01-2 2H5a2 2 0 01-2-2v-2a2 2 0 100-4V9zM12 7v10" />,
+    {ty    p => <Icon {...p} d="M3 9a2 2 0 012-2h14a2 2 0 012 2v2a2 2 0 100 4v2a2 2 0 01-2 2H5a2 2 0 01-2-2v-2a2 2 0 100-4V9zM12 7v10" />,
   shield:    p => <Icon {...p} d="M12 3l8 3v6c0 5-3.5 8.5-8 9-4.5-.5-8-4-8-9V6l8-3z" />,
   users:     p => <Icon {...p} d={<><circle cx="9" cy="8" r="3.5" /><path d="M3 20c.7-3.5 3.2-5.5 6-5.5s5.3 2 6 5.5" /><circle cx="17" cy="9" r="2.5" /><path d="M16 14c2.4.3 4.3 2 5 5" /></>} />,
   bell:      p => <Icon {...p} d="M6 8a6 6 0 1112 0c0 5 2 6 2 8H4c0-2 2-3 2-8zM10 21h4" />,
@@ -51,6 +38,11 @@ export const Icons = {
   message:   p => <Icon {...p} d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />,
   send:      p => <Icon {...p} d="M22 2L11 13M22 2l-7 20-4-9-9-4z" />,
   settings:  p => <Icon {...p} d={<><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" /></>} />,
+  globe:     p => <Icon {...p} d={<><circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3a14 14 0 010 18M12 3a14 14 0 000 18" /></>} />,
+  image:     p => <Icon {...p} d={<><rect x="3" y="5" width="18" height="14" rx="2" /><circle cx="9" cy="10" r="1.5" /><path d="M21 16l-5-5L5 19" /></>} />,
+  trash:     p => <Icon {...p} d={<><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" /><path d="M10 11v6M14 11v6" /></>} />,
+  phone:     p => <Icon {...p} d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6A19.79 19.79 0 012.12 4.18 2 2 0 014.11 2h3a2 2 0 012 1.72c.13.94.36 1.86.7 2.74a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.34-1.27a2 2 0 012.11-.45c.88.34 1.8.57 2.74.7A2 2 0 0122 16.92z" />,
+  building:  p => <Icon {...p} d={<><rect x="4" y="3" width="16" height="18" rx="1" /><path d="M9 7h.01M9 12h.01M9 17h.01M15 7h.01M15 12h.01M15 17h.01" /></>} />,
   building:  p => <Icon {...p} d={<><rect x="4" y="3" width="16" height="18" rx="2" /><path d="M9 9h.01M15 9h.01M9 13h.01M15 13h.01M9 17h6" /></>} />,
   globe:     p => <Icon {...p} d={<><circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3a14 14 0 010 18M12 3a14 14 0 000 18" /></>} />,
   phone:     p => <Icon {...p} d="M5 4h4l2 5-2.5 1.5a11 11 0 005 5L15 13l5 2v4a2 2 0 01-2 2A16 16 0 013 6a2 2 0 012-2z" />,
@@ -60,6 +52,19 @@ export const Icons = {
   cloud:     p => <Icon {...p} d="M7 18a5 5 0 010-10 7 7 0 0113.4 2A4 4 0 0119 18H7zM12 12v6m0-6l-2 2m2-2l2 2" />,
   trash:     p => <Icon {...p} d={<><path d="M4 7h16M9 7V4h6v3M6 7l1 13a2 2 0 002 2h6a2 2 0 002-2l1-13" /><path d="M10 11v6M14 11v6" /></>} />,
   link:      p => <Icon {...p} d="M10 14a5 5 0 007 0l3-3a5 5 0 00-7-7l-1 1M14 10a5 5 0 00-7 0l-3 3a5 5 0 007 7l1-1" />,
+  </svg>
+);
+
+export const Icons = {
+  search:    p => <Icon {...p} d="M21 21l-4.3-4.3M11 19a8 8 0 110-16 8 8 0 010 16z" />,
+  arrowR:    p => <Icon {...p} d="M5 12h14M13 5l7 7-7 7" />,
+  arrowL:    p => <Icon {...p} d="M19 12H5M11 5l-7 7 7 7" />,
+  check:     p => <Icon {...p} d="M5 13l4 4L19 7" />,
+  x:         p => <Icon {...p} d="M18 6L6 18M6 6l12 12" />,
+  pin:       p => <Icon {...p} d={<><path d="M12 22s7-7.5 7-13a7 7 0 10-14 0c0 5.5 7 13 7 13z" /><circle cx="12" cy="9" r="2.5" /></>} />,
+  calendar:  p => <Icon {...p} d={<><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M3 10h18M8 3v4M16 3v4" /></>} />,
+  clock:     p => <Icon {...p} d={<><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></>} />,
+  ticket:
 };
 
 export default Icon;
