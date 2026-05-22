@@ -8,6 +8,18 @@ import {
 import { useUpdateEventConfigMutation } from '@/features/events/eventsApi';
 import Button from '@/components/ui/Button';
 import { Icons } from '@/components/ui/Icon';
+import CsvImportModal from '@/components/ui/CsvImportModal';
+
+/* Column schema for the CSV/Excel guest import. Order matters — the importer
+   maps file column 1 → fields[0], column 2 → fields[1], etc. Keep the
+   required columns first so the disclaimer "Column order: name, email"
+   matches reality. */
+const GUEST_IMPORT_FIELDS = [
+    { key: 'name',  label: 'Name',  required: true },
+    { key: 'email', label: 'Email', required: true },
+    { key: 'phone', label: 'Phone (optional)', required: false },
+    { key: 'note',  label: 'Note (optional)',  required: false },
+];
 
 const RSVP_STYLE = {
     PENDING:  { bg: '#FEF4E2', fg: '#B8770A', label: 'Pending' },
@@ -40,9 +52,42 @@ export default function GuestsTab({ eventId }) {
         }
     }
     const [showForm, setShowForm] = useState(false);
+    const [showImport, setShowImport] = useState(false);
     const [pendingRemove, setPendingRemove] = useState(null);
     const [removeGuest, removeState] = useRemoveGuestMutation();
+    const [addGuest] = useAddGuestMutation();
     const [removeError, setRemoveError] = useState('');
+
+    // Per-row submit callback for the import modal. Wrapping the existing
+    // addGuest mutation gives us the same validation + invalidation as the
+    // single-add form, just in a loop. Errors are caught by CsvImportModal
+    // and surfaced in the summary.
+    //
+    // The backend's AddGuestRequest expects `guestName` (not `name`) and has
+    // no `phone` column at all — phone numbers in the CSV are silently
+    // dropped on the server, so we omit them client-side to stay honest.
+    async function importOneGuest(row) {
+        await addGuest({
+            eventId,
+            email: row.email,
+            guestName: row.name || undefined,
+            note: row.note || undefined,
+        }).unwrap();
+    }
+
+    // Click handler for the Import button. Auto-enables the guest list if
+    // it isn't already on — otherwise the user's batch would hit "guest list
+    // is not enabled" on every row. Doing this proactively avoids the
+    // confusing N-identical-errors summary we'd otherwise show.
+    async function handleOpenImport() {
+        try {
+            await updateConfig({ eventId, guestListEnabled: true }).unwrap();
+        } catch {
+            // If the toggle fails (already enabled, or something stranger),
+            // open the modal anyway — addGuest itself surfaces real issues.
+        }
+        setShowImport(true);
+    }
 
     const counts = guests.reduce((acc, g) => {
         acc[g.rsvpStatus] = (acc[g.rsvpStatus] ?? 0) + 1;
@@ -105,7 +150,11 @@ export default function GuestsTab({ eventId }) {
                         {counts.DECLINED != null && ` · ${counts.DECLINED} declined`}
                     </p>
                 </div>
-                <div style={{ display: 'flex', gap: 8 }}>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    <Button variant="secondary" size="md" icon={<Icons.download size={14} />}
+                        onClick={handleOpenImport}>
+                        Import
+                    </Button>
                     {guests.length > 0 && (
                         <Button variant="secondary" size="md" icon={<Icons.list size={14} />} onClick={exportCsv}>
                             Export CSV
@@ -123,9 +172,14 @@ export default function GuestsTab({ eventId }) {
                     message="No guests yet"
                     sub="Add guests and track RSVPs. Guests will receive an invite link by email."
                     action={
-                        <Button variant="primary" size="md" onClick={() => setShowForm(true)}>
-                            Invite first guest
-                        </Button>
+                        <div style={{ display: 'inline-flex', gap: 10 }}>
+                            <Button variant="secondary" size="md" onClick={handleOpenImport}>
+                                Import from file
+                            </Button>
+                            <Button variant="primary" size="md" onClick={() => setShowForm(true)}>
+                                Invite first guest
+                            </Button>
+                        </div>
                     }
                 />
             ) : (
@@ -149,6 +203,16 @@ export default function GuestsTab({ eventId }) {
                 <AddGuestModal eventId={eventId} onDismiss={() => setShowForm(false)} />
             )}
 
+            <CsvImportModal
+                open={showImport}
+                title="Import guests"
+                description="Bulk-add guests from a CSV, TSV, or Excel file. Each row will be added to the guest list and (if the event has guest invites enabled) emailed an RSVP link."
+                fields={GUEST_IMPORT_FIELDS}
+                onSubmitRow={importOneGuest}
+                onClose={() => setShowImport(false)}
+                onComplete={() => refetch()}
+            />
+
             {pendingRemove && (
                 <div
                     role="dialog"
@@ -170,7 +234,8 @@ export default function GuestsTab({ eventId }) {
                             Remove guest?
                         </h2>
                         <p className="body-sm" style={{ margin: '0 0 24px', color: 'var(--text-2)' }}>
-                            <strong>{pendingRemove.name}</strong> will be removed from the guest list.
+                            <strong>{pendingRemove.guestName ?? pendingRemove.name ?? pendingRemove.email}</strong>{' '}
+                            will be removed from the guest list.
                         </p>
                         {removeError && (
                             <p style={{ fontSize: 13, color: 'var(--error)', marginBottom: 12 }}>{removeError}</p>
@@ -199,6 +264,10 @@ function GuestRow({ guest, eventId, isLast, onRemove }) {
     const [statusError, setStatusError] = useState('');
     const style = RSVP_STYLE[guest.rsvpStatus] ?? RSVP_STYLE.PENDING;
     const invited = fmtDate(guest.invitedAt);
+    // Backend GuestListEntryResponse serializes the name as `guestName`. The
+    // create endpoint accepts `name` on the way in but read responses ship as
+    // `guestName` — keep both in case that's ever normalised.
+    const displayName = guest.guestName ?? guest.name ?? '';
 
     async function handleStatusChange(rsvpStatus) {
         setStatusError('');
@@ -218,7 +287,7 @@ function GuestRow({ guest, eventId, isLast, onRemove }) {
         }}>
             <div>
                 <div style={{ fontWeight: 500, color: 'var(--text-1)', fontSize: 14 }}>
-                    {guest.name}
+                    {displayName || <span style={{ color: 'var(--text-3)', fontStyle: 'italic' }}>Unnamed guest</span>}
                 </div>
                 <div style={{ fontSize: 13, color: 'var(--text-2)', marginTop: 1 }}>
                     {guest.email}
@@ -247,7 +316,7 @@ function GuestRow({ guest, eventId, isLast, onRemove }) {
                 </select>
                 <button
                     onClick={onRemove}
-                    aria-label={`Remove ${guest.name}`}
+                    aria-label={`Remove ${displayName || guest.email}`}
                     style={{
                         background: 'none', border: '1px solid var(--border)',
                         borderRadius: 6, padding: '4px 8px', cursor: 'pointer',
@@ -272,11 +341,13 @@ function AddGuestModal({ eventId, onDismiss }) {
         e.preventDefault();
         setErr('');
         try {
+            // Backend AddGuestRequest fields: email (required), guestName (optional),
+            // note (optional). Phone isn't stored server-side — kept in the form
+            // for now as a UX courtesy but not sent.
             await addGuest({
                 eventId,
-                name: form.name.trim(),
                 email: form.email.trim(),
-                phone: form.phone.trim() || undefined,
+                guestName: form.name.trim() || undefined,
                 note: form.note.trim() || undefined,
             }).unwrap();
             onDismiss();

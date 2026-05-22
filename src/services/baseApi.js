@@ -26,6 +26,8 @@ export const baseApi = createApi({
         'RatingForm', 'RatingResponses',
         // KYC + host-profile trust model
         'Kyc', 'HostProfile',
+        // Organiser-issued vendor invitations
+        'VendorInvites',
     ],
     endpoints: () => ({}),
 });

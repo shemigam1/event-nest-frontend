@@ -9,6 +9,7 @@ import { selectCurrentUser, selectAuthEmail } from '@/features/auth/authSlice';
 import { formatEventDate } from '@/utils/dateFormat';
 import Button from '@/components/ui/Button';
 import { Icons } from '@/components/ui/Icon';
+import SandboxBanner from '../components/SandboxBanner';
 // TODO(Phase F — Messages/chat): The "Received inquiries" panel previously read from
 // `useGetReceivedInquiriesQuery` and `useCloseInquiryMutation`. Both endpoints were
 // frontend-only and 404'd against the backend (VendorInquiryController only exposes
@@ -124,6 +125,9 @@ export default function VendorDashboardPage() {
     return (
         <div style={{ background: 'var(--surface-subtle)', minHeight: '100vh' }}>
             <div style={{ maxWidth: 1200, margin: '0 auto', padding: '32px 24px 80px' }}>
+
+                {/* SANDBOXED → "you're locked to one event, verify to unlock the marketplace". */}
+                <SandboxBanner />
 
                 {/* Header */}
                 <div style={{

@@ -46,6 +46,7 @@ import VendorMarketplacePage from '../features/vendor/pages/VendorMarketplacePag
 import VendorDetailPage from '../features/vendor/pages/VendorDetailPage';
 import VendorProfileSetupPage from '../features/vendor/pages/VendorProfileSetupPage';
 import VendorSignupPage from '../features/vendor/pages/VendorSignupPage';
+import VendorInviteAcceptPage from '../features/vendor/pages/VendorInviteAcceptPage';
 import MessagesPage from '../features/messages/pages/MessagesPage';
 import SettingsPage from '../features/settings/pages/SettingsPage';
 import PrivateRoute from './PrivateRoute';
@@ -74,6 +75,9 @@ const router = createBrowserRouter([
             { path: '/vendors/:id',    element: <VendorDetailPage /> },
             { path: '/payment-result', element: <PaymentResultPage /> },
             { path: '/vendor/signup',  element: <VendorSignupPage /> },
+            // Vendor invite landing. Public because the recipient may not yet
+            // have an EventNest account — completing the invite creates one.
+            { path: '/vendor/invite/:token', element: <VendorInviteAcceptPage /> },
 
             {
                 element: <PrivateRoute />,
