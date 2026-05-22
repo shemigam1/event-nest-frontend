@@ -7,7 +7,12 @@ import {
     useRateVendorMutation,
     useGetVendorsQuery,
 } from '../vendorsApi';
+import {
+    useCreateVendorInviteMutation,
+    useGetVendorInvitesForEventQuery,
+} from '@/features/vendor/vendorInvitesApi';
 import Button from '@/components/ui/Button';
+import Input from '@/components/ui/Input';
 import { Icons } from '@/components/ui/Icon';
 
 const STATUS_STYLE = {
@@ -21,8 +26,13 @@ const APP_FILTERS = [
 ];
 
 const TABS = [
-    { key: 'applications', label: 'Applications' },
+    // Marketplace first — the most likely first action for a new event is to
+    // browse known vendors. Invites second — if the organiser already has a
+    // working relationship off-platform, they go straight to invite. Inbound
+    // applications come last since they trickle in over time.
     { key: 'marketplace',  label: 'Browse marketplace' },
+    { key: 'invites',      label: 'Invites' },
+    { key: 'applications', label: 'Applications' },
 ];
 
 function initials(name) {
@@ -45,7 +55,8 @@ function fmtDate(iso) {
 
 /* ─── Tab entry point ─────────────────────────────── */
 export default function VendorsTab({ eventId }) {
-    const [activeTab, setActiveTab] = useState('applications');
+    // Default to the leftmost tab — marketplace is now the primary entry point.
+    const [activeTab, setActiveTab] = useState('marketplace');
 
     return (
         <div>
@@ -77,7 +88,346 @@ export default function VendorsTab({ eventId }) {
 
             {activeTab === 'applications' && <ApplicationsPane eventId={eventId} />}
             {activeTab === 'marketplace'  && <MarketplacePane eventId={eventId} />}
+            {activeTab === 'invites'      && <InvitesPane eventId={eventId} />}
         </div>
+    );
+}
+
+/* ─── Invites pane — direct-invite vendors you already work with ───────
+   On submit we POST to /organiser/vendor-invites with eventId. The raw token
+   comes back ONCE in the response — we surface it as a copyable invite link
+   right away so the organiser can send it via whatever channel they use
+   (email, WhatsApp, SMS). The link points at /vendor/invite/:token.
+   ───────────────────────────────────────────────────────────────────── */
+function InvitesPane({ eventId }) {
+    const [email, setEmail] = useState('');
+    const [error, setError] = useState('');
+    // Tokens come back from the create call once — we stash them locally so
+    // the organiser can copy the link before navigating away. Keyed by invite
+    // id so re-inviting different emails doesn't overwrite earlier tokens.
+    const [tokensById, setTokensById] = useState({});
+
+    const invitesQuery = useGetVendorInvitesForEventQuery(eventId);
+    const [createInvite, createState] = useCreateVendorInviteMutation();
+
+    async function handleSend(e) {
+        e.preventDefault();
+        // Email is optional now — empty means "open invite, anyone with the
+        // link can claim it". Only validate the format when something IS typed.
+        const trimmed = email.trim().toLowerCase();
+        if (trimmed && !/^\S+@\S+\.\S+$/.test(trimmed)) {
+            setError('Enter a valid email address (or leave blank for an open link)');
+            return;
+        }
+        setError('');
+        try {
+            const result = await createInvite({
+                targetEmail: trimmed || undefined,
+                eventId,
+            }).unwrap();
+            // The server returns { id, ..., token } once — store the raw token.
+            if (result?.id && result?.token) {
+                setTokensById((prev) => ({ ...prev, [result.id]: result.token }));
+            }
+            setEmail('');
+        } catch (err) {
+            const apiErrs = Array.isArray(err?.data?.errors) ? err.data.errors.join('; ') : '';
+            setError(apiErrs || err?.data?.message || 'Could not generate invite. Try again.');
+        }
+    }
+
+    const invites = invitesQuery.data ?? [];
+
+    return (
+        <div style={{ maxWidth: 720, display: 'flex', flexDirection: 'column', gap: 24 }}>
+            <p style={{ margin: 0, fontSize: 14, color: 'var(--text-2)' }}>
+                Already working with a vendor off-platform? Generate an invite link and share it
+                however you normally reach them — WhatsApp, X, SMS, email. They&apos;ll land
+                sandboxed on this event only; once they verify their account, they become a
+                full marketplace vendor.
+            </p>
+
+            <form onSubmit={handleSend} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                    <div style={{ flex: 1 }}>
+                        <Input
+                            type="email"
+                            placeholder="vendor@example.com (optional)"
+                            value={email}
+                            onChange={(e) => { setEmail(e.target.value); if (error) setError(''); }}
+                            icon={<Icons.mail size={16} />}
+                            error={error}
+                        />
+                    </div>
+                    <Button
+                        type="submit"
+                        variant="primary"
+                        size="md"
+                        disabled={createState.isLoading}
+                    >
+                        {createState.isLoading
+                            ? 'Generating…'
+                            : email.trim() ? 'Send invite' : 'Generate link'}
+                    </Button>
+                </div>
+                <p style={{ margin: 0, fontSize: 12, color: 'var(--text-3)' }}>
+                    Leave the email blank to generate an open link you can share via any channel —
+                    the recipient supplies their own email when they accept. Add an email to lock
+                    the invite to that specific account.
+                </p>
+            </form>
+
+            {/* Invites list */}
+            <div>
+                <div style={{
+                    fontSize: 12, fontWeight: 700, letterSpacing: '0.07em',
+                    color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: 10,
+                }}>
+                    Invitations sent
+                </div>
+
+                {invitesQuery.isLoading ? (
+                    <div style={{ fontSize: 13, color: 'var(--text-3)' }}>Loading…</div>
+                ) : invites.length === 0 ? (
+                    <div style={{
+                        padding: 24, fontSize: 13, color: 'var(--text-3)',
+                        background: 'var(--surface-subtle)',
+                        border: '1px dashed var(--border)', borderRadius: 12,
+                    }}>
+                        No invites yet. Send your first one above.
+                    </div>
+                ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                        {invites.map((inv) => (
+                            <InviteRow
+                                key={inv.id}
+                                invite={inv}
+                                // Show the just-issued link if we have it cached;
+                                // it's never echoed by the listing endpoint.
+                                rawToken={tokensById[inv.id]}
+                            />
+                        ))}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
+
+function InviteRow({ invite, rawToken }) {
+    const link = rawToken
+        ? `${window.location.origin}/vendor/invite/${rawToken}`
+        : null;
+    const tone = {
+        PENDING:  { bg: '#FEF4E2', fg: '#B8770A', label: 'Pending' },
+        ACCEPTED: { bg: '#E6F4EA', fg: '#0F9D58', label: 'Accepted' },
+        EXPIRED:  { bg: 'var(--surface-subtle)', fg: 'var(--text-3)', label: 'Expired' },
+        REVOKED:  { bg: 'var(--surface-subtle)', fg: 'var(--text-3)', label: 'Revoked' },
+    }[invite.status] ?? { bg: 'var(--surface-subtle)', fg: 'var(--text-3)', label: invite.status };
+
+    const [copied, setCopied] = useState(false);
+    function handleCopy() {
+        if (!link) return;
+        navigator.clipboard?.writeText(link);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1500);
+    }
+
+    return (
+        <div style={{
+            background: 'var(--surface-elevated, white)',
+            border: '1px solid var(--border)', borderRadius: 12,
+            padding: '14px 16px',
+            display: 'flex', flexDirection: 'column', gap: 10,
+        }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <span style={{
+                    width: 32, height: 32, borderRadius: 99,
+                    background: 'var(--surface-subtle)', color: 'var(--text-3)',
+                    display: 'grid', placeItems: 'center', flexShrink: 0,
+                }}>
+                    <Icons.mail size={14} />
+                </span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-1)' }}>
+                        {invite.targetEmail || 'Open invite link'}
+                    </div>
+                    <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>
+                        {!invite.targetEmail && 'Anyone with the link · '}
+                        Sent {fmtDate(invite.createdAt)}
+                        {invite.expiresAt && ` · expires ${fmtDate(invite.expiresAt)}`}
+                    </div>
+                </div>
+                <span style={{
+                    padding: '3px 10px', borderRadius: 99,
+                    fontSize: 11, fontWeight: 600, letterSpacing: '0.04em',
+                    background: tone.bg, color: tone.fg, textTransform: 'uppercase',
+                    flexShrink: 0,
+                }}>
+                    {tone.label}
+                </span>
+            </div>
+
+            {link && (
+                <>
+                    <div style={{
+                        display: 'flex', gap: 6, alignItems: 'center',
+                        padding: '8px 10px',
+                        background: 'var(--mp-blue-50, #EAF1FE)',
+                        borderRadius: 8,
+                    }}>
+                        <code style={{
+                            flex: 1, fontSize: 12, color: 'var(--mp-blue)',
+                            wordBreak: 'break-all',
+                            fontFamily: 'ui-monospace, monospace',
+                        }}>
+                            {link}
+                        </code>
+                        <Button variant="secondary" size="sm" onClick={handleCopy}>
+                            {copied ? 'Copied!' : 'Copy link'}
+                        </Button>
+                    </div>
+                    <ShareRow
+                        link={link}
+                        eventTitle={invite.eventTitle}
+                        targetEmail={invite.targetEmail}
+                    />
+                </>
+            )}
+            {!link && invite.status === 'PENDING' && (
+                <p style={{ margin: 0, fontSize: 12, color: 'var(--text-3)' }}>
+                    Invite link was shown when this invite was created. For security, the
+                    raw link isn&apos;t re-displayed. Send a new invite if you need to share it again.
+                </p>
+            )}
+        </div>
+    );
+}
+
+/* ─── Share row — quick-share buttons for a freshly-issued invite ──────
+   Pre-composes the right URL for each channel (WhatsApp, X, Email, SMS) so
+   the organiser can fire the invite off through whichever channel they
+   normally use to reach this vendor. The native Web Share API picker is
+   surfaced on devices that support it (mobile mostly) under "More".
+   ─────────────────────────────────────────────────────────────────────── */
+function ShareRow({ link, eventTitle, targetEmail }) {
+    const eventLabel = eventTitle || 'my event';
+    const message = `Hi! I'd like to bring you on as a vendor for ${eventLabel} via EventNest. Accept your invite here: ${link}`;
+    const shortMessage = `EventNest vendor invite for ${eventLabel}: ${link}`;
+    const subject = `Vendor invite — ${eventLabel}`;
+
+    const targets = [
+        {
+            key: 'whatsapp',
+            label: 'WhatsApp',
+            href: `https://wa.me/?text=${encodeURIComponent(message)}`,
+            color: '#25D366',
+            icon: <WhatsAppGlyph />,
+        },
+        {
+            key: 'email',
+            label: 'Email',
+            // Pre-fill the invitee's address when we have it; the organiser
+            // can still change it before sending.
+            href: `mailto:${encodeURIComponent(targetEmail || '')}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(message)}`,
+            color: 'var(--mp-blue)',
+            icon: <Icons.mail size={13} />,
+        },
+        {
+            key: 'x',
+            label: 'X',
+            href: `https://twitter.com/intent/tweet?text=${encodeURIComponent(shortMessage)}`,
+            color: 'var(--text-1)',
+            icon: <XGlyph />,
+        },
+        {
+            key: 'sms',
+            label: 'SMS',
+            href: `sms:?&body=${encodeURIComponent(message)}`,
+            color: 'var(--text-2)',
+            icon: <Icons.message size={13} />,
+        },
+    ];
+
+    const hasNativeShare = typeof navigator !== 'undefined' && typeof navigator.share === 'function';
+    async function handleNativeShare() {
+        try {
+            await navigator.share({ title: subject, text: message, url: link });
+        } catch {
+            // user cancelled or the browser refused — silent
+        }
+    }
+
+    const btn = (color) => ({
+        display: 'inline-flex', alignItems: 'center', gap: 5,
+        fontSize: 12, fontWeight: 600,
+        color, background: 'var(--surface-elevated, white)',
+        border: '1px solid var(--border)',
+        borderRadius: 8, padding: '5px 10px',
+        cursor: 'pointer', fontFamily: 'inherit',
+        textDecoration: 'none',
+        transition: 'background 0.15s, border-color 0.15s',
+    });
+
+    return (
+        <div style={{
+            display: 'flex', flexWrap: 'wrap', gap: 6,
+            alignItems: 'center',
+        }}>
+            <span style={{
+                fontSize: 11, fontWeight: 700, letterSpacing: '0.05em',
+                color: 'var(--text-3)', textTransform: 'uppercase',
+                marginRight: 4,
+            }}>
+                Share via
+            </span>
+            {targets.map((t) => (
+                <a
+                    key={t.key}
+                    href={t.href}
+                    target={t.key === 'email' || t.key === 'sms' ? '_self' : '_blank'}
+                    rel="noopener noreferrer"
+                    aria-label={`Share via ${t.label}`}
+                    style={btn(t.color)}
+                >
+                    {t.icon}{t.label}
+                </a>
+            ))}
+            {hasNativeShare && (
+                <button
+                    type="button"
+                    onClick={handleNativeShare}
+                    aria-label="Open device share sheet"
+                    style={btn('var(--text-2)')}
+                >
+                    <Icons.send size={13} />More…
+                </button>
+            )}
+        </div>
+    );
+}
+
+function WhatsAppGlyph() {
+    // Minimal monochrome glyph — picks up `color: currentColor` from the
+    // parent button so the fill matches the button's text colour.
+    return (
+        <svg width={13} height={13} viewBox="0 0 24 24" aria-hidden="true">
+            <path
+                fill="currentColor"
+                d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.99.58 3.86 1.59 5.45L2 22l4.78-1.25a9.84 9.84 0 0 0 5.26 1.5h.01c5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.13-2.9-7-1.87-1.88-4.36-2.92-7.02-2.92zm5.78 14.07c-.24.69-1.4 1.32-1.95 1.39-.49.07-1.11.1-1.79-.11-.41-.13-.95-.31-1.63-.6-2.86-1.23-4.74-4.12-4.88-4.3-.14-.18-1.17-1.55-1.17-2.96 0-1.4.74-2.09 1-2.37.27-.29.58-.36.78-.36.2 0 .39 0 .56.01.18.01.42-.07.66.5.24.58.83 2.01.9 2.15.07.14.12.31.02.49-.09.18-.14.29-.27.45-.14.16-.29.36-.41.49-.14.14-.28.29-.12.57.16.27.71 1.17 1.52 1.9 1.04.93 1.92 1.21 2.19 1.35.27.14.43.12.59-.07.16-.18.68-.79.86-1.07.18-.27.36-.23.61-.14.24.09 1.55.73 1.81.86.27.14.44.2.51.32.07.12.07.71-.17 1.4z"
+            />
+        </svg>
+    );
+}
+
+function XGlyph() {
+    return (
+        <svg width={12} height={12} viewBox="0 0 24 24" aria-hidden="true">
+            <path
+                fill="currentColor"
+                d="M18.244 2H21.5l-7.5 8.572L23 22h-6.875l-5.39-7.04L4.5 22H1.244l8.018-9.165L1 2h7.044l4.87 6.435L18.244 2zm-2.41 18h1.91L6.273 4h-2.05l11.61 16z"
+            />
+        </svg>
     );
 }
 
@@ -139,15 +489,9 @@ function ApplicationsPane({ eventId }) {
             gap: 20,
         }}>
             <div style={{ minWidth: 0 }}>
-                <div style={{
-                    display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)',
-                    gap: 16, marginBottom: 20,
-                }}>
-                    <Tile label="Applications" value={counts.all} icon={<Icons.inbox size={16} />} />
-                    <Tile label="Pending" value={counts.PENDING} accent={counts.PENDING > 0 ? 'var(--warning)' : undefined} />
-                    <Tile label="Accepted" value={counts.ACCEPTED} accent={counts.ACCEPTED > 0 ? 'var(--success)' : undefined} />
-                    <Tile label="Rejected" value={counts.REJECTED} />
-                </div>
+                {/* Stat tiles removed — the filter chips below already surface
+                    the same counts (All N · Pending N · Accepted N · Rejected N),
+                    so the tiles were just duplicating information. */}
 
                 <div style={{
                     background: 'white', border: '1px solid var(--border)',
@@ -422,28 +766,6 @@ function FilterBar({ filters, counts, active, onChange }) {
                     </button>
                 );
             })}
-        </div>
-    );
-}
-
-function Tile({ label, value, icon, accent }) {
-    return (
-        <div style={{
-            background: 'white', border: '1px solid var(--border)',
-            borderRadius: 12, padding: 18,
-        }}>
-            <div style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12,
-            }}>
-                <span style={{ fontSize: 13, color: 'var(--text-2)', fontWeight: 500 }}>{label}</span>
-                {icon && <span style={{ color: 'var(--text-3)' }}>{icon}</span>}
-            </div>
-            <div className="mp-num" style={{
-                fontSize: 26, fontWeight: 700, lineHeight: 1,
-                color: accent || 'var(--text-1)',
-            }}>
-                {value}
-            </div>
         </div>
     );
 }

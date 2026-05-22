@@ -71,6 +71,9 @@ export default function AppShell() {
     ]);
     const p = location.pathname;
     const isCheckinRoute = p === '/checkin' || p.startsWith('/checkin/');
+    // Vendor invite landing page renders standalone (no sidebar) — recipient
+    // may not yet be signed in, and the page handles its own layout.
+    const isVendorInvite = /^\/vendor\/invite\/[^/]+$/.test(p);
     const isPublicBrowsingPage =
         p === '/events' ||
         p === '/vendors' ||
@@ -80,6 +83,7 @@ export default function AppShell() {
     const isNoSidebarPage =
         ALWAYS_NO_SIDEBAR.has(p) ||
         isCheckinRoute ||
+        isVendorInvite ||
         (!isAuthenticated && isPublicBrowsingPage);
 
     if (isNoSidebarPage) {
