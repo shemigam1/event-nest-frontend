@@ -286,6 +286,61 @@ export const MOCK_EVENT_BOOKINGS = {
     ],
 };
 
+export const MOCK_COMMENTS = {
+    evt_001: {
+        content: [
+            {
+                id: 'cmt_001',
+                parentCommentId: null,
+                authorId: 'user_001',
+                authorName: 'Base Locke',
+                authorRoleOnEvent: 'ORGANIZER',
+                body: 'Looking forward to this event!',
+                deleted: false,
+                editedAt: null,
+                createdAt: '2026-05-16T09:00:00',
+                likeCount: 3,
+                replyCount: 1,
+                replies: [],
+            },
+            {
+                id: 'cmt_002',
+                parentCommentId: null,
+                authorId: 'user_002',
+                authorName: 'Emeka Okafor',
+                authorRoleOnEvent: null,
+                body: 'Just convinced my whole team to get tickets!',
+                deleted: false,
+                editedAt: null,
+                createdAt: '2026-05-15T14:00:00',
+                likeCount: 0,
+                replyCount: 0,
+                replies: [],
+            },
+        ],
+        totalElements: 2,
+        totalPages: 1,
+    },
+};
+
+export const MOCK_REPLIES = {
+    cmt_001: [
+        {
+            id: 'rpl_001',
+            parentCommentId: 'cmt_001',
+            authorId: 'user_003',
+            authorName: 'Fatima Bello',
+            authorRoleOnEvent: null,
+            body: 'Same here! Already bought mine.',
+            deleted: false,
+            editedAt: null,
+            createdAt: '2026-05-16T10:00:00',
+            likeCount: 1,
+            replies: [],
+        },
+    ],
+};
+
 export const MOCK_ANALYTICS = {
     eventsByStatus: { DRAFT: 3, PENDING_APPROVAL: 2, PUBLISHED: 5, CANCELLED: 1 },
     totalBookings: 42,
@@ -679,6 +734,72 @@ export const server = setupServer(
     // Delete event
     http.delete(`${BASE_URL}/events/:id`, () =>
         HttpResponse.json({ success: true, message: 'Event deleted' })
+    ),
+
+    // Comments: list for an event (paged)
+    http.get(`${BASE_URL}/events/:eventId/comments`, ({ params }) => {
+        const data = MOCK_COMMENTS[params.eventId] ?? { content: [], totalElements: 0, totalPages: 0 };
+        return HttpResponse.json({ success: true, data });
+    }),
+
+    // Comments: post (top-level or reply)
+    http.post(`${BASE_URL}/events/:eventId/comments`, async ({ params, request }) => {
+        const body = await request.json();
+        return HttpResponse.json({
+            success: true,
+            data: {
+                id: 'cmt_new',
+                parentCommentId: body.parentCommentId ?? null,
+                authorId: 'user_001',
+                authorName: 'Base Locke',
+                authorRoleOnEvent: 'ORGANIZER',
+                body: body.body,
+                deleted: false,
+                editedAt: null,
+                createdAt: new Date().toISOString(),
+                likeCount: 0,
+                replyCount: 0,
+                replies: [],
+            },
+        }, { status: 201 });
+    }),
+
+    // Comments: get replies for a single comment
+    http.get(`${BASE_URL}/comments/:commentId/replies`, ({ params }) => {
+        const data = MOCK_REPLIES[params.commentId] ?? [];
+        return HttpResponse.json({ success: true, data });
+    }),
+
+    // Comments: update (edit body)
+    http.patch(`${BASE_URL}/comments/:commentId`, async ({ params, request }) => {
+        const body = await request.json();
+        return HttpResponse.json({
+            success: true,
+            data: {
+                id: params.commentId,
+                body: body.body,
+                deleted: false,
+                editedAt: new Date().toISOString(),
+                likeCount: 0,
+                replies: [],
+            },
+        });
+    }),
+
+    // Comments: soft-delete
+    http.delete(`${BASE_URL}/comments/:commentId`, ({ params }) =>
+        HttpResponse.json({
+            success: true,
+            data: { id: params.commentId, deleted: true, body: '[Comment removed]' },
+        })
+    ),
+
+    // Comments: toggle like
+    http.post(`${BASE_URL}/comments/:commentId/like`, ({ params }) =>
+        HttpResponse.json({
+            success: true,
+            data: { commentId: params.commentId, type: 'LIKE', reacted: true, likeCount: 1 },
+        })
     ),
 
     // Check-in: scan a ticket

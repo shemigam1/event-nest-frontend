@@ -737,11 +737,18 @@ function InquiryModal({ vendorId, onDismiss }) {
     async function handleSubmit() {
         setError('');
         try {
+            // Backend only has vendorProfileId + openingMessage.
+            // Combine the optional serviceType into the opening message so it
+            // surfaces in the chat thread rather than being silently dropped.
+            const parts = [];
+            if (serviceType.trim()) parts.push(`Service type: ${serviceType.trim()}`);
+            if (message.trim())     parts.push(message.trim());
+            const openingMessage = parts.join('\n\n') || undefined;
+
             const result = await sendInquiry({
                 eventId,
                 vendorId,
-                message: message.trim(),
-                serviceType: serviceType.trim() || undefined,
+                openingMessage,
             }).unwrap();
             if (result?.conversationId) {
                 navigate(`/messages?c=${result.conversationId}`);

@@ -81,8 +81,9 @@ export default function VendorsTab({ eventId }) {
     );
 }
 
-/* ─── Applications pane (unchanged from original) ── */
+/* ─── Applications pane ───────────────────────────── */
 function ApplicationsPane({ eventId }) {
+    const navigate = useNavigate();
     const apps = useGetEventVendorApplicationsQuery({ eventId });
     const [accept, acceptState] = useAcceptVendorApplicationMutation();
     const [reject, rejectState] = useRejectVendorApplicationMutation();
@@ -188,6 +189,7 @@ function ApplicationsPane({ eventId }) {
                                 onAccept={() => handleAccept(a)}
                                 onReject={() => setPendingReject(a)}
                                 onRate={() => setPendingRate(a)}
+                                onViewProfile={() => navigate(`/vendors/${a.vendorProfileId}`)}
                                 busy={
                                     (acceptState.isLoading && acceptState.originalArgs?.applicationId === a.id)
                                     || (rejectState.isLoading && pendingReject?.id === a.id)
@@ -208,7 +210,7 @@ function ApplicationsPane({ eventId }) {
             {pendingReject && (
                 <ConfirmDialog
                     title="Reject application?"
-                    body={<>The application from <strong>{pendingReject.applicantName}</strong> for <strong>{pendingReject.serviceType}</strong> will be rejected.</>}
+                    body={<>The application from <strong>{pendingReject.businessName}</strong> for <strong>{pendingReject.vendorCategory}</strong> will be rejected.</>}
                     confirmLabel="Reject"
                     loading={rejectState.isLoading}
                     onConfirm={handleReject}
@@ -446,15 +448,16 @@ function Tile({ label, value, icon, accent }) {
     );
 }
 
-function ApplicationRow({ application, isLast, onAccept, onReject, onRate, busy }) {
+function ApplicationRow({ application, isLast, onAccept, onReject, onRate, onViewProfile, busy }) {
     const style = STATUS_STYLE[application.status] || STATUS_STYLE.PENDING;
     const isPending  = application.status === 'PENDING';
     const isAccepted = application.status === 'ACCEPTED';
-    const eventEnded = application.eventEndTime
-        ? new Date(application.eventEndTime) < new Date()
-        : false;
-    const canRate = isAccepted && eventEnded;
-    const amount = ngn(application.proposedAmount);
+    // Show "Rate vendor" for accepted applications — backend enforces the event-ended rule
+    const canRate    = isAccepted;
+    const trust      = application.trustScore != null ? Number(application.trustScore) : null;
+    const completed  = application.completedContracts ?? 0;
+    const total      = application.totalContracts ?? 0;
+
     return (
         <div style={{
             display: 'grid', gridTemplateColumns: '48px 1fr auto',
@@ -462,22 +465,43 @@ function ApplicationRow({ application, isLast, onAccept, onReject, onRate, busy 
             padding: '18px 20px',
             borderBottom: isLast ? 0 : '1px solid var(--border)',
         }}>
-            <div style={{
-                width: 48, height: 48, borderRadius: 10,
-                background: 'var(--surface-subtle)', color: 'var(--text-2)',
-                display: 'grid', placeItems: 'center', fontSize: 14, fontWeight: 700,
-            }}>
-                {initials(application.applicantName)}
-            </div>
+            {/* Avatar — clickable shortcut to vendor profile */}
+            <button
+                onClick={onViewProfile}
+                title="View vendor profile"
+                style={{
+                    width: 48, height: 48, borderRadius: 10,
+                    background: 'var(--surface-subtle)', color: 'var(--text-2)',
+                    display: 'grid', placeItems: 'center', fontSize: 14, fontWeight: 700,
+                    border: 0, cursor: 'pointer', padding: 0, flexShrink: 0,
+                }}
+                onMouseOver={(e) => { e.currentTarget.style.background = '#dde3ed'; e.currentTarget.style.color = 'var(--mp-blue)'; }}
+                onMouseOut={(e) => { e.currentTarget.style.background = 'var(--surface-subtle)'; e.currentTarget.style.color = 'var(--text-2)'; }}
+            >
+                {initials(application.businessName)}
+            </button>
+
             <div style={{ minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
-                    <span style={{ fontWeight: 600, color: 'var(--text-1)' }}>{application.applicantName}</span>
+                    {/* Business name — clickable */}
+                    <button
+                        onClick={onViewProfile}
+                        style={{
+                            background: 'none', border: 0, padding: 0,
+                            fontWeight: 600, color: 'var(--text-1)',
+                            cursor: 'pointer', fontFamily: 'inherit', fontSize: 'inherit',
+                        }}
+                        onMouseOver={(e) => { e.currentTarget.style.color = 'var(--mp-blue)'; e.currentTarget.style.textDecoration = 'underline'; }}
+                        onMouseOut={(e) => { e.currentTarget.style.color = 'var(--text-1)'; e.currentTarget.style.textDecoration = 'none'; }}
+                    >
+                        {application.businessName}
+                    </button>
                     <span style={{
                         fontSize: 11, padding: '2px 8px',
                         background: 'var(--surface-subtle)', borderRadius: 6,
                         color: 'var(--text-2)', fontWeight: 600,
                     }}>
-                        {application.serviceType}
+                        {application.vendorCategory}
                     </span>
                     <span style={{
                         padding: '2px 9px', background: style.bg, color: style.fg,
@@ -486,42 +510,71 @@ function ApplicationRow({ application, isLast, onAccept, onReject, onRate, busy 
                         {style.label}
                     </span>
                 </div>
-                {application.description && (
+                {application.coverNote && (
                     <p className="body-sm" style={{
                         margin: '0 0 8px', color: 'var(--text-2)',
                         whiteSpace: 'pre-wrap', lineHeight: 1.5,
                     }}>
-                        {application.description}
+                        {application.coverNote}
                     </p>
                 )}
                 <div style={{ display: 'flex', gap: 14, fontSize: 12, color: 'var(--text-3)', flexWrap: 'wrap' }}>
-                    {amount && (
+                    {trust != null && (
                         <span className="mp-num" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                            <Icons.wallet size={12} />
-                            <span style={{ color: 'var(--text-1)', fontWeight: 600 }}>{amount}</span>
-                            <span>proposed</span>
+                            <Icons.shield size={12} />
+                            <span style={{ color: 'var(--text-1)', fontWeight: 600 }}>{trust.toFixed(0)}</span>
+                            <span>trust score</span>
                         </span>
                     )}
-                    <span>· Applied {fmtDate(application.createdAt)}</span>
+                    {total > 0 && (
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                            <span style={{ color: 'var(--text-1)', fontWeight: 600 }}>{completed}/{total}</span>
+                            <span>contracts completed</span>
+                        </span>
+                    )}
+                    <span>· Applied {fmtDate(application.appliedAt)}</span>
+                    {application.vendorEmail && (
+                        <span>· {application.vendorEmail}</span>
+                    )}
                 </div>
             </div>
-            <div style={{ display: 'flex', gap: 8, paddingTop: 4, flexWrap: 'wrap' }}>
-                {isPending ? (
-                    <>
-                        <Button size="sm" variant="primary" icon={<Icons.check size={13} />} onClick={onAccept} disabled={busy}>
-                            Accept
+
+            {/* Actions column — accept/reject/rate stacked above a persistent View profile link */}
+            <div style={{
+                display: 'flex', flexDirection: 'column',
+                gap: 8, paddingTop: 4, alignItems: 'flex-end',
+            }}>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                    {isPending ? (
+                        <>
+                            <Button size="sm" variant="primary" icon={<Icons.check size={13} />} onClick={onAccept} disabled={busy}>
+                                Accept
+                            </Button>
+                            <Button size="sm" variant="secondary" icon={<Icons.x size={13} />} onClick={onReject} disabled={busy}>
+                                Reject
+                            </Button>
+                        </>
+                    ) : canRate ? (
+                        <Button size="sm" variant="secondary" icon={<StarIcon size={13} />} onClick={onRate}>
+                            Rate vendor
                         </Button>
-                        <Button size="sm" variant="secondary" icon={<Icons.x size={13} />} onClick={onReject} disabled={busy}>
-                            Reject
-                        </Button>
-                    </>
-                ) : canRate ? (
-                    <Button size="sm" variant="secondary" icon={<StarIcon size={13} />} onClick={onRate}>
-                        Rate vendor
-                    </Button>
-                ) : (
-                    <span style={{ fontSize: 12, color: 'var(--text-3)' }}>—</span>
-                )}
+                    ) : null}
+                </div>
+                {/* Always-visible profile link */}
+                <button
+                    onClick={onViewProfile}
+                    style={{
+                        background: 'none', border: 0, padding: 0,
+                        color: 'var(--mp-blue)', cursor: 'pointer',
+                        fontFamily: 'inherit', fontSize: 12, fontWeight: 500,
+                        display: 'inline-flex', alignItems: 'center', gap: 3,
+                    }}
+                    onMouseOver={(e) => { e.currentTarget.style.textDecoration = 'underline'; }}
+                    onMouseOut={(e) => { e.currentTarget.style.textDecoration = 'none'; }}
+                >
+                    View profile
+                    <Icons.arrowR size={11} />
+                </button>
             </div>
         </div>
     );

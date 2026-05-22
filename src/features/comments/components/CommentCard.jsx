@@ -12,6 +12,7 @@ import Composer from './Composer';
 const ROLE_STYLE = {
     ORGANIZER:     { label: 'Organiser', bg: '#E6F4EA', fg: '#0F9D58' },
     MANAGER:       { label: 'Manager',   bg: '#EAF1FE', fg: '#0247c7' },
+    VENDOR:        { label: 'Vendor',    bg: '#FFF3E0', fg: '#E65100' },
     CHECKIN_STAFF: { label: 'Check-in',  bg: '#FEF4E2', fg: '#B8770A' },
     ATTENDEE:      { label: 'Attendee',  bg: '#F5F7FA', fg: '#4A5468' },
 };

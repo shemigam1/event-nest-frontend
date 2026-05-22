@@ -8,6 +8,9 @@ import {
     useUpdateEventConfigMutation,
 } from '@/features/events/eventsApi';
 import {
+    useUpdateTierMutation,
+} from '@/features/events/tiersApi';
+import {
     useGetOrganizerEventByIdQuery,
     useGetEventBookingsQuery,
     useGetEventAnalyticsQuery,
@@ -702,11 +705,150 @@ const VENDOR_CATEGORIES = [
     { value: 'OTHER',       label: 'Other' },
 ];
 
+/* ── Per-tier limit row ──────────────────────────── */
+function TierLimitRow({ tier, eventId, isLast }) {
+    const [editing, setEditing] = useState(false);
+    const [limitDraft, setLimitDraft] = useState(
+        tier.maxPerPerson != null ? String(tier.maxPerPerson) : ''
+    );
+    const [updateTier, { isLoading }] = useUpdateTierMutation();
+    const [error, setError] = useState('');
+
+    async function save() {
+        const mpp = limitDraft !== '' ? parseInt(limitDraft, 10) : null;
+        const payload = { eventId, tierId: tier.id };
+        if (mpp != null && mpp >= 1) payload.maxPerPerson = mpp;
+        else payload.clearMaxPerPerson = true;
+        try {
+            await updateTier(payload).unwrap();
+            setEditing(false);
+            setError('');
+        } catch (err) {
+            setError(err?.data?.message || 'Could not update limit.');
+        }
+    }
+
+    function cancel() {
+        setLimitDraft(tier.maxPerPerson != null ? String(tier.maxPerPerson) : '');
+        setEditing(false);
+        setError('');
+    }
+
+    return (
+        <div style={{ borderBottom: isLast ? 0 : '1px solid var(--border)' }}>
+            <div style={{
+                padding: '14px 20px', display: 'flex',
+                justifyContent: 'space-between', alignItems: 'center', gap: 12,
+            }}>
+                <div>
+                    <span style={{ fontWeight: 600, color: 'var(--text-1)', fontSize: 14 }}>
+                        {tier.name}
+                    </span>
+                    <span style={{ marginLeft: 10, fontSize: 13, color: 'var(--text-2)' }}>
+                        {Number(tier.price) === 0 ? 'Free' : `₦${(Number(tier.price) / 100).toLocaleString()}`}
+                    </span>
+                    <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>
+                        {tier.maxPerPerson != null
+                            ? `Max ${tier.maxPerPerson} ticket${tier.maxPerPerson !== 1 ? 's' : ''} per person`
+                            : 'No per-person limit (unlimited)'}
+                    </div>
+                </div>
+                <button
+                    onClick={() => setEditing((e) => !e)}
+                    style={{
+                        fontSize: 13, fontWeight: 500, padding: '5px 14px',
+                        borderRadius: 8, border: '1px solid var(--border)',
+                        background: 'white', color: 'var(--text-2)', cursor: 'pointer',
+                    }}
+                >
+                    {editing ? 'Cancel' : 'Edit limit'}
+                </button>
+            </div>
+
+            {editing && (
+                <div style={{
+                    margin: '0 20px 14px', padding: '14px 16px',
+                    background: 'var(--surface-subtle)', borderRadius: 10,
+                    display: 'flex', flexDirection: 'column', gap: 10,
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                        <label style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-1)', whiteSpace: 'nowrap' }}>
+                            Max per person
+                        </label>
+                        {limitDraft !== '' ? (
+                            <input
+                                type="number" min="1" placeholder="e.g. 4"
+                                value={limitDraft}
+                                onChange={(e) => setLimitDraft(e.target.value)}
+                                style={{
+                                    width: 100, height: 36, padding: '0 12px',
+                                    background: 'white', border: '1px solid var(--border)',
+                                    borderRadius: 8, fontSize: 14, color: 'var(--text-1)',
+                                }}
+                            />
+                        ) : (
+                            <span style={{ fontSize: 13, color: 'var(--text-3)', fontStyle: 'italic' }}>
+                                Unlimited
+                            </span>
+                        )}
+                        <button
+                            type="button"
+                            onClick={() => setLimitDraft(limitDraft !== '' ? '' : (Number(tier.price) === 0 ? '2' : '1'))}
+                            style={{
+                                fontSize: 12, fontWeight: 500, padding: '4px 12px',
+                                borderRadius: 8, border: '1px solid var(--border)',
+                                background: limitDraft === '' ? 'var(--mp-blue)' : 'var(--surface-subtle)',
+                                color: limitDraft === '' ? 'white' : 'var(--text-2)',
+                                cursor: 'pointer',
+                            }}
+                        >
+                            Unlimited
+                        </button>
+                    </div>
+                    <p style={{ margin: 0, fontSize: 12, color: 'var(--text-3)' }}>
+                        {Number(tier.price) === 0
+                            ? 'Free tiers default to 2. Increase or set unlimited if you trust your attendees.'
+                            : 'Paid tiers are unlimited by default. Set a cap if needed.'}
+                    </p>
+                    {error && <p style={{ margin: 0, fontSize: 12, color: 'var(--error)' }}>{error}</p>}
+                    <div style={{ display: 'flex', gap: 8 }}>
+                        <button
+                            onClick={save}
+                            disabled={isLoading}
+                            style={{
+                                height: 32, padding: '0 16px', borderRadius: 8, border: 0,
+                                background: 'var(--mp-blue)', color: 'white',
+                                fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                                opacity: isLoading ? 0.6 : 1,
+                            }}
+                        >
+                            {isLoading ? 'Saving…' : 'Save'}
+                        </button>
+                        <button
+                            onClick={cancel}
+                            disabled={isLoading}
+                            style={{
+                                height: 32, padding: '0 14px', borderRadius: 8,
+                                border: '1px solid var(--border)', background: 'white',
+                                fontSize: 13, fontWeight: 500, cursor: 'pointer',
+                                color: 'var(--text-2)',
+                            }}
+                        >
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
 function SettingsTab({ event, eventId, navigate }) {
     const [submitEvent, submitState]   = useSubmitEventMutation();
     const [deleteEvent, deleteState]   = useDeleteEventMutation();
     const [updateConfig, configState]  = useUpdateEventConfigMutation();
     const configQuery = useGetEventConfigQuery(eventId);
+    const tiersQuery  = useGetEventTiersQuery(eventId);
 
     const [showDeleteDialog, setShowDeleteDialog] = useState(false);
     const [actionError, setActionError] = useState('');
@@ -726,6 +868,7 @@ function SettingsTab({ event, eventId, navigate }) {
     const vendorAppsOpen   = config.vendorApplicationsOpen ?? false;
     const freeTicketLimit  = config.freeTicketLimit ?? 2;
     const requiredCats     = config.requiredVendorCategories ?? [];
+    const tiers            = tiersQuery.data ?? [];
 
     const [limitDraft, setLimitDraft] = useState(null); // null = not editing
 
@@ -1000,6 +1143,34 @@ function SettingsTab({ event, eventId, navigate }) {
                     )}
                 </div>
             </div>
+
+            {/* Ticket tiers — per-person limits */}
+            {tiers.length > 0 && (
+                <div style={{
+                    background: 'white', border: '1px solid var(--border)',
+                    borderRadius: 12, overflow: 'hidden',
+                }}>
+                    <div style={{
+                        padding: '16px 20px', borderBottom: '1px solid var(--border)',
+                    }}>
+                        <div style={{ fontWeight: 600, color: 'var(--text-1)', fontSize: 15 }}>
+                            Ticket tiers
+                        </div>
+                        <div style={{ fontSize: 13, color: 'var(--text-2)', marginTop: 2 }}>
+                            Set the maximum number of tickets one person can hold per tier.
+                            Free tiers default to 2 to prevent hoarding; paid tiers are unlimited by default.
+                        </div>
+                    </div>
+                    {tiers.map((tier, i) => (
+                        <TierLimitRow
+                            key={tier.id}
+                            tier={tier}
+                            eventId={eventId}
+                            isLast={i === tiers.length - 1}
+                        />
+                    ))}
+                </div>
+            )}
 
             {/* Required vendor categories */}
             <div style={{

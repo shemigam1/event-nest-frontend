@@ -16,12 +16,20 @@ import { baseApi } from '@/services/baseApi';
 export const inquiriesApi = baseApi.injectEndpoints({
     endpoints: (builder) => ({
 
-        /** Organiser/manager opens a direct vendor inquiry — auto-creates a VENDOR_INQUIRY conversation. */
+        /** Organiser/manager opens a direct vendor inquiry — auto-creates a VENDOR_INQUIRY conversation.
+         *
+         * Backend CreateVendorInquiryRequest fields:
+         *   vendorProfileId (required UUID)  — maps from the caller's `vendorId` param
+         *   openingMessage  (optional String) — maps from the caller's `openingMessage` param
+         */
         sendInquiry: builder.mutation({
-            query: ({ eventId, vendorId, message, serviceType }) => ({
+            query: ({ eventId, vendorId, openingMessage }) => ({
                 url: `/events/${eventId}/vendor-inquiries`,
                 method: 'POST',
-                body: { vendorId, message, serviceType },
+                body: {
+                    vendorProfileId: vendorId,
+                    openingMessage:  openingMessage || undefined,
+                },
             }),
             invalidatesTags: (result, error, { eventId }) => [
                 { type: 'Inquiry', id: eventId },

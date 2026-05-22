@@ -38,7 +38,7 @@ export const adminApi = baseApi.injectEndpoints({
         getAdminUsers: builder.query({
             query: () => '/admin/users',
             providesTags: ['User'],
-            transformResponse: (r) => { const d = r.data ?? r; return Array.isArray(d) ? d : (d?.content ?? []); },
+            transformResponse: (r) => r.data ?? r,
         }),
         updateUserStatus: builder.mutation({
             query: ({ id, enabled }) => ({
@@ -176,7 +176,15 @@ export const adminApi = baseApi.injectEndpoints({
                 return qs ? `/admin/vendors?${qs}` : '/admin/vendors';
             },
             providesTags: ['Vendor'],
-            transformResponse: (r) => { const d = r.data ?? r; return Array.isArray(d) ? d : (d?.content ?? []); },
+            transformResponse: (r) => {
+                const d = r.data ?? r;
+                const content = Array.isArray(d) ? d : (d?.content ?? []);
+                // Spring Data 3.x nests pagination under a 'page' sub-object;
+                // fall back to top-level totalElements for older shapes.
+                const totalElements = d?.page?.totalElements ?? d?.totalElements ?? content.length;
+                const totalPages    = d?.page?.totalPages    ?? d?.totalPages    ?? 1;
+                return { content, totalElements, totalPages };
+            },
         }),
         getAdminVendorById: builder.query({
             query: (vendorId) => `/admin/vendors/${vendorId}`,
