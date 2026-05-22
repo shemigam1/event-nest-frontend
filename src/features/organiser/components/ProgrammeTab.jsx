@@ -24,7 +24,7 @@ function fmtDateTime(iso) {
           + d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
 }
 
-export default function ProgrammeTab({ eventId }) {
+export default function ProgrammeTab({ eventId, event }) {
     const { data: items = [], isLoading, isError, refetch } = useGetProgrammeQuery(eventId);
     const [showForm, setShowForm] = useState(false);
     const [editing, setEditing] = useState(null);
@@ -99,6 +99,8 @@ export default function ProgrammeTab({ eventId }) {
                 <ProgrammeItemModal
                     eventId={eventId}
                     item={editing}
+                    eventStartTime={event?.startTime}
+                    eventEndTime={event?.endTime}
                     onDismiss={() => { setShowForm(false); setEditing(null); }}
                 />
             )}
@@ -212,7 +214,7 @@ function ProgrammeRow({ item, isLast, onEdit, onDelete }) {
     );
 }
 
-function ProgrammeItemModal({ eventId, item, onDismiss }) {
+function ProgrammeItemModal({ eventId, item, eventStartTime, eventEndTime, onDismiss }) {
     const isEdit = !!item;
     const [addItem, addState] = useAddProgrammeItemMutation();
     const [updateItem, updateState] = useUpdateProgrammeItemMutation();
@@ -231,9 +233,42 @@ function ProgrammeItemModal({ eventId, item, onDismiss }) {
     const busy = addState.isLoading || updateState.isLoading;
     const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
+    // Clamp the min/max attributes shown in the datetime-local inputs
+    // so the browser's own date picker also guides the user.
+    const inputMin = eventStartTime ? eventStartTime.slice(0, 16) : undefined;
+    const inputMax = eventEndTime   ? eventEndTime.slice(0, 16)   : undefined;
+
+    function validate() {
+        const sessionStart = form.startTime ? new Date(form.startTime) : null;
+        const sessionEnd   = form.endTime   ? new Date(form.endTime)   : null;
+        const evtStart     = eventStartTime  ? new Date(eventStartTime) : null;
+        const evtEnd       = eventEndTime    ? new Date(eventEndTime)   : null;
+
+        if (sessionStart && sessionEnd && sessionStart >= sessionEnd) {
+            return 'Session end time must be after start time.';
+        }
+        if (evtStart && sessionStart && sessionStart < evtStart) {
+            return `Session start time cannot be before the event starts (${fmtDateTime(eventStartTime)}).`;
+        }
+        if (evtEnd && sessionEnd && sessionEnd > evtEnd) {
+            return `Session end time cannot be after the event ends (${fmtDateTime(eventEndTime)}).`;
+        }
+        if (evtStart && evtEnd && sessionStart && sessionStart > evtEnd) {
+            return 'Programme item must fall within the event\'s time window.';
+        }
+        return null;
+    }
+
     async function handleSubmit(e) {
         e.preventDefault();
         setErr('');
+
+        const validationError = validate();
+        if (validationError) {
+            setErr(validationError);
+            return;
+        }
+
         const body = {
             title: form.title.trim(),
             description: form.description.trim() || undefined,
@@ -284,10 +319,10 @@ function ProgrammeItemModal({ eventId, item, onDismiss }) {
                     </FieldGroup>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                         <FieldGroup label="Start time">
-                            <TextInput type="datetime-local" value={form.startTime} onChange={set('startTime')} />
+                            <TextInput type="datetime-local" value={form.startTime} onChange={set('startTime')} min={inputMin} max={inputMax} />
                         </FieldGroup>
                         <FieldGroup label="End time">
-                            <TextInput type="datetime-local" value={form.endTime} onChange={set('endTime')} />
+                            <TextInput type="datetime-local" value={form.endTime} onChange={set('endTime')} min={inputMin} max={inputMax} />
                         </FieldGroup>
                     </div>
                     <FieldGroup label="Speaker name">

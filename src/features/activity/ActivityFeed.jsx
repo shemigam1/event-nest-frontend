@@ -1,6 +1,7 @@
 import { useSelector } from 'react-redux';
 import { selectActivityForEvent } from './activitySlice';
 import { Icons } from '@/components/ui/Icon';
+import { formatNaira } from '@/utils/currency';
 
 /**
  * Live feed of SSE events for a single event. Mount on the organiser
@@ -106,7 +107,9 @@ function ActivityText({ item }) {
                     <strong>{p.attendeeEmail ?? 'Someone'}</strong>{' '}
                     booked {p.quantity ?? '—'} × {p.tierName ?? 'ticket'}
                     {p.totalAmount != null && (
-                        <span style={{ color: 'var(--text-3)' }}> · ₦{Number(p.totalAmount).toLocaleString()}</span>
+                        <span style={{ color: 'var(--text-3)' }}>
+                            {' '}· {p.totalAmount === 0 ? 'Free' : formatNaira(p.totalAmount)}
+                        </span>
                     )}
                 </div>
             );

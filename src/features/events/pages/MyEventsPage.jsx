@@ -6,6 +6,18 @@ import { useGetPublishedEventsQuery } from '../eventsApi';
 import { formatEventDate } from '@/utils/dateFormat';
 import Button from '@/components/ui/Button';
 import { Icons } from '@/components/ui/Icon';
+import MessagesTab        from '@/features/organiser/components/MessagesTab';
+import EscrowTab          from '@/features/organiser/components/EscrowTab';
+import MarketplaceDashTab from '@/features/organiser/components/MarketplaceDashTab';
+import PaymentsTab        from '@/features/organiser/components/PaymentsTab';
+
+const DASH_TABS = [
+    { id: 'my-events',   label: 'My Events',    icon: <Icons.calendar size={14} /> },
+    { id: 'messages',    label: 'Messages',     icon: <Icons.message  size={14} /> },
+    { id: 'escrow',      label: 'Escrow',       icon: <Icons.shield   size={14} /> },
+    { id: 'marketplace', label: 'Marketplace',  icon: <Icons.users    size={14} /> },
+    { id: 'payments',    label: 'Payments',     icon: <Icons.wallet   size={14} /> },
+];
 
 /* ── Role badge — small chip on the card ───────────────────────── */
 function RoleBadge({ role }) {
@@ -171,8 +183,9 @@ function SkeletonCard() {
    ─────────────────────────────────────────────────────────── */
 export default function MyEventsPage() {
     const navigate = useNavigate();
-    const [timeTab, setTimeTab]   = useState('upcoming');
-    const [roleChip, setRoleChip] = useState('all');
+    const [activeTab, setActiveTab] = useState('my-events');
+    const [timeTab, setTimeTab]     = useState('upcoming');
+    const [roleChip, setRoleChip]   = useState('all');
     // Capture "now" once at mount so the upcoming/past split is stable
     // across re-renders (and so we don't trip the no-impure-call rule).
     const [now] = useState(() => Date.now());
@@ -243,6 +256,7 @@ export default function MyEventsPage() {
     return (
         <div style={{ background: 'var(--surface-subtle)', minHeight: '100vh' }}>
             <div style={{ maxWidth: 1200, margin: '0 auto', padding: '32px 24px 80px' }}>
+
                 {/* Header */}
                 <div style={{
                     display: 'flex', flexWrap: 'wrap', gap: 16,
@@ -265,61 +279,112 @@ export default function MyEventsPage() {
                     </Button>
                 </div>
 
-                {/* Tabs row */}
-                <div style={{
-                    display: 'flex', flexWrap: 'wrap', gap: 12,
-                    alignItems: 'center', marginBottom: 24,
+                {/* Dashboard tab bar */}
+                <div className="mp-tab-scroll" style={{
+                    display: 'flex', gap: 4, marginBottom: 28,
+                    background: 'white', border: '1px solid var(--border)',
+                    borderRadius: 12, padding: 4,
+                    width: 'fit-content', maxWidth: '100%',
                 }}>
-                    <SegmentedTabs items={TIME_TABS} active={timeTab} onChange={setTimeTab} />
-                    <SegmentedTabs items={ROLE_CHIPS} active={roleChip} onChange={setRoleChip} />
+                    {DASH_TABS.map(({ id, label, icon }) => {
+                        const active = activeTab === id;
+                        return (
+                            <button
+                                key={id}
+                                onClick={() => setActiveTab(id)}
+                                style={{
+                                    height: 36, padding: '0 14px', borderRadius: 8, border: 'none',
+                                    background: active ? 'var(--mp-blue)' : 'transparent',
+                                    color: active ? 'white' : 'var(--text-2)',
+                                    fontSize: 13, fontWeight: active ? 600 : 500, cursor: 'pointer',
+                                    transition: 'all 0.15s',
+                                    display: 'flex', alignItems: 'center', gap: 6,
+                                    fontFamily: 'inherit',
+                                }}
+                            >
+                                {icon} {label}
+                            </button>
+                        );
+                    })}
                 </div>
 
-                {/* Grid */}
-                {isError ? (
-                    <div style={{ textAlign: 'center', padding: '80px 24px' }}>
-                        <Icons.alert size={32} style={{ color: 'var(--error)' }} />
-                        <div className="mp-h4" style={{ color: 'var(--text-1)', marginTop: 12 }}>
-                            Could not load your events
+                {/* ── My Events tab ─────────────────────────────── */}
+                {activeTab === 'my-events' && (
+                    <>
+                        {/* Time + role filters */}
+                        <div style={{
+                            display: 'flex', flexWrap: 'wrap', gap: 12,
+                            alignItems: 'center', marginBottom: 24,
+                        }}>
+                            <SegmentedTabs items={TIME_TABS} active={timeTab} onChange={setTimeTab} />
+                            <SegmentedTabs items={ROLE_CHIPS} active={roleChip} onChange={setRoleChip} />
                         </div>
-                        <Button
-                            variant="secondary"
-                            size="sm"
-                            onClick={() => { bookingsQuery.refetch(); organiserQuery.refetch(); }}
-                            style={{ marginTop: 16 }}
-                        >
-                            Retry
-                        </Button>
-                    </div>
-                ) : isLoading ? (
-                    <div style={{
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-                        gap: 20,
-                    }}>
-                        {Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)}
-                    </div>
-                ) : filtered.length === 0 ? (
-                    <EmptyState
-                        timeTab={timeTab}
-                        roleChip={roleChip}
-                        onBrowse={() => navigate('/events')}
-                        onCreate={() => navigate('/events/new')}
-                    />
-                ) : (
-                    <div style={{
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-                        gap: 20,
-                    }}>
-                        {filtered.map((item) => (
-                            <MyEventCard
-                                key={`${item.role}-${item.event.id}`}
-                                event={item.event}
-                                role={item.role}
-                                onClick={() => handleClick(item)}
+
+                        {/* Event grid */}
+                        {isError ? (
+                            <div style={{ textAlign: 'center', padding: '80px 24px' }}>
+                                <Icons.alert size={32} style={{ color: 'var(--error)' }} />
+                                <div className="mp-h4" style={{ color: 'var(--text-1)', marginTop: 12 }}>
+                                    Could not load your events
+                                </div>
+                                <Button
+                                    variant="secondary"
+                                    size="sm"
+                                    onClick={() => { bookingsQuery.refetch(); organiserQuery.refetch(); }}
+                                    style={{ marginTop: 16 }}
+                                >
+                                    Retry
+                                </Button>
+                            </div>
+                        ) : isLoading ? (
+                            <div style={{
+                                display: 'grid',
+                                gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+                                gap: 20,
+                            }}>
+                                {Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)}
+                            </div>
+                        ) : filtered.length === 0 ? (
+                            <EmptyState
+                                timeTab={timeTab}
+                                roleChip={roleChip}
+                                onBrowse={() => navigate('/events')}
+                                onCreate={() => navigate('/events/new')}
                             />
-                        ))}
-                    </div>
+                        ) : (
+                            <div style={{
+                                display: 'grid',
+                                gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+                                gap: 20,
+                            }}>
+                                {filtered.map((item) => (
+                                    <MyEventCard
+                                        key={`${item.role}-${item.event.id}`}
+                                        event={item.event}
+                                        role={item.role}
+                                        onClick={() => handleClick(item)}
+                                    />
+                                ))}
+                            </div>
+                        )}
+                    </>
+                )}
+
+                {/* ── Messages tab ──────────────────────────────── */}
+                {activeTab === 'messages' && <MessagesTab />}
+
+                {/* ── Escrow tab ────────────────────────────────── */}
+                {activeTab === 'escrow' && <EscrowTab />}
+
+                {/* ── Marketplace tab ───────────────────────────── */}
+                {activeTab === 'marketplace' && <MarketplaceDashTab />}
+
+                {/* ── Payments tab ──────────────────────────────── */}
+                {activeTab === 'payments' && (
+                    <PaymentsTab
+                        events={organiserQuery.data ?? []}
+                        isLoading={organiserQuery.isLoading}
+                    />
                 )}
             </div>
         </div>
