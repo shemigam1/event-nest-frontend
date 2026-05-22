@@ -131,7 +131,10 @@ function TransferTab() {
     const [errorMsg, setErrorMsg]     = useState('');
 
     const transferable = (tickets.data ?? []).filter(
-        t => t.status !== 'USED' && t.status !== 'REFUNDED' && t.status !== 'CANCELLED'
+        t => t.transfersEnabled
+          && t.status !== 'USED'
+          && t.status !== 'REFUNDED'
+          && t.status !== 'CANCELLED'
     );
 
     const selected = transferable.find(t => String(t.id) === selectedId);
@@ -329,18 +332,7 @@ function TransferTab() {
             </div>
 
             {transferable.length === 0 ? (
-                <div style={{
-                    background: 'white', border: '1px solid var(--border)',
-                    borderRadius: 12, padding: 48, textAlign: 'center',
-                }}>
-                    <Icons.ticket size={32} style={{ color: 'var(--text-3)' }} />
-                    <p style={{ margin: '12px 0 4px', fontWeight: 600, fontSize: 16, color: 'var(--text-1)' }}>
-                        No transferable tickets
-                    </p>
-                    <p style={{ margin: 0, fontSize: 14, color: 'var(--text-2)' }}>
-                        Used, refunded, or cancelled tickets cannot be transferred.
-                    </p>
-                </div>
+                <TransferEmptyState tickets={tickets.data ?? []} />
             ) : (
                 <form onSubmit={handleReview} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
@@ -622,6 +614,50 @@ function SectionHeader({ label, icon }) {
             marginBottom: 10,
         }}>
             {icon}{label}
+        </div>
+    );
+}
+
+/* ── Transfer empty state ───────────────────────────────── */
+
+/**
+ * Distinguishes between "you have tickets but transfers are disabled by the
+ * organiser" vs "you simply have no eligible tickets left."
+ */
+function TransferEmptyState({ tickets }) {
+    // Any active ticket where the organiser hasn't enabled transfers
+    const hasDisabled = tickets.some(
+        t => !t.transfersEnabled
+          && t.status !== 'USED'
+          && t.status !== 'REFUNDED'
+          && t.status !== 'CANCELLED'
+    );
+
+    return (
+        <div style={{
+            background: 'white', border: '1px solid var(--border)',
+            borderRadius: 12, padding: 48, textAlign: 'center',
+        }}>
+            <Icons.ticket size={32} style={{ color: 'var(--text-3)' }} />
+            {hasDisabled ? (
+                <>
+                    <p style={{ margin: '12px 0 4px', fontWeight: 600, fontSize: 16, color: 'var(--text-1)' }}>
+                        Transfers not available
+                    </p>
+                    <p style={{ margin: 0, fontSize: 14, color: 'var(--text-2)' }}>
+                        The organiser has not enabled ticket transfers for this event.
+                    </p>
+                </>
+            ) : (
+                <>
+                    <p style={{ margin: '12px 0 4px', fontWeight: 600, fontSize: 16, color: 'var(--text-1)' }}>
+                        No transferable tickets
+                    </p>
+                    <p style={{ margin: 0, fontSize: 14, color: 'var(--text-2)' }}>
+                        Used, refunded, or cancelled tickets cannot be transferred.
+                    </p>
+                </>
+            )}
         </div>
     );
 }
