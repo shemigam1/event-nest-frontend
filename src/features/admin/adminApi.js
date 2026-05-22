@@ -167,7 +167,14 @@ export const adminApi = baseApi.injectEndpoints({
 
         /* Admin vendor management */
         getAdminVendors: builder.query({
-            query: (status) => status ? `/admin/vendors?status=${status}` : '/admin/vendors',
+            query: ({ status, page, size } = {}) => {
+                const params = new URLSearchParams();
+                if (status) params.append('status', status);
+                if (page != null) params.append('page', page);
+                if (size != null) params.append('size', size);
+                const qs = params.toString();
+                return qs ? `/admin/vendors?${qs}` : '/admin/vendors';
+            },
             providesTags: ['Vendor'],
             transformResponse: (r) => { const d = r.data ?? r; return Array.isArray(d) ? d : (d?.content ?? []); },
         }),

@@ -254,11 +254,13 @@ function MarketplacePane() {
     const { data: rawVendors = [], isLoading, isError, refetch } =
         useGetVendorsQuery({ serviceType: keyword });
 
+    // Backend returns a paginated Page object; extract the content array defensively.
     // Backend doesn't support a name search — apply it client-side.
     const vendors = useMemo(() => {
+        const items = Array.isArray(rawVendors) ? rawVendors : (rawVendors?.content ?? []);
         const q = search.trim().toLowerCase();
-        if (!q) return rawVendors;
-        return rawVendors.filter((v) => {
+        if (!q) return items;
+        return items.filter((v) => {
             const hay = `${v.vendorName || ''} ${v.serviceType || ''} ${v.profileDescription || ''}`.toLowerCase();
             return hay.includes(q);
         });

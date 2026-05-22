@@ -9,6 +9,18 @@ import { StatusBadge } from '@/components/ui/Badge';
 import { Icons } from '@/components/ui/Icon';
 import { formatEventDate } from '@/utils/dateFormat';
 import { formatNaira, formatNairaCompact } from '@/utils/currency';
+import MessagesTab      from '../components/MessagesTab';
+import EscrowTab        from '../components/EscrowTab';
+import MarketplaceDashTab from '../components/MarketplaceDashTab';
+import PaymentsTab      from '../components/PaymentsTab';
+
+const DASH_TABS = [
+    { id: 'events',      label: 'Events',      icon: <Icons.calendar size={14} /> },
+    { id: 'messages',    label: 'Messages',    icon: <Icons.message  size={14} /> },
+    { id: 'escrow',      label: 'Escrow',      icon: <Icons.shield   size={14} /> },
+    { id: 'marketplace', label: 'Marketplace', icon: <Icons.users    size={14} /> },
+    { id: 'payments',    label: 'Payments',    icon: <Icons.wallet   size={14} /> },
+];
 
 const FILTERS = [
     { id: 'ALL',              label: 'All' },
@@ -198,6 +210,7 @@ export default function OrganizerConsolePage() {
     const [submitEvent, submitState] = useSubmitEventMutation();
     const [deleteEvent, deleteState] = useDeleteEventMutation();
 
+    const [activeTab, setActiveTab] = useState('events');
     const [filter, setFilter] = useState('ALL');
     const [pendingDelete, setPendingDelete] = useState(null);
     const [actionError, setActionError] = useState('');
@@ -243,109 +256,156 @@ export default function OrganizerConsolePage() {
                     </Button>
                 </div>
 
-                {/* Stats */}
-                <div className="mp-stat-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 32 }}>
-                    <StatTile label="Total events" value={isLoading ? '—' : events.length} icon={<Icons.calendar size={16} />} />
-                    <StatTile label="Published" value={isLoading ? '—' : published} icon={<Icons.bolt size={16} />} />
-                    <StatTile label="Tickets sold" value={isLoading ? '—' : totalSold.toLocaleString()} icon={<Icons.ticket size={16} />} />
-                    <StatTile
-                        label="Total revenue"
-                        value={isLoading ? '—' : formatNaira(totalRevenue, { zeroLabel: '₦0' })}
-                        icon={<Icons.wallet size={16} />}
-                        sub={pending > 0 ? `${pending} event${pending > 1 ? 's' : ''} pending approval` : null}
-                    />
-                </div>
-
-                {actionError && (
-                    <div role="alert" style={{ margin: '0 0 16px', padding: '10px 16px', background: 'var(--error-bg)', color: 'var(--error)', borderRadius: 10, fontSize: 14 }}>
-                        {actionError}
-                    </div>
-                )}
-
-                {/* Filter tabs */}
-                <div className="mp-tab-scroll" style={{ display: 'flex', gap: 4, marginBottom: 16, background: 'white', border: '1px solid var(--border)', borderRadius: 12, padding: 4, width: 'fit-content', maxWidth: '100%' }}>
-                    {FILTERS.map(({ id, label }) => {
-                        const active = filter === id;
+                {/* Dashboard tab bar */}
+                <div className="mp-tab-scroll" style={{
+                    display: 'flex', gap: 4, marginBottom: 28,
+                    background: 'white', border: '1px solid var(--border)',
+                    borderRadius: 12, padding: 4,
+                    width: 'fit-content', maxWidth: '100%',
+                }}>
+                    {DASH_TABS.map(({ id, label: tabLabel, icon }) => {
+                        const active = activeTab === id;
                         return (
                             <button
                                 key={id}
-                                onClick={() => setFilter(id)}
+                                onClick={() => setActiveTab(id)}
                                 style={{
-                                    height: 34, padding: '0 14px', borderRadius: 8, border: 'none',
+                                    height: 36, padding: '0 14px', borderRadius: 8, border: 'none',
                                     background: active ? 'var(--mp-blue)' : 'transparent',
                                     color: active ? 'white' : 'var(--text-2)',
                                     fontSize: 13, fontWeight: active ? 600 : 500, cursor: 'pointer',
                                     transition: 'all 0.15s',
+                                    display: 'flex', alignItems: 'center', gap: 6,
                                 }}
                             >
-                                {label}
+                                {icon} {tabLabel}
                             </button>
                         );
                     })}
                 </div>
 
-                {/* Events list */}
-                {isLoading && <Skeleton />}
-
-                {isForbidden && (
-                    <div style={{ padding: 56, textAlign: 'center' }}>
-                        <Icons.lock size={32} style={{ color: 'var(--text-3)' }} />
-                        <p className="mp-h4" style={{ margin: '12px 0 4px', color: 'var(--text-1)' }}>Organiser access required</p>
-                        <p className="body-sm" style={{ color: 'var(--text-2)', margin: '0 0 20px' }}>
-                            Create your first event to unlock the organiser console.
-                        </p>
-                        <Button variant="primary" size="sm" icon={<Icons.plus size={14} />} onClick={() => navigate('/events/new')}>
-                            Create event
-                        </Button>
-                    </div>
-                )}
-
-                {isError && !isUnauthorized && !isForbidden && (
-                    <div style={{ padding: 40, textAlign: 'center' }}>
-                        <Icons.alert size={28} style={{ color: 'var(--error)' }} />
-                        <p className="body-sm" style={{ marginTop: 8, color: 'var(--text-2)' }}>Could not load your events.</p>
-                        <Button variant="secondary" size="sm" onClick={refetch} style={{ marginTop: 12 }}>Retry</Button>
-                    </div>
-                )}
-
-                {!isLoading && !isError && (
-                    <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: 12, boxShadow: 'var(--shadow-card)', overflow: 'hidden' }}>
-                        <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span style={{ fontWeight: 600, color: 'var(--text-1)', fontSize: 14 }}>Your events</span>
-                            <span style={{ fontSize: 13, color: 'var(--text-3)' }}>
-                                {filteredEvents.length} event{filteredEvents.length !== 1 ? 's' : ''}
-                            </span>
+                {/* ── Events tab ────────────────────────────────── */}
+                {activeTab === 'events' && (
+                    <>
+                        {/* Stats */}
+                        <div className="mp-stat-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 32 }}>
+                            <StatTile label="Total events" value={isLoading ? '—' : events.length} icon={<Icons.calendar size={16} />} />
+                            <StatTile label="Published" value={isLoading ? '—' : published} icon={<Icons.bolt size={16} />} />
+                            <StatTile label="Tickets sold" value={isLoading ? '—' : totalSold.toLocaleString()} icon={<Icons.ticket size={16} />} />
+                            <StatTile
+                                label="Total revenue"
+                                value={isLoading ? '—' : formatNaira(totalRevenue, { zeroLabel: '₦0' })}
+                                icon={<Icons.wallet size={16} />}
+                                sub={pending > 0 ? `${pending} event${pending > 1 ? 's' : ''} pending approval` : null}
+                            />
                         </div>
 
-                        {filteredEvents.length === 0 ? (
-                            <div style={{ padding: 56, textAlign: 'center' }}>
-                                <Icons.calendar size={32} style={{ color: 'var(--text-3)' }} />
-                                <p className="mp-h4" style={{ margin: '12px 0 4px', color: 'var(--text-1)' }}>
-                                    {filter === 'ALL' ? 'No events yet' : `No ${label(filter)} events`}
-                                </p>
-                                <p className="body-sm" style={{ color: 'var(--text-2)', margin: '0 0 20px' }}>
-                                    {filter === 'ALL'
-                                        ? 'Create your first event to get started.'
-                                        : 'Events with this status will appear here.'}
-                                </p>
-                                {filter === 'ALL' && (
-                                    <Button variant="primary" size="sm" icon={<Icons.plus size={14} />} onClick={() => navigate('/events/new')}>
-                                        Create event
-                                    </Button>
-                                )}
+                        {actionError && (
+                            <div role="alert" style={{ margin: '0 0 16px', padding: '10px 16px', background: 'var(--error-bg)', color: 'var(--error)', borderRadius: 10, fontSize: 14 }}>
+                                {actionError}
                             </div>
-                        ) : filteredEvents.map((event, i) => (
-                            <EventRow
-                                key={event.id}
-                                event={event}
-                                isLast={i === filteredEvents.length - 1}
-                                onView={(id) => navigate(`/organiser/events/${id}`)}
-                                onSubmit={handleSubmit}
-                                onDelete={setPendingDelete}
-                                submitting={submitState.isLoading}
-                            />
-                        ))}
-                    </div>
+                        )}
+
+                        {/* Filter tabs */}
+                        <div className="mp-tab-scroll" style={{ display: 'flex', gap: 4, marginBottom: 16, background: 'white', border: '1px solid var(--border)', borderRadius: 12, padding: 4, width: 'fit-content', maxWidth: '100%' }}>
+                            {FILTERS.map(({ id, label }) => {
+                                const active = filter === id;
+                                return (
+                                    <button
+                                        key={id}
+                                        onClick={() => setFilter(id)}
+                                        style={{
+                                            height: 34, padding: '0 14px', borderRadius: 8, border: 'none',
+                                            background: active ? 'var(--mp-blue)' : 'transparent',
+                                            color: active ? 'white' : 'var(--text-2)',
+                                            fontSize: 13, fontWeight: active ? 600 : 500, cursor: 'pointer',
+                                            transition: 'all 0.15s',
+                                        }}
+                                    >
+                                        {label}
+                                    </button>
+                                );
+                            })}
+                        </div>
+
+                        {/* Events list */}
+                        {isLoading && <Skeleton />}
+
+                        {isForbidden && (
+                            <div style={{ padding: 56, textAlign: 'center' }}>
+                                <Icons.lock size={32} style={{ color: 'var(--text-3)' }} />
+                                <p className="mp-h4" style={{ margin: '12px 0 4px', color: 'var(--text-1)' }}>Organiser access required</p>
+                                <p className="body-sm" style={{ color: 'var(--text-2)', margin: '0 0 20px' }}>
+                                    Create your first event to unlock the organiser console.
+                                </p>
+                                <Button variant="primary" size="sm" icon={<Icons.plus size={14} />} onClick={() => navigate('/events/new')}>
+                                    Create event
+                                </Button>
+                            </div>
+                        )}
+
+                        {isError && !isUnauthorized && !isForbidden && (
+                            <div style={{ padding: 40, textAlign: 'center' }}>
+                                <Icons.alert size={28} style={{ color: 'var(--error)' }} />
+                                <p className="body-sm" style={{ marginTop: 8, color: 'var(--text-2)' }}>Could not load your events.</p>
+                                <Button variant="secondary" size="sm" onClick={refetch} style={{ marginTop: 12 }}>Retry</Button>
+                            </div>
+                        )}
+
+                        {!isLoading && !isError && (
+                            <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: 12, boxShadow: 'var(--shadow-card)', overflow: 'hidden' }}>
+                                <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span style={{ fontWeight: 600, color: 'var(--text-1)', fontSize: 14 }}>Your events</span>
+                                    <span style={{ fontSize: 13, color: 'var(--text-3)' }}>
+                                        {filteredEvents.length} event{filteredEvents.length !== 1 ? 's' : ''}
+                                    </span>
+                                </div>
+
+                                {filteredEvents.length === 0 ? (
+                                    <div style={{ padding: 56, textAlign: 'center' }}>
+                                        <Icons.calendar size={32} style={{ color: 'var(--text-3)' }} />
+                                        <p className="mp-h4" style={{ margin: '12px 0 4px', color: 'var(--text-1)' }}>
+                                            {filter === 'ALL' ? 'No events yet' : `No ${label(filter)} events`}
+                                        </p>
+                                        <p className="body-sm" style={{ color: 'var(--text-2)', margin: '0 0 20px' }}>
+                                            {filter === 'ALL'
+                                                ? 'Create your first event to get started.'
+                                                : 'Events with this status will appear here.'}
+                                        </p>
+                                        {filter === 'ALL' && (
+                                            <Button variant="primary" size="sm" icon={<Icons.plus size={14} />} onClick={() => navigate('/events/new')}>
+                                                Create event
+                                            </Button>
+                                        )}
+                                    </div>
+                                ) : filteredEvents.map((event, i) => (
+                                    <EventRow
+                                        key={event.id}
+                                        event={event}
+                                        isLast={i === filteredEvents.length - 1}
+                                        onView={(id) => navigate(`/organiser/events/${id}`)}
+                                        onSubmit={handleSubmit}
+                                        onDelete={setPendingDelete}
+                                        submitting={submitState.isLoading}
+                                    />
+                                ))}
+                            </div>
+                        )}
+                    </>
+                )}
+
+                {/* ── Messages tab ──────────────────────────────── */}
+                {activeTab === 'messages' && <MessagesTab />}
+
+                {/* ── Escrow tab ────────────────────────────────── */}
+                {activeTab === 'escrow' && <EscrowTab />}
+
+                {/* ── Marketplace tab ───────────────────────────── */}
+                {activeTab === 'marketplace' && <MarketplaceDashTab />}
+
+                {/* ── Payments tab ──────────────────────────────── */}
+                {activeTab === 'payments' && (
+                    <PaymentsTab events={events} isLoading={isLoading} />
                 )}
             </div>
 
