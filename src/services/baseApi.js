@@ -24,6 +24,8 @@ export const baseApi = createApi({
         'InquiryReceived', 'Inquiry', 'ContractMine',
         'ContributionPool', 'Contribution',
         'RatingForm', 'RatingResponses',
+        // KYC + host-profile trust model
+        'Kyc', 'HostProfile',
     ],
     endpoints: () => ({}),
 });

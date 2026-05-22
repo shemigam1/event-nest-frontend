@@ -1,6 +1,9 @@
+import { useState } from 'react';
 import Button from './Button';
 import { StatusBadge } from './Badge';
 import { formatEventDate } from '@/utils/dateFormat';
+import { downloadTicketPdf } from '@/features/tickets/pdf';
+import { Icons } from './Icon';
 
 /**
  * Ticket card matching the v2 design: details on the left,
@@ -17,6 +20,23 @@ export default function TicketCard({ ticket, eventStartTime, venue, onShowQr }) 
     const resolvedStartTime = eventStartTime ?? ticket.eventStartTime ?? null;
     const resolvedVenue     = venue ?? ticket.eventVenue ?? null;
     const muted = ticket.status === 'USED' || ticket.status === 'REFUNDED';
+    const [generating, setGenerating] = useState(false);
+
+    async function handleDownload() {
+        if (generating) return;
+        setGenerating(true);
+        try {
+            await downloadTicketPdf({
+                ...ticket,
+                // Make sure the PDF gets the resolved start time + venue
+                // even when they were supplied via props (legacy callers).
+                eventStartTime: resolvedStartTime ?? ticket.eventStartTime,
+                eventVenue:     resolvedVenue     ?? ticket.eventVenue,
+            });
+        } finally {
+            setGenerating(false);
+        }
+    }
     return (
         <div
             data-testid={`ticket-${ticket.id}`}
@@ -112,6 +132,37 @@ export default function TicketCard({ ticket, eventStartTime, venue, onShowQr }) 
                 >
                     Show QR
                 </Button>
+                {/* Refunded/used tickets can still be re-downloaded — useful for
+                    receipt purposes — so this stays enabled even when muted. */}
+                <button
+                    type="button"
+                    onClick={handleDownload}
+                    disabled={generating}
+                    aria-label="Download ticket as PDF"
+                    style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 6,
+                        background: 'transparent',
+                        border: '1px solid rgba(255,255,255,0.25)',
+                        color: 'rgba(255,255,255,0.9)',
+                        padding: '6px 10px', borderRadius: 8,
+                        fontSize: 12, fontWeight: 500,
+                        cursor: generating ? 'wait' : 'pointer',
+                        fontFamily: 'inherit',
+                        transition: 'background 0.15s, border-color 0.15s',
+                    }}
+                    onMouseOver={(e) => {
+                        if (generating) return;
+                        e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
+                        e.currentTarget.style.borderColor = 'rgba(255,255,255,0.45)';
+                    }}
+                    onMouseOut={(e) => {
+                        e.currentTarget.style.background = 'transparent';
+                        e.currentTarget.style.borderColor = 'rgba(255,255,255,0.25)';
+                    }}
+                >
+                    <Icons.download size={13} />
+                    {generating ? 'Preparing…' : 'PDF'}
+                </button>
             </div>
         </div>
     );

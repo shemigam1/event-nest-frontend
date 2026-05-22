@@ -15,6 +15,7 @@ import Input from '@/components/ui/Input';
 import { QRCode } from 'react-qr-code';
 import TicketCard from '@/components/ui/TicketCard';
 import { Icons } from '@/components/ui/Icon';
+import { downloadTicketPdf } from '../pdf';
 
 const TABS = [
     { key: 'tickets',   label: 'My Tickets' },
@@ -670,6 +671,18 @@ function TicketOption({ ticket: t, selected, onSelect }) {
 /* ── QR Modal ───────────────────────────────────────────── */
 
 function QrModalContent({ ticket, onClose }) {
+    const [downloading, setDownloading] = useState(false);
+
+    async function handleDownload() {
+        if (downloading) return;
+        setDownloading(true);
+        try {
+            await downloadTicketPdf(ticket);
+        } finally {
+            setDownloading(false);
+        }
+    }
+
     return (
         <div>
             <div style={{
@@ -742,6 +755,16 @@ function QrModalContent({ ticket, onClose }) {
                         {ticket.shortCode}
                     </div>
                 )}
+
+                <Button
+                    variant="secondary"
+                    size="md"
+                    onClick={handleDownload}
+                    disabled={downloading}
+                    iconLeft={<Icons.download size={14} />}
+                >
+                    {downloading ? 'Preparing PDF…' : 'Download as PDF'}
+                </Button>
             </div>
         </div>
     );

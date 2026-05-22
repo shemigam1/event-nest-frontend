@@ -74,6 +74,24 @@ export const authApi = baseApi.injectEndpoints({
             }),
             transformResponse: (response) => response?.data ?? response,
         }),
+
+        // ── KYC ────────────────────────────────────────────────────────────
+        // Status returns { status: 'NONE' | 'VERIFIED', bvnLast4, verifiedAt }.
+        getKycStatus: builder.query({
+            query: () => '/me/kyc',
+            providesTags: ['Kyc'],
+            transformResponse: (response) => response?.data ?? response,
+        }),
+        verifyBvn: builder.mutation({
+            // Simulated on the server (~2s sleep) — keep that in mind for UX.
+            query: (body) => ({
+                url: '/me/kyc/verify-bvn',
+                method: 'POST',
+                body,
+            }),
+            invalidatesTags: ['Kyc', 'HostProfile'],
+            transformResponse: (response) => response?.data ?? response,
+        }),
     }),
 });
 
@@ -87,4 +105,6 @@ export const {
     useGetMeQuery,
     useUpdateProfileMutation,
     useChangePasswordMutation,
+    useGetKycStatusQuery,
+    useVerifyBvnMutation,
 } = authApi;

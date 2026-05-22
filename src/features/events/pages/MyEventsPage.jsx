@@ -190,12 +190,18 @@ export default function MyEventsPage() {
     // across re-renders (and so we don't trip the no-impure-call rule).
     const [now] = useState(() => Date.now());
 
-    const bookingsQuery   = useGetMyBookingsQuery();
-    const organiserQuery  = useGetOrganizerEventsQuery();
+    // Force a refetch on mount so we never serve a stale cache after the user
+    // creates an event in another tab/route and lands here expecting to see it.
+    const bookingsQuery   = useGetMyBookingsQuery(undefined, { refetchOnMountOrArgChange: true });
+    const organiserQuery  = useGetOrganizerEventsQuery(undefined, { refetchOnMountOrArgChange: true });
     const publishedQuery  = useGetPublishedEventsQuery();
 
     const isLoading = bookingsQuery.isLoading || organiserQuery.isLoading || publishedQuery.isLoading;
-    const isError   = bookingsQuery.isError && organiserQuery.isError;
+    // Surface a partial error if EITHER feed failed — quietly returning an
+    // empty list when /me/organiser/events 500s makes "I just created an
+    // event but it's not here" impossible to debug.
+    const isError   = bookingsQuery.isError || organiserQuery.isError;
+    const partialError = bookingsQuery.isError !== organiserQuery.isError;
 
     // Build a lookup of full event data from published events so we can
     // enrich attendee bookings (which only carry eventId + title) with
@@ -318,10 +324,43 @@ export default function MyEventsPage() {
                         }}>
                             <SegmentedTabs items={TIME_TABS} active={timeTab} onChange={setTimeTab} />
                             <SegmentedTabs items={ROLE_CHIPS} active={roleChip} onChange={setRoleChip} />
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => { bookingsQuery.refetch(); organiserQuery.refetch(); publishedQuery.refetch(); }}
+                                style={{ marginLeft: 'auto' }}
+                                iconLeft={<Icons.arrowR size={13} style={{ transform: 'rotate(45deg)' }} />}
+                            >
+                                Refresh
+                            </Button>
                         </div>
 
+                        {/* Partial-error banner — one feed failed but the other
+                            succeeded. We still render whatever we have so the
+                            user isn't left with a blank page. */}
+                        {partialError && !isLoading && (
+                            <div role="alert" style={{
+                                padding: '10px 14px',
+                                background: 'var(--warning-bg)',
+                                color: 'var(--warning)',
+                                borderRadius: 10,
+                                fontSize: 13,
+                                marginBottom: 16,
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 8,
+                            }}>
+                                <Icons.alert size={14} />
+                                <span>
+                                    {organiserQuery.isError
+                                        ? 'Could not load your organiser events. Showing attended events only.'
+                                        : 'Could not load your bookings. Showing organiser events only.'}
+                                </span>
+                            </div>
+                        )}
+
                         {/* Event grid */}
-                        {isError ? (
+                        {isError && !partialError ? (
                             <div style={{ textAlign: 'center', padding: '80px 24px' }}>
                                 <Icons.alert size={32} style={{ color: 'var(--error)' }} />
                                 <div className="mp-h4" style={{ color: 'var(--text-1)', marginTop: 12 }}>
