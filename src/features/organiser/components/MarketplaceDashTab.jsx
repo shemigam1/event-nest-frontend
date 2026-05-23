@@ -119,7 +119,7 @@ export default function MarketplaceDashTab() {
             {/* Error */}
             {isError && (
                 <div style={{
-                    background: 'white', border: '1px solid var(--border)',
+                    background: 'var(--surface-elevated)', border: '1px solid var(--border)',
                     borderRadius: 12, padding: 40, textAlign: 'center',
                 }}>
                     <Icons.alert size={28} style={{ color: 'var(--error)' }} />
@@ -182,7 +182,7 @@ function VendorCard({ vendor: v, onView }) {
 
     return (
         <div style={{
-            background: 'white', border: '1px solid var(--border)',
+            background: 'var(--surface-elevated)', border: '1px solid var(--border)',
             borderRadius: 12, padding: 16, boxShadow: 'var(--shadow-card)',
             display: 'flex', flexDirection: 'column', gap: 10,
         }}>

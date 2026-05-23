@@ -494,7 +494,7 @@ function ApplicationsPane({ eventId }) {
                     so the tiles were just duplicating information. */}
 
                 <div style={{
-                    background: 'white', border: '1px solid var(--border)',
+                    background: 'var(--surface-elevated)', border: '1px solid var(--border)',
                     borderRadius: 12, overflow: 'hidden',
                 }}>
                     <div style={{
@@ -686,7 +686,7 @@ function MiniVendorCard({ vendor, onView }) {
 
     return (
         <div style={{
-            background: 'white', border: '1px solid var(--border)',
+            background: 'var(--surface-elevated)', border: '1px solid var(--border)',
             borderRadius: 12, padding: 16,
             display: 'flex', flexDirection: 'column', gap: 10,
         }}>
@@ -905,7 +905,7 @@ function ApplicationRow({ application, isLast, onAccept, onReject, onRate, onVie
 function HowVendorsApplyCard() {
     return (
         <div style={{
-            background: 'white', border: '1px solid var(--border)',
+            background: 'var(--surface-elevated)', border: '1px solid var(--border)',
             borderRadius: 12, padding: 18,
         }}>
             <Icons.shield size={20} style={{ color: 'var(--mp-blue)' }} />
@@ -958,7 +958,7 @@ function EmptyCard({ message, sub }) {
 function ErrorCard({ message, onRetry }) {
     return (
         <div style={{
-            background: 'white', border: '1px solid var(--border)',
+            background: 'var(--surface-elevated)', border: '1px solid var(--border)',
             borderRadius: 12, padding: 40, textAlign: 'center',
         }}>
             <Icons.alert size={28} style={{ color: 'var(--error)' }} />
@@ -985,7 +985,7 @@ function ConfirmDialog({ title, body, confirmLabel, loading, onConfirm, onDismis
             }}
         >
             <div onClick={(e) => e.stopPropagation()} style={{
-                width: '100%', maxWidth: 420, background: 'white',
+                width: '100%', maxWidth: 420, background: 'var(--surface-elevated)',
                 borderRadius: 16, boxShadow: 'var(--shadow-modal)', padding: 28,
             }}>
                 <h2 className="mp-h3" style={{ margin: 0, color: 'var(--text-1)' }}>{title}</h2>
@@ -1025,7 +1025,7 @@ function RateModal({ application, loading, error, onSubmit, onDismiss }) {
             }}
         >
             <div onClick={(e) => e.stopPropagation()} style={{
-                width: '100%', maxWidth: 440, background: 'white',
+                width: '100%', maxWidth: 440, background: 'var(--surface-elevated)',
                 borderRadius: 16, boxShadow: 'var(--shadow-modal)', padding: 28,
             }}>
                 <h2 className="mp-h3" style={{ margin: 0, color: 'var(--text-1)' }}>
@@ -1112,7 +1112,7 @@ function RateModal({ application, loading, error, onSubmit, onDismiss }) {
 
 function Skeleton() {
     const tile = {
-        height: 90, background: 'white', border: '1px solid var(--border)',
+        height: 90, background: 'var(--surface-elevated)', border: '1px solid var(--border)',
         borderRadius: 12, animation: 'mp-flash 1.6s ease-in-out infinite',
     };
     const row = {
@@ -1128,7 +1128,7 @@ function Skeleton() {
                 <div style={{ ...tile, opacity: 0.6 }} />
                 <div style={{ ...tile, opacity: 0.4 }} />
             </div>
-            <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
+            <div style={{ background: 'var(--surface-elevated)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
                 <div style={{ ...row, height: 50 }} />
                 <div style={row} />
                 <div style={{ ...row, opacity: 0.7 }} />

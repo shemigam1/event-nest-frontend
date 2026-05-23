@@ -195,7 +195,7 @@ function PageShell({ children }) {
 function Card({ children }) {
     return (
         <div style={{
-            background: 'white',
+            background: 'var(--surface-elevated)',
             border: '1px solid var(--border)',
             borderRadius: 16,
             boxShadow: 'var(--shadow-card)',
@@ -357,7 +357,7 @@ function Radio({ selected }) {
         }}>
             {selected && (
                 <span style={{
-                    position: 'absolute', inset: 3, borderRadius: 99, background: 'white',
+                    position: 'absolute', inset: 3, borderRadius: 99, background: 'var(--surface-elevated)',
                 }} />
             )}
         </span>
@@ -437,7 +437,7 @@ function StepperButton({ children, ...rest }) {
                 height: 48,
                 borderRadius: 12,
                 border: '1px solid var(--border)',
-                background: 'white',
+                background: 'var(--surface-elevated)',
                 fontSize: 22,
                 fontWeight: 600,
                 color: 'var(--text-1)',

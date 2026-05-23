@@ -172,7 +172,7 @@ function TransferTab() {
         return (
             <div style={{ maxWidth: 560 }}>
                 <div style={{
-                    background: 'white', border: '1px solid #A8D5B5',
+                    background: 'var(--surface-elevated)', border: '1px solid #A8D5B5',
                     borderRadius: 16, padding: 40, textAlign: 'center',
                 }}>
                     <div style={{
@@ -448,7 +448,7 @@ function TransfersTab() {
     if (!hasAnything) {
         return (
             <div style={{
-                background: 'white', border: '1px solid var(--border)',
+                background: 'var(--surface-elevated)', border: '1px solid var(--border)',
                 borderRadius: 12, padding: 48, textAlign: 'center',
             }}>
                 <Icons.send size={32} style={{ color: 'var(--text-3)' }} />
@@ -500,7 +500,7 @@ function TransfersTab() {
                             const busy = actionId === t.id;
                             return (
                                 <div key={t.id} style={{
-                                    background: 'white', border: '1px solid var(--border)',
+                                    background: 'var(--surface-elevated)', border: '1px solid var(--border)',
                                     borderRadius: 12, overflow: 'hidden', boxShadow: 'var(--shadow-card)',
                                 }}>
                                     <div style={{ padding: '16px 18px', display: 'flex', gap: 14, alignItems: 'flex-start' }}>
@@ -557,7 +557,7 @@ function TransfersTab() {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                         {outgoing.map(t => (
                             <div key={t.id} style={{
-                                background: 'white', border: '1px solid var(--border)',
+                                background: 'var(--surface-elevated)', border: '1px solid var(--border)',
                                 borderRadius: 12, padding: '16px 18px',
                                 display: 'flex', gap: 14, alignItems: 'flex-start',
                                 boxShadow: 'var(--shadow-card)',
@@ -635,7 +635,7 @@ function TransferEmptyState({ tickets }) {
 
     return (
         <div style={{
-            background: 'white', border: '1px solid var(--border)',
+            background: 'var(--surface-elevated)', border: '1px solid var(--border)',
             borderRadius: 12, padding: 48, textAlign: 'center',
         }}>
             <Icons.ticket size={32} style={{ color: 'var(--text-3)' }} />
@@ -680,7 +680,7 @@ function TicketOption({ ticket: t, selected, onSelect }) {
             <div style={{
                 width: 18, height: 18, borderRadius: '50%', flexShrink: 0,
                 border: selected ? '5px solid var(--mp-blue)' : '2px solid var(--border)',
-                background: 'white',
+                background: 'var(--surface-elevated)',
             }} />
             <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-1)' }}>
@@ -811,7 +811,7 @@ function QrModalContent({ ticket, onClose }) {
 function EmptyState({ onBrowse }) {
     return (
         <div data-testid="tickets-empty" style={{
-            background: 'white', border: '1px solid var(--border)',
+            background: 'var(--surface-elevated)', border: '1px solid var(--border)',
             borderRadius: 12, padding: 40, textAlign: 'center',
         }}>
             <Icons.ticket size={32} style={{ color: 'var(--text-3)' }} />
@@ -831,7 +831,7 @@ function EmptyState({ onBrowse }) {
 function ErrorState({ onRetry }) {
     return (
         <div role="alert" style={{
-            background: 'white', border: '1px solid var(--border)',
+            background: 'var(--surface-elevated)', border: '1px solid var(--border)',
             borderRadius: 12, padding: 40, textAlign: 'center',
         }}>
             <Icons.alert size={32} style={{ color: 'var(--error)' }} />
@@ -850,7 +850,7 @@ function ErrorState({ onRetry }) {
 
 function SkeletonList({ count = 3 }) {
     const skeleton = {
-        height: 130, background: 'white',
+        height: 130, background: 'var(--surface-elevated)',
         border: '1px solid var(--border)', borderRadius: 12,
         animation: 'mp-flash 1.6s ease-in-out infinite',
     };

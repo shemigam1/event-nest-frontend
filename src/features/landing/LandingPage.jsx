@@ -15,7 +15,7 @@ import { formatEventDate } from '../../utils/dateFormat';
 function Tile({ label, value, sub }) {
   return (
     <div style={{
-      background: 'white',
+      background: 'var(--surface-elevated)',
       border: '1px solid var(--border)',
       borderRadius: 12,
       padding: 16,
@@ -32,7 +32,7 @@ function Tile({ label, value, sub }) {
 function AttendeePreview() {
   return (
     <div style={{
-      background: 'white',
+      background: 'var(--surface-elevated)',
       border: '1px solid var(--border)',
       borderRadius: 16,
       boxShadow: 'var(--shadow-elevated)',
@@ -85,7 +85,7 @@ function AttendeePreview() {
 function OrganiserPreview() {
   return (
     <div style={{
-      background: 'white',
+      background: 'var(--surface-elevated)',
       border: '1px solid var(--border)',
       borderRadius: 16,
       boxShadow: 'var(--shadow-elevated)',

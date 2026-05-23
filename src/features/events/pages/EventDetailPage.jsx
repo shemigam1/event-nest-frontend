@@ -86,7 +86,7 @@ export default function EventDetailPage() {
 
             <div style={{ maxWidth: 1200, margin: '-80px auto 0', padding: '0 24px 64px', position: 'relative' }}>
                 <div className="mp-detail-grid" style={{
-                    background: 'white',
+                    background: 'var(--surface-elevated)',
                     border: '1px solid var(--border)',
                     borderRadius: 16,
                     boxShadow: 'var(--shadow-elevated)',
@@ -188,7 +188,7 @@ export default function EventDetailPage() {
                                 {!tiersQuery.isLoading && tiers.length === 0 && (
                                     <div style={{
                                         padding: 14,
-                                        background: 'white',
+                                        background: 'var(--surface-elevated)',
                                         border: '1px solid var(--border)',
                                         borderRadius: 10,
                                         fontSize: 13,
@@ -251,7 +251,7 @@ export default function EventDetailPage() {
 
                         {!isOwnEvent && e.status === 'PUBLISHED' && (
                             <div style={{
-                                background: 'white',
+                                background: 'var(--surface-elevated)',
                                 border: '1px solid var(--border)',
                                 borderRadius: 12,
                                 padding: 18,
@@ -350,7 +350,7 @@ function TierRow({ tier }) {
     return (
         <div style={{
             padding: 14,
-            background: 'white',
+            background: 'var(--surface-elevated)',
             border: '1px solid var(--border)',
             borderRadius: 10,
             opacity: isSoldOut ? 0.6 : 1,
@@ -392,7 +392,7 @@ function DetailSkeleton() {
             <div className="mp-placeholder" style={{ height: 320 }} />
             <div style={{ maxWidth: 1200, margin: '-80px auto 0', padding: '0 24px 64px' }}>
                 <div style={{
-                    background: 'white',
+                    background: 'var(--surface-elevated)',
                     borderRadius: 16,
                     padding: 32,
                     boxShadow: 'var(--shadow-elevated)',
@@ -436,7 +436,7 @@ function ShareRow({ title }) {
         display: 'inline-flex', alignItems: 'center', gap: 6,
         padding: '6px 12px', borderRadius: 8,
         border: '1px solid var(--border)',
-        background: 'white', cursor: 'pointer',
+        background: 'var(--surface-elevated)', cursor: 'pointer',
         fontSize: 13, fontWeight: 500,
         color: 'var(--text-2)', fontFamily: 'inherit',
         transition: 'border-color 0.15s, color 0.15s',

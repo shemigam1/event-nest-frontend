@@ -118,7 +118,7 @@ export default function VendorDetailPage() {
         return (
             <Shell>
                 <div style={{
-                    background: 'white', border: '1px solid var(--border)',
+                    background: 'var(--surface-elevated)', border: '1px solid var(--border)',
                     borderRadius: 12, padding: 60, textAlign: 'center',
                 }}>
                     <Icons.alert size={28} style={{ color: 'var(--error)' }} />
@@ -171,7 +171,7 @@ export default function VendorDetailPage() {
 
             {/* Profile header */}
             <div style={{
-                background: 'white',
+                background: 'var(--surface-elevated)',
                 border: '1px solid var(--border)',
                 borderRadius: 16,
                 padding: '28px 28px 24px',
@@ -373,7 +373,7 @@ function OverviewTab({ vendor: v }) {
                     </Section>
                 ) : (
                     <div style={{
-                        background: 'white', border: '1px solid var(--border)',
+                        background: 'var(--surface-elevated)', border: '1px solid var(--border)',
                         borderRadius: 12, padding: 40, textAlign: 'center',
                         color: 'var(--text-3)', fontSize: 14,
                     }}>
@@ -384,7 +384,7 @@ function OverviewTab({ vendor: v }) {
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                 <div style={{
-                    background: 'white', border: '1px solid var(--border)',
+                    background: 'var(--surface-elevated)', border: '1px solid var(--border)',
                     borderRadius: 12, padding: 18,
                 }}>
                     <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-3)', marginBottom: 12 }}>
@@ -461,7 +461,7 @@ function ReviewsTab({ items }) {
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div style={{
-                background: 'white', border: '1px solid var(--border)',
+                background: 'var(--surface-elevated)', border: '1px solid var(--border)',
                 borderRadius: 12, padding: '18px 24px',
                 display: 'flex', gap: 28, alignItems: 'center', flexWrap: 'wrap',
             }}>
@@ -600,7 +600,7 @@ function ReviewRow({ item, isLast }) {
 function Section({ title, children, padBody = false }) {
     return (
         <div style={{
-            background: 'white', border: '1px solid var(--border)',
+            background: 'var(--surface-elevated)', border: '1px solid var(--border)',
             borderRadius: 12, overflow: 'hidden',
         }}>
             <div style={{
@@ -677,7 +677,7 @@ function RatingBreakdown({ reviews }) {
 function EmptyOrError({ message, sub }) {
     return (
         <div style={{
-            background: 'white', border: '1px solid var(--border)',
+            background: 'var(--surface-elevated)', border: '1px solid var(--border)',
             borderRadius: 12, padding: 60, textAlign: 'center',
         }}>
             <div style={{
@@ -697,11 +697,11 @@ function PageSkeleton() {
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div style={{
-                height: 200, background: 'white', border: '1px solid var(--border)',
+                height: 200, background: 'var(--surface-elevated)', border: '1px solid var(--border)',
                 borderRadius: 16, animation: 'mp-flash 1.6s ease-in-out infinite',
             }} />
             <div style={{
-                height: 400, background: 'white', border: '1px solid var(--border)',
+                height: 400, background: 'var(--surface-elevated)', border: '1px solid var(--border)',
                 borderRadius: 12, animation: 'mp-flash 1.6s ease-in-out infinite', opacity: 0.7,
             }} />
         </div>
@@ -761,7 +761,7 @@ function InquiryModal({ vendorId, onDismiss }) {
             }}
         >
             <div onClick={(e) => e.stopPropagation()} style={{
-                width: '100%', maxWidth: 480, background: 'white',
+                width: '100%', maxWidth: 480, background: 'var(--surface-elevated)',
                 borderRadius: 16, boxShadow: 'var(--shadow-modal)', padding: 28,
             }}>
                 <h2 className="mp-h3" style={{ margin: 0, color: 'var(--text-1)' }}>
@@ -807,7 +807,7 @@ function InquiryModal({ vendorId, onDismiss }) {
                                 border: '1px solid var(--border)',
                                 fontFamily: 'inherit', fontSize: 14,
                                 color: eventId ? 'var(--text-1)' : 'var(--text-3)',
-                                background: 'white', cursor: 'pointer',
+                                background: 'var(--surface-elevated)', cursor: 'pointer',
                             }}
                         >
                             <option value="">Select an event…</option>

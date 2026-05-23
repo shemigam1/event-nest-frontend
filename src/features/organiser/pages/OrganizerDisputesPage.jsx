@@ -56,13 +56,13 @@ export default function OrganizerDisputesPage() {
             {contractsQ.isLoading && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                     {[1, 2].map(k => (
-                        <div key={k} style={{ background: 'white', borderRadius: 12, border: '1px solid var(--border)', height: 100, animation: 'pulse 1.4s ease-in-out infinite' }} />
+                        <div key={k} style={{ background: 'var(--surface-elevated)', borderRadius: 12, border: '1px solid var(--border)', height: 100, animation: 'pulse 1.4s ease-in-out infinite' }} />
                     ))}
                 </div>
             )}
 
             {contractsQ.isError && (
-                <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: 12, padding: 40, textAlign: 'center' }}>
+                <div style={{ background: 'var(--surface-elevated)', border: '1px solid var(--border)', borderRadius: 12, padding: 40, textAlign: 'center' }}>
                     <Icons.alert size={28} style={{ color: 'var(--error)' }} />
                     <p style={{ marginTop: 8, color: 'var(--text-2)', fontSize: 14 }}>Could not load dispute data.</p>
                     <Button variant="secondary" size="sm" onClick={contractsQ.refetch} style={{ marginTop: 12 }}>Retry</Button>
@@ -70,7 +70,7 @@ export default function OrganizerDisputesPage() {
             )}
 
             {!contractsQ.isLoading && !contractsQ.isError && activeContracts.length === 0 && (
-                <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: 12, padding: 56, textAlign: 'center' }}>
+                <div style={{ background: 'var(--surface-elevated)', border: '1px solid var(--border)', borderRadius: 12, padding: 56, textAlign: 'center' }}>
                     <div style={{ width: 52, height: 52, borderRadius: 99, background: '#E6F4EA', display: 'grid', placeItems: 'center', margin: '0 auto 16px' }}>
                         <Icons.check size={26} style={{ color: '#0F9D58' }} />
                     </div>
@@ -112,7 +112,7 @@ function DisputeList({ contracts }) {
 
             {/* Empty state shown after all contracts have been checked */}
             {Object.keys(disputedCards).length === contracts.length && totalDisputed === 0 && (
-                <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: 12, padding: 56, textAlign: 'center', marginTop: 8 }}>
+                <div style={{ background: 'var(--surface-elevated)', border: '1px solid var(--border)', borderRadius: 12, padding: 56, textAlign: 'center', marginTop: 8 }}>
                     <div style={{ width: 52, height: 52, borderRadius: 99, background: '#E6F4EA', display: 'grid', placeItems: 'center', margin: '0 auto 16px' }}>
                         <Icons.check size={26} style={{ color: '#0F9D58' }} />
                     </div>
@@ -146,7 +146,7 @@ function ContractDisputeLoader({ contract, onDisputesFound }) {
     if (escrowQ.isError || !escrow || disputed.length === 0) return null;
 
     return (
-        <div style={{ background: 'white', border: '2px solid #FBB6B6', borderRadius: 12, overflow: 'hidden' }}>
+        <div style={{ background: 'var(--surface-elevated)', border: '2px solid #FBB6B6', borderRadius: 12, overflow: 'hidden' }}>
             {/* contract header */}
             <div style={{
                 background: '#FBE9E9', padding: '10px 20px',

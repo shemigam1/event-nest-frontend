@@ -125,13 +125,19 @@ export default function MessagesPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedId, history]);
 
-    // Load history into local state when REST response arrives
+    // Load history into local state when REST response arrives.
+    // Use the functional updater so any in-flight optimistic messages survive
+    // a refetch — without this, a history arrival before the STOMP echo wipes
+    // the __temp__ bubble and the echo is appended as a duplicate.
     useEffect(() => {
         if (!history) return;
         const msgs = Array.isArray(history)
             ? history
             : history.content ?? history.messages ?? [];
-        setMessages(msgs);
+        setMessages(prev => {
+            const pending = prev.filter(m => String(m.id ?? '').startsWith(TEMP_PREFIX));
+            return [...msgs, ...pending];
+        });
     }, [history]);
 
     // Subscribe to STOMP topic for selected conversation
@@ -140,14 +146,18 @@ export default function MessagesPage() {
         const dest = `/topic/conversation.${selectedId}`;
         const unsub = stompSubscribe(dest, (msg) => {
             setMessages(prev => {
-                // Check if this is the echo of one of our optimistic messages.
-                // We detect our own echo by matching the temp-prefixed placeholder —
-                // this is reliable regardless of what format senderUserId uses.
+                // 1. Replace the optimistic placeholder (same body, temp id).
                 const tempIdx = prev.findIndex(
                     m => String(m.id ?? '').startsWith(TEMP_PREFIX) && m.body === msg.body
                 );
                 if (tempIdx >= 0) {
                     return prev.map((m, i) => (i === tempIdx ? msg : m));
+                }
+                // 2. Guard against the race where a history refetch already added
+                //    the server message before the STOMP echo arrived — deduplicate
+                //    by the server-assigned id so we never show the same message twice.
+                if (msg.id && prev.some(m => String(m.id) === String(msg.id))) {
+                    return prev;
                 }
                 return [...prev, msg];
             });
@@ -471,7 +481,7 @@ export default function MessagesPage() {
 
             <style>{`
                 .mp-msg-panel {
-                    background: white;
+                    background: var(--surface-elevated);
                     border-radius: 12px;
                     border: 1px solid var(--border);
                     display: flex;

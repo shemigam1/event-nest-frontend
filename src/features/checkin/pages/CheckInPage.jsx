@@ -43,7 +43,7 @@ function SetupScreen({ onStart, prefillEventId = '', prefillToken = '' }) {
                 <form
                     onSubmit={handleSubmit}
                     style={{
-                        background: 'white',
+                        background: 'var(--surface-elevated)',
                         border: '1px solid var(--border)',
                         borderRadius: 16,
                         padding: 28,
@@ -78,7 +78,7 @@ function SetupScreen({ onStart, prefillEventId = '', prefillToken = '' }) {
                                 autoComplete="off"
                                 style={{
                                     width: '100%', height: 44, padding: '0 40px 0 38px',
-                                    background: 'white', border: '1px solid var(--border)',
+                                    background: 'var(--surface-elevated)', border: '1px solid var(--border)',
                                     borderRadius: 12, fontSize: 15, color: 'var(--text-1)',
                                     fontFamily: staffToken && !showToken ? 'monospace' : 'inherit',
                                     boxSizing: 'border-box',
@@ -252,7 +252,7 @@ function ActiveSession({ credentials, onEnd }) {
         <div style={{ background: 'var(--surface-subtle)', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
             {/* Header */}
             <div style={{
-                background: 'white', borderBottom: '1px solid var(--border)',
+                background: 'var(--surface-elevated)', borderBottom: '1px solid var(--border)',
                 padding: '0 24px', height: 64,
                 display: 'flex', alignItems: 'center', gap: 16,
                 position: 'sticky', top: 0, zIndex: 10,
@@ -311,7 +311,7 @@ function ActiveSession({ credentials, onEnd }) {
                                 autoFocus
                                 style={{
                                     width: '100%', height: 52, padding: '0 14px 0 44px',
-                                    background: 'white', border: '2px solid var(--mp-blue)',
+                                    background: 'var(--surface-elevated)', border: '2px solid var(--mp-blue)',
                                     borderRadius: 12, fontSize: 15, color: 'var(--text-1)',
                                     boxSizing: 'border-box', outline: 'none',
                                 }}
@@ -346,7 +346,7 @@ function ActiveSession({ credentials, onEnd }) {
                             Recent scans
                         </div>
                         <div style={{
-                            background: 'white', border: '1px solid var(--border)',
+                            background: 'var(--surface-elevated)', border: '1px solid var(--border)',
                             borderRadius: 12, overflow: 'hidden', boxShadow: 'var(--shadow-card)',
                         }}>
                             {history.slice(0, 10).map((entry, i) => (
@@ -359,7 +359,7 @@ function ActiveSession({ credentials, onEnd }) {
                 {history.length === 0 && !result && (
                     <div style={{
                         marginTop: 48, textAlign: 'center',
-                        padding: 40, background: 'white',
+                        padding: 40, background: 'var(--surface-elevated)',
                         border: '1px solid var(--border)', borderRadius: 14,
                         boxShadow: 'var(--shadow-card)',
                     }}>
@@ -405,7 +405,7 @@ function Field({ label, placeholder, value, onChange, icon }) {
                     style={{
                         width: '100%', height: 44,
                         padding: icon ? '0 14px 0 38px' : '0 14px',
-                        background: 'white', border: '1px solid var(--border)',
+                        background: 'var(--surface-elevated)', border: '1px solid var(--border)',
                         borderRadius: 12, fontSize: 15, color: 'var(--text-1)',
                         boxSizing: 'border-box',
                     }}
@@ -445,7 +445,7 @@ function EventInfoScreen({ credentials, onProceed, onBack }) {
 
                 {isLoading && (
                     <div style={{
-                        background: 'white', border: '1px solid var(--border)',
+                        background: 'var(--surface-elevated)', border: '1px solid var(--border)',
                         borderRadius: 16, padding: 40, textAlign: 'center',
                         animation: 'mp-flash 1.6s ease-in-out infinite',
                         height: 260,
@@ -453,7 +453,7 @@ function EventInfoScreen({ credentials, onProceed, onBack }) {
                 )}
 
                 {isError && (
-                    <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: 16, padding: 28, textAlign: 'center', boxShadow: 'var(--shadow-card)' }}>
+                    <div style={{ background: 'var(--surface-elevated)', border: '1px solid var(--border)', borderRadius: 16, padding: 28, textAlign: 'center', boxShadow: 'var(--shadow-card)' }}>
                         <Icons.alert size={28} style={{ color: 'var(--error)' }} />
                         <p className="mp-h4" style={{ margin: '12px 0 6px', color: 'var(--text-1)' }}>Event not found</p>
                         <p className="body-sm" style={{ color: 'var(--text-2)', marginBottom: 20 }}>
@@ -467,7 +467,7 @@ function EventInfoScreen({ credentials, onProceed, onBack }) {
                 )}
 
                 {!isLoading && !isError && event && (
-                    <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden', boxShadow: 'var(--shadow-card)' }}>
+                    <div style={{ background: 'var(--surface-elevated)', border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden', boxShadow: 'var(--shadow-card)' }}>
                         {/* Event header */}
                         <div style={{ padding: '24px 28px', borderBottom: '1px solid var(--border)' }}>
                             <h1 className="mp-h2" style={{ margin: '0 0 12px', color: 'var(--text-1)' }}>

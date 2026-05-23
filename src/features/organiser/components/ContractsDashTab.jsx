@@ -109,7 +109,7 @@ export default function ContractsDashTab() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {[1, 2, 3].map((k) => (
                     <div key={k} style={{
-                        background: 'white', borderRadius: 12,
+                        background: 'var(--surface-elevated)', borderRadius: 12,
                         border: '1px solid var(--border)', height: 72,
                         animation: 'mp-flash 1.6s ease-in-out infinite',
                         opacity: 1.1 - k * 0.2,
@@ -121,7 +121,7 @@ export default function ContractsDashTab() {
 
     if (isError) {
         return (
-            <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: 12, padding: 48, textAlign: 'center' }}>
+            <div style={{ background: 'var(--surface-elevated)', border: '1px solid var(--border)', borderRadius: 12, padding: 48, textAlign: 'center' }}>
                 <Icons.alert size={28} style={{ color: 'var(--error)' }} />
                 <p style={{ marginTop: 8, color: 'var(--text-2)', fontSize: 14 }}>Could not load contracts.</p>
                 <Button variant="secondary" size="sm" onClick={refetch} style={{ marginTop: 12 }}>Retry</Button>
@@ -131,7 +131,7 @@ export default function ContractsDashTab() {
 
     if (contracts.length === 0) {
         return (
-            <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: 12, padding: 56, textAlign: 'center' }}>
+            <div style={{ background: 'var(--surface-elevated)', border: '1px solid var(--border)', borderRadius: 12, padding: 56, textAlign: 'center' }}>
                 <Icons.list size={32} style={{ color: 'var(--text-3)', marginBottom: 12 }} />
                 <p className="mp-h3" style={{ margin: '0 0 4px', color: 'var(--text-1)' }}>No contracts yet</p>
                 <p style={{ fontSize: 14, color: 'var(--text-2)', margin: 0 }}>
@@ -159,7 +159,7 @@ export default function ContractsDashTab() {
                     { label: 'Completed', count: completed.length, color: '#0F7B3E' },
                 ].map(({ label, count, color }) => count > 0 && (
                     <div key={label} style={{
-                        background: 'white', border: '1px solid var(--border)',
+                        background: 'var(--surface-elevated)', border: '1px solid var(--border)',
                         borderRadius: 10, padding: '10px 16px',
                         display: 'flex', alignItems: 'center', gap: 8,
                     }}>
@@ -169,7 +169,7 @@ export default function ContractsDashTab() {
                 ))}
             </div>
 
-            <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: 12, boxShadow: 'var(--shadow-card)', overflow: 'hidden' }}>
+            <div style={{ background: 'var(--surface-elevated)', border: '1px solid var(--border)', borderRadius: 12, boxShadow: 'var(--shadow-card)', overflow: 'hidden' }}>
                 <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ fontWeight: 600, color: 'var(--text-1)', fontSize: 14 }}>All contracts</span>
                     <span style={{ fontSize: 13, color: 'var(--text-3)' }}>

@@ -288,7 +288,7 @@ export default function MyEventsPage() {
                 {/* Dashboard tab bar */}
                 <div className="mp-tab-scroll" style={{
                     display: 'flex', gap: 4, marginBottom: 28,
-                    background: 'white', border: '1px solid var(--border)',
+                    background: 'var(--surface-elevated)', border: '1px solid var(--border)',
                     borderRadius: 12, padding: 4,
                     width: 'fit-content', maxWidth: '100%',
                 }}>

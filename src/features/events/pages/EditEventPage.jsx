@@ -124,7 +124,7 @@ function PublishedTierRow({ tier, eventId, isLast }) {
                             onChange={(e) => setName(e.target.value)}
                             style={{
                                 width: '100%', height: 38, padding: '0 12px',
-                                background: 'white', border: '1px solid var(--border)',
+                                background: 'var(--surface-elevated)', border: '1px solid var(--border)',
                                 borderRadius: 8, fontSize: 14, color: 'var(--text-1)', boxSizing: 'border-box',
                             }}
                         />
@@ -154,7 +154,7 @@ function PublishedTierRow({ tier, eventId, isLast }) {
                                 onChange={(e) => setPrice(e.target.value)}
                                 style={{
                                     width: '100%', height: 38, padding: '0 12px',
-                                    background: 'white', border: '1px solid var(--border)',
+                                    background: 'var(--surface-elevated)', border: '1px solid var(--border)',
                                     borderRadius: 8, fontSize: 14, color: 'var(--text-1)', boxSizing: 'border-box',
                                 }}
                             />
@@ -187,7 +187,7 @@ function PublishedTierRow({ tier, eventId, isLast }) {
                                 onChange={(e) => setMaxPerPerson(e.target.value)}
                                 style={{
                                     width: 120, height: 38, padding: '0 12px',
-                                    background: 'white', border: '1px solid var(--border)',
+                                    background: 'var(--surface-elevated)', border: '1px solid var(--border)',
                                     borderRadius: 8, fontSize: 14, color: 'var(--text-1)',
                                 }}
                             />
@@ -256,7 +256,7 @@ function DraftTierCard({ tier, eventId, onDelete, isLast }) {
 
     return (
         <div style={{
-            background: 'white', border: '1px solid var(--border)',
+            background: 'var(--surface-elevated)', border: '1px solid var(--border)',
             borderRadius: 12, overflow: 'hidden',
             marginBottom: isLast ? 0 : 10,
         }}>
@@ -281,7 +281,7 @@ function DraftTierCard({ tier, eventId, onDelete, isLast }) {
                         aria-label="Delete tier"
                         style={{
                             width: 32, height: 32, borderRadius: 8, border: '1px solid var(--border)',
-                            background: 'white', cursor: 'pointer', display: 'grid', placeItems: 'center',
+                            background: 'var(--surface-elevated)', cursor: 'pointer', display: 'grid', placeItems: 'center',
                             color: 'var(--error)',
                         }}
                     >
@@ -381,7 +381,7 @@ function DraftTierCard({ tier, eventId, onDelete, isLast }) {
 
 const inputStyle = {
     width: '100%', height: 36, padding: '0 10px',
-    background: 'white', border: '1px solid var(--border)',
+    background: 'var(--surface-elevated)', border: '1px solid var(--border)',
     borderRadius: 8, fontSize: 13, color: 'var(--text-1)', boxSizing: 'border-box',
 };
 
@@ -475,7 +475,7 @@ export default function EditEventPage() {
     if (eventQuery.isLoading) {
         return (
             <Shell>
-                <div style={{ height: 400, background: 'white', border: '1px solid var(--border)', borderRadius: 12, animation: 'mp-flash 1.6s ease-in-out infinite' }} />
+                <div style={{ height: 400, background: 'var(--surface-elevated)', border: '1px solid var(--border)', borderRadius: 12, animation: 'mp-flash 1.6s ease-in-out infinite' }} />
             </Shell>
         );
     }
@@ -570,7 +570,7 @@ export default function EditEventPage() {
             )}
 
             {/* Main form card */}
-            <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: 16, padding: 28, marginBottom: 20, boxShadow: 'var(--shadow-card)' }}>
+            <div style={{ background: 'var(--surface-elevated)', border: '1px solid var(--border)', borderRadius: 16, padding: 28, marginBottom: 20, boxShadow: 'var(--shadow-card)' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
                     {/* Title */}
@@ -606,7 +606,7 @@ export default function EditEventPage() {
                             placeholder="Tell attendees what to expect…"
                             style={{
                                 width: '100%', minHeight: 120, padding: '10px 14px',
-                                background: 'white', border: '1px solid var(--border)',
+                                background: 'var(--surface-elevated)', border: '1px solid var(--border)',
                                 borderRadius: 12, fontSize: 15, color: 'var(--text-1)',
                                 resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box',
                             }}
@@ -634,7 +634,7 @@ export default function EditEventPage() {
             </div>
 
             {/* Tiers */}
-            <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden', marginBottom: 24, boxShadow: 'var(--shadow-card)' }}>
+            <div style={{ background: 'var(--surface-elevated)', border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden', marginBottom: 24, boxShadow: 'var(--shadow-card)' }}>
                 <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ fontWeight: 600, color: 'var(--text-1)', fontSize: 14 }}>Ticket tiers</span>
                     {isDraft && (
@@ -778,7 +778,7 @@ function Field({ label, value, onChange, placeholder }) {
                 placeholder={placeholder}
                 style={{
                     width: '100%', height: 44, padding: '0 14px',
-                    background: 'white', border: '1px solid var(--border)',
+                    background: 'var(--surface-elevated)', border: '1px solid var(--border)',
                     borderRadius: 12, fontSize: 15, color: 'var(--text-1)', boxSizing: 'border-box',
                 }}
             />
@@ -797,7 +797,7 @@ function DateField({ label, type, value, onChange, min }) {
                 min={min}
                 style={{
                     width: '100%', height: 44, padding: '0 14px',
-                    background: 'white', border: '1px solid var(--border)',
+                    background: 'var(--surface-elevated)', border: '1px solid var(--border)',
                     borderRadius: 12, fontSize: 15, color: 'var(--text-1)', boxSizing: 'border-box',
                 }}
             />

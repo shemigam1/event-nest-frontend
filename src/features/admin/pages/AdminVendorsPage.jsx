@@ -102,7 +102,7 @@ export default function AdminVendorsPage() {
 
                 {!q.isLoading && !q.isError && vendors.length > 0 && (
                     <div style={{
-                        background: 'white',
+                        background: 'var(--surface-elevated)',
                         border: '1px solid var(--border)',
                         borderRadius: 12,
                         overflow: 'hidden',
@@ -218,7 +218,7 @@ function Paginator({ page, pageCount, onPrev, onNext }) {
 function EmptyCard({ status }) {
     return (
         <div style={{
-            background: 'white', border: '1px solid var(--border)',
+            background: 'var(--surface-elevated)', border: '1px solid var(--border)',
             borderRadius: 12, padding: 60, textAlign: 'center',
         }}>
             <Icons.users size={32} style={{ color: 'var(--text-3)' }} />
@@ -237,7 +237,7 @@ function EmptyCard({ status }) {
 function ErrorCard({ message, onRetry }) {
     return (
         <div style={{
-            background: 'white', border: '1px solid var(--border)',
+            background: 'var(--surface-elevated)', border: '1px solid var(--border)',
             borderRadius: 12, padding: 40, textAlign: 'center',
         }}>
             <Icons.alert size={28} style={{ color: 'var(--error)' }} />
@@ -252,7 +252,7 @@ function ErrorCard({ message, onRetry }) {
 function Skeleton() {
     return (
         <div style={{
-            background: 'white', border: '1px solid var(--border)',
+            background: 'var(--surface-elevated)', border: '1px solid var(--border)',
             borderRadius: 12, overflow: 'hidden',
         }}>
             {Array.from({ length: 4 }).map((_, i) => (

@@ -37,7 +37,7 @@ const FILTERS = [
 function StatTile({ label, value, icon, sub }) {
     return (
         <div style={{
-            background: 'white', border: '1px solid var(--border)',
+            background: 'var(--surface-elevated)', border: '1px solid var(--border)',
             borderRadius: 12, padding: 20, boxShadow: 'var(--shadow-card)',
         }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, fontSize: 13, fontWeight: 500, color: 'var(--text-2)' }}>
@@ -63,7 +63,7 @@ function DeleteDialog({ event, onConfirm, onDismiss, loading }) {
         >
             <div
                 onClick={(e) => e.stopPropagation()}
-                style={{ width: '100%', maxWidth: 400, background: 'white', borderRadius: 16, padding: 28, boxShadow: 'var(--shadow-modal)' }}
+                style={{ width: '100%', maxWidth: 400, background: 'var(--surface-elevated)', borderRadius: 16, padding: 28, boxShadow: 'var(--shadow-modal)' }}
             >
                 <h2 className="mp-h3" style={{ margin: '0 0 8px', color: 'var(--text-1)' }}>Delete event?</h2>
                 <p className="body-sm" style={{ margin: '0 0 24px', color: 'var(--text-2)' }}>
@@ -167,7 +167,7 @@ function EventRow({ event, isLast, onView, onSubmit, onDelete, submitting }) {
                             aria-label="Delete event"
                             style={{
                                 width: 32, height: 32, borderRadius: 8, border: '1px solid var(--border)',
-                                background: 'white', cursor: 'pointer', display: 'grid', placeItems: 'center',
+                                background: 'var(--surface-elevated)', cursor: 'pointer', display: 'grid', placeItems: 'center',
                                 color: 'var(--error)',
                             }}
                         >
@@ -184,7 +184,7 @@ function EventRow({ event, isLast, onView, onSubmit, onDelete, submitting }) {
 function Skeleton() {
     const row = { height: 82, borderBottom: '1px solid var(--border)', background: 'var(--surface-subtle)', animation: 'mp-flash 1.6s ease-in-out infinite' };
     return (
-        <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
+        <div style={{ background: 'var(--surface-elevated)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
             <div style={row} /><div style={{ ...row, opacity: 0.7 }} /><div style={{ ...row, opacity: 0.4, borderBottom: 0 }} />
         </div>
     );
@@ -261,7 +261,7 @@ export default function OrganizerConsolePage() {
                 {/* Dashboard tab bar */}
                 <div className="mp-tab-scroll" style={{
                     display: 'flex', gap: 4, marginBottom: 28,
-                    background: 'white', border: '1px solid var(--border)',
+                    background: 'var(--surface-elevated)', border: '1px solid var(--border)',
                     borderRadius: 12, padding: 4,
                     width: 'fit-content', maxWidth: '100%',
                 }}>
@@ -309,7 +309,7 @@ export default function OrganizerConsolePage() {
                         )}
 
                         {/* Filter tabs */}
-                        <div className="mp-tab-scroll" style={{ display: 'flex', gap: 4, marginBottom: 16, background: 'white', border: '1px solid var(--border)', borderRadius: 12, padding: 4, width: 'fit-content', maxWidth: '100%' }}>
+                        <div className="mp-tab-scroll" style={{ display: 'flex', gap: 4, marginBottom: 16, background: 'var(--surface-elevated)', border: '1px solid var(--border)', borderRadius: 12, padding: 4, width: 'fit-content', maxWidth: '100%' }}>
                             {FILTERS.map(({ id, label }) => {
                                 const active = filter === id;
                                 return (
@@ -355,7 +355,7 @@ export default function OrganizerConsolePage() {
                         )}
 
                         {!isLoading && !isError && (
-                            <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: 12, boxShadow: 'var(--shadow-card)', overflow: 'hidden' }}>
+                            <div style={{ background: 'var(--surface-elevated)', border: '1px solid var(--border)', borderRadius: 12, boxShadow: 'var(--shadow-card)', overflow: 'hidden' }}>
                                 <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <span style={{ fontWeight: 600, color: 'var(--text-1)', fontSize: 14 }}>Your events</span>
                                     <span style={{ fontSize: 13, color: 'var(--text-3)' }}>

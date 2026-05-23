@@ -85,7 +85,7 @@ export default function PaymentResultPage() {
                 <div
                     data-testid="payment-result-card"
                     style={{
-                        background: 'white',
+                        background: 'var(--surface-elevated)',
                         border: '1px solid var(--border)',
                         borderRadius: 16,
                         boxShadow: 'var(--shadow-card)',

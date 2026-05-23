@@ -45,7 +45,7 @@ export default function CheckInScannerPage() {
                 <form
                     onSubmit={submit}
                     style={{
-                        background: 'white', border: '1px solid var(--border)',
+                        background: 'var(--surface-elevated)', border: '1px solid var(--border)',
                         borderRadius: 16, padding: 24, boxShadow: 'var(--shadow-card)',
                         display: 'flex', flexDirection: 'column', gap: 16,
                     }}

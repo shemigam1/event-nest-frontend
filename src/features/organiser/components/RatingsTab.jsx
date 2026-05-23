@@ -61,7 +61,7 @@ function DesignerEmpty({ eventId }) {
 
     return (
         <div style={{
-            background: 'white',
+            background: 'var(--surface-elevated)',
             border: '1px solid var(--border)',
             borderRadius: 12,
             boxShadow: 'var(--shadow-card)',
@@ -143,7 +143,7 @@ function Designer({ eventId, onClose }) {
 
     return (
         <form onSubmit={submit} style={{
-            background: 'white',
+            background: 'var(--surface-elevated)',
             border: '1px solid var(--border)',
             borderRadius: 12,
             boxShadow: 'var(--shadow-card)',
@@ -226,7 +226,7 @@ function QuestionEditor({ index, question, onChange, onRemove, canRemove }) {
                         value={question.type}
                         onChange={(e) => onChange({ type: e.target.value, options: [] })}
                         style={{
-                            background: 'white', border: '1px solid var(--border)',
+                            background: 'var(--surface-elevated)', border: '1px solid var(--border)',
                             borderRadius: 8, padding: '6px 10px', fontSize: 13,
                         }}
                     >
@@ -314,7 +314,7 @@ function FormView({ form, eventId }) {
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
             <div style={{
-                background: 'white',
+                background: 'var(--surface-elevated)',
                 border: '1px solid var(--border)',
                 borderRadius: 12,
                 boxShadow: 'var(--shadow-card)',
@@ -368,7 +368,7 @@ function QuestionAggregate({ question, index }) {
     const responseCount = question.responseCount ?? 0;
     return (
         <div style={{
-            background: 'white',
+            background: 'var(--surface-elevated)',
             border: '1px solid var(--border)',
             borderRadius: 12,
             boxShadow: 'var(--shadow-card)',
@@ -485,7 +485,7 @@ function ResponsesList({ eventId }) {
 
     return (
         <div style={{
-            background: 'white',
+            background: 'var(--surface-elevated)',
             border: '1px solid var(--border)',
             borderRadius: 12,
             boxShadow: 'var(--shadow-card)',
@@ -595,7 +595,7 @@ function AnswerLine({ answer }) {
 function Skeleton() {
     return (
         <div style={{
-            background: 'white', border: '1px solid var(--border)',
+            background: 'var(--surface-elevated)', border: '1px solid var(--border)',
             borderRadius: 12, padding: 24, minHeight: 200,
             animation: 'mp-flash 1.6s ease-in-out infinite',
         }} />
@@ -620,7 +620,7 @@ function ListSkeleton() {
 function ErrorBlock({ message, onRetry }) {
     return (
         <div style={{
-            background: 'white', border: '1px solid var(--border)',
+            background: 'var(--surface-elevated)', border: '1px solid var(--border)',
             borderRadius: 12, padding: 40, textAlign: 'center',
         }}>
             <Icons.alert size={28} style={{ color: 'var(--error)' }} />

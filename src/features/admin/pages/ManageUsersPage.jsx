@@ -28,7 +28,7 @@ function ConfirmDialog({ user, onConfirm, onDismiss, loading }) {
                 onClick={(e) => e.stopPropagation()}
                 style={{
                     width: '100%', maxWidth: 420,
-                    background: 'white', borderRadius: 16,
+                    background: 'var(--surface-elevated)', borderRadius: 16,
                     boxShadow: 'var(--shadow-modal)', padding: 28,
                 }}
             >
@@ -77,7 +77,7 @@ function ConfirmDialog({ user, onConfirm, onDismiss, loading }) {
 function Skeleton() {
     const row = { height: 64, borderBottom: '1px solid var(--border)', background: 'var(--surface-subtle)', animation: 'mp-flash 1.6s ease-in-out infinite' };
     return (
-        <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
+        <div style={{ background: 'var(--surface-elevated)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
             <div style={row} /><div style={{ ...row, opacity: 0.7 }} /><div style={{ ...row, opacity: 0.4, borderBottom: 0 }} />
         </div>
     );
@@ -136,7 +136,7 @@ export default function ManageUsersPage() {
                 )}
 
                 {!isLoading && !isError && (
-                    <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: 12, boxShadow: 'var(--shadow-card)', overflow: 'hidden' }}>
+                    <div style={{ background: 'var(--surface-elevated)', border: '1px solid var(--border)', borderRadius: 12, boxShadow: 'var(--shadow-card)', overflow: 'hidden' }}>
                         <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <span style={{ fontWeight: 600, color: 'var(--text-1)', fontSize: 14 }}>Platform users</span>
                             <span style={{ fontSize: 13, color: 'var(--text-3)' }}>{data?.totalElements ?? users.length} users</span>

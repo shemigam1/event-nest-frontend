@@ -162,7 +162,7 @@ export default function MyApplicationsPage() {
 
                 {apps.isError && !apps.isLoading && (
                     <div style={{
-                        background: 'white',
+                        background: 'var(--surface-elevated)',
                         border: '1px solid var(--border)',
                         borderRadius: 12,
                         padding: 40,
@@ -210,7 +210,7 @@ function WorkingView({ working, onBrowse, onView }) {
     if (total === 0) {
         return (
             <div style={{
-                background: 'white',
+                background: 'var(--surface-elevated)',
                 border: '1px solid var(--border)',
                 borderRadius: 12,
                 padding: 60,
@@ -286,7 +286,7 @@ function WorkingView({ working, onBrowse, onView }) {
 function Section({ title, count, accent, children }) {
     return (
         <div style={{
-            background: 'white',
+            background: 'var(--surface-elevated)',
             border: '1px solid var(--border)',
             borderRadius: 12,
             overflow: 'hidden',
@@ -431,7 +431,7 @@ function AllApplicationsView({
 
             {/* List card */}
             <div style={{
-                background: 'white',
+                background: 'var(--surface-elevated)',
                 border: '1px solid var(--border)',
                 borderRadius: 12,
                 overflow: 'hidden',
@@ -512,7 +512,7 @@ function AllApplicationsView({
 function Tile({ label, value, sub, icon, accent }) {
     return (
         <div style={{
-            background: 'white',
+            background: 'var(--surface-elevated)',
             border: '1px solid var(--border)',
             borderRadius: 12,
             padding: 18,

@@ -45,7 +45,7 @@ export default function Composer({
                     width: '100%',
                     minHeight: onCancel ? 80 : 60,
                     padding: '10px 14px',
-                    background: 'white',
+                    background: 'var(--surface-elevated)',
                     border: `1px solid ${overLimit ? 'var(--error)' : 'var(--border)'}`,
                     borderRadius: 10,
                     fontSize: 14,

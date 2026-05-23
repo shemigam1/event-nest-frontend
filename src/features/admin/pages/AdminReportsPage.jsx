@@ -62,7 +62,7 @@ function ReviewDialog({ report, action, onConfirm, onDismiss, loading }) {
         >
             <div
                 onClick={(e) => e.stopPropagation()}
-                style={{ width: '100%', maxWidth: 440, background: 'white', borderRadius: 16, boxShadow: 'var(--shadow-modal)', padding: 28 }}
+                style={{ width: '100%', maxWidth: 440, background: 'var(--surface-elevated)', borderRadius: 16, boxShadow: 'var(--shadow-modal)', padding: 28 }}
             >
                 <h2 className="mp-h3" style={{ margin: '0 0 6px', color: 'var(--text-1)' }}>{title}</h2>
                 <p className="body-sm" style={{ margin: '0 0 16px', color: 'var(--text-2)' }}>{body}</p>
@@ -76,7 +76,7 @@ function ReviewDialog({ report, action, onConfirm, onDismiss, loading }) {
                         placeholder="Internal note for this decision…"
                         style={{
                             width: '100%', minHeight: 80, padding: '10px 14px',
-                            background: 'white', border: '1px solid var(--border)',
+                            background: 'var(--surface-elevated)', border: '1px solid var(--border)',
                             borderRadius: 12, fontSize: 15, color: 'var(--text-1)',
                             resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box',
                         }}
@@ -109,7 +109,7 @@ function TakeDownDialog({ report, onConfirm, onDismiss, loading }) {
         >
             <div
                 onClick={(e) => e.stopPropagation()}
-                style={{ width: '100%', maxWidth: 420, background: 'white', borderRadius: 16, boxShadow: 'var(--shadow-modal)', padding: 28 }}
+                style={{ width: '100%', maxWidth: 420, background: 'var(--surface-elevated)', borderRadius: 16, boxShadow: 'var(--shadow-modal)', padding: 28 }}
             >
                 <h2 className="mp-h3" style={{ margin: '0 0 8px', color: 'var(--text-1)' }}>Take down this event?</h2>
                 <p className="body-sm" style={{ margin: '0 0 6px', color: 'var(--text-2)' }}>
@@ -138,7 +138,7 @@ function ReportCard({ report, onReview, onDismiss, onTakeDown }) {
 
     return (
         <div style={{
-            background: 'white', border: '1px solid var(--border)',
+            background: 'var(--surface-elevated)', border: '1px solid var(--border)',
             borderRadius: 16, overflow: 'hidden', boxShadow: 'var(--shadow-card)',
         }}>
             {/* Header */}
@@ -224,7 +224,7 @@ function Skeleton() {
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {[1, 2, 3].map((i) => (
-                <div key={i} style={{ height: 160, background: 'white', border: '1px solid var(--border)', borderRadius: 16, animation: 'mp-flash 1.6s ease-in-out infinite', opacity: 1 - (i - 1) * 0.25 }} />
+                <div key={i} style={{ height: 160, background: 'var(--surface-elevated)', border: '1px solid var(--border)', borderRadius: 16, animation: 'mp-flash 1.6s ease-in-out infinite', opacity: 1 - (i - 1) * 0.25 }} />
             ))}
         </div>
     );
@@ -305,7 +305,7 @@ export default function AdminReportsPage() {
                 )}
 
                 {/* Filter tabs */}
-                <div style={{ display: 'flex', gap: 4, marginBottom: 20, background: 'white', border: '1px solid var(--border)', borderRadius: 12, padding: 4, width: 'fit-content' }}>
+                <div style={{ display: 'flex', gap: 4, marginBottom: 20, background: 'var(--surface-elevated)', border: '1px solid var(--border)', borderRadius: 12, padding: 4, width: 'fit-content' }}>
                     {STATUS_FILTERS.map(({ id, label }) => {
                         const active = statusFilter === id;
                         return (
@@ -337,7 +337,7 @@ export default function AdminReportsPage() {
                 )}
 
                 {!isLoading && !isError && reports.length === 0 && (
-                    <div style={{ padding: 56, textAlign: 'center', background: 'white', border: '1px solid var(--border)', borderRadius: 16 }}>
+                    <div style={{ padding: 56, textAlign: 'center', background: 'var(--surface-elevated)', border: '1px solid var(--border)', borderRadius: 16 }}>
                         <Icons.inbox size={32} style={{ color: 'var(--text-3)' }} />
                         <p className="mp-h4" style={{ margin: '12px 0 4px', color: 'var(--text-1)' }}>
                             {statusFilter === 'PENDING' ? 'No pending reports' : 'No reports found'}

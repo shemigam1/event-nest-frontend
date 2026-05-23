@@ -26,7 +26,7 @@ export default function InviteAdminPage() {
                     </p>
                 </div>
 
-                <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: 16, boxShadow: 'var(--shadow-card)', padding: 28, marginBottom: 24 }}>
+                <div style={{ background: 'var(--surface-elevated)', border: '1px solid var(--border)', borderRadius: 16, boxShadow: 'var(--shadow-card)', padding: 28, marginBottom: 24 }}>
                     <h2 className="mp-h3" style={{ margin: '0 0 6px', color: 'var(--text-1)' }}>Send invitation</h2>
                     <p className="body-sm" style={{ margin: '0 0 20px', color: 'var(--text-2)' }}>
                         The recipient will receive an email with a link to set up their admin account.
@@ -56,7 +56,7 @@ export default function InviteAdminPage() {
                                 required
                                 style={{
                                     flex: 1, height: 44, padding: '0 14px',
-                                    background: 'white', border: '1px solid var(--border)',
+                                    background: 'var(--surface-elevated)', border: '1px solid var(--border)',
                                     borderRadius: 12, fontSize: 15, color: 'var(--text-1)',
                                     boxSizing: 'border-box',
                                 }}
@@ -72,7 +72,7 @@ export default function InviteAdminPage() {
                 </div>
 
                 {invites.length > 0 && (
-                    <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: 16, boxShadow: 'var(--shadow-card)', overflow: 'hidden' }}>
+                    <div style={{ background: 'var(--surface-elevated)', border: '1px solid var(--border)', borderRadius: 16, boxShadow: 'var(--shadow-card)', overflow: 'hidden' }}>
                         <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', fontWeight: 600, color: 'var(--text-1)', fontSize: 14 }}>
                             Sent invitations
                         </div>

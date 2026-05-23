@@ -375,7 +375,7 @@ function BasicsStep({ data, onChange, onNext, hostProfiles, hostProfilesLoading 
         width: '100%',
         height: 44,
         padding: '0 14px',
-        background: 'white',
+        background: 'var(--surface-elevated)',
         border: `1px solid ${hasErr ? 'var(--error)' : 'var(--border)'}`,
         borderRadius: 12,
         fontSize: 16,
@@ -464,7 +464,7 @@ function BasicsStep({ data, onChange, onNext, hostProfiles, hostProfilesLoading 
                             width: '100%',
                             minHeight: 100,
                             padding: '10px 14px',
-                            background: 'white',
+                            background: 'var(--surface-elevated)',
                             border: '1px solid var(--border)',
                             borderRadius: 12,
                             fontSize: 16,
@@ -693,7 +693,7 @@ function TierCard({ tier, onChange, onRemove, errors = {} }) {
         <div
             data-testid={`tier-card-${tier._id}`}
             style={{
-                background: 'white',
+                background: 'var(--surface-elevated)',
                 border: '1px solid var(--border)',
                 borderRadius: 12,
                 padding: 20,
@@ -1050,7 +1050,7 @@ function ReviewStep({ basics, tiers, onBack, onSaveDraft, onSubmitForApproval, s
 
             {/* Event summary */}
             <div style={{
-                background: 'white',
+                background: 'var(--surface-elevated)',
                 border: '1px solid var(--border)',
                 borderRadius: 12,
                 overflow: 'hidden',
@@ -1115,7 +1115,7 @@ function ReviewStep({ basics, tiers, onBack, onSaveDraft, onSubmitForApproval, s
             {/* Tiers summary */}
             {tiers.length > 0 && (
                 <div style={{
-                    background: 'white',
+                    background: 'var(--surface-elevated)',
                     border: '1px solid var(--border)',
                     borderRadius: 12,
                     overflow: 'hidden',
@@ -1160,7 +1160,7 @@ function ReviewStep({ basics, tiers, onBack, onSaveDraft, onSubmitForApproval, s
 
             {totalSeats > 0 && (
                 <div className="mp-grid-stack" style={{
-                    background: 'white',
+                    background: 'var(--surface-elevated)',
                     border: '1px solid var(--border)',
                     borderRadius: 12,
                     padding: 20,

@@ -503,7 +503,7 @@ function ToggleSwitch({ on, onChange }) {
                 width: 16,
                 height: 16,
                 borderRadius: 99,
-                background: 'white',
+                background: 'var(--surface-elevated)',
                 boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
                 transition: 'left 0.15s ease',
                 display: 'block',

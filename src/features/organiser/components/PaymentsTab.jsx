@@ -83,7 +83,7 @@ export default function PaymentsTab({ events = [], isLoading }) {
                 </div>
             ) : (
                 <div style={{
-                    background: 'white', border: '1px solid var(--border)',
+                    background: 'var(--surface-elevated)', border: '1px solid var(--border)',
                     borderRadius: 12, overflow: 'hidden',
                 }}>
                     {/* Table header */}
@@ -215,7 +215,7 @@ function EventRevenueRow({ event: e, topRevenue, isLast }) {
 function StatTile({ label, value, icon, accent }) {
     return (
         <div style={{
-            background: 'white', border: '1px solid var(--border)',
+            background: 'var(--surface-elevated)', border: '1px solid var(--border)',
             borderRadius: 12, padding: 20, boxShadow: 'var(--shadow-card)',
         }}>
             <div style={{
@@ -255,7 +255,7 @@ function PaySkeleton() {
                 ))}
             </div>
             <div style={{
-                background: 'white', border: '1px solid var(--border)',
+                background: 'var(--surface-elevated)', border: '1px solid var(--border)',
                 borderRadius: 12, overflow: 'hidden',
             }}>
                 <div style={{ ...row, height: 50 }} />

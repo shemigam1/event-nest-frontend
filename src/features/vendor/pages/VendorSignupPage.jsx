@@ -27,7 +27,7 @@ export default function VendorSignupPage() {
             <div style={{
                 maxWidth: 480,
                 width: '100%',
-                background: 'white',
+                background: 'var(--surface-elevated)',
                 borderRadius: 16,
                 border: '1px solid var(--border)',
                 padding: '40px 36px',

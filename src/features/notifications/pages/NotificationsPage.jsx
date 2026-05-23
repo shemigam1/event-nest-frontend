@@ -146,7 +146,7 @@ function SkeletonList() {
             {[0, 1, 2, 3].map((i) => (
                 <div key={i} style={{
                     height: 84,
-                    background: 'white',
+                    background: 'var(--surface-elevated)',
                     border: '1px solid var(--border)',
                     borderRadius: 12,
                     animation: 'mp-flash 1.6s ease-in-out infinite',
@@ -175,7 +175,7 @@ function EmptyState({ onBrowse }) {
     return (
         <div style={{
             padding: 48, textAlign: 'center',
-            background: 'white', border: '1px solid var(--border)',
+            background: 'var(--surface-elevated)', border: '1px solid var(--border)',
             borderRadius: 12, boxShadow: 'var(--shadow-card)',
         }}>
             <Icons.bell size={32} style={{ color: 'var(--text-3)' }} />

@@ -44,7 +44,7 @@ export default function TeamTab({ eventId, isPublished }) {
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
             <div style={{
-                background: 'white', border: '1px solid var(--border)',
+                background: 'var(--surface-elevated)', border: '1px solid var(--border)',
                 borderRadius: 12, overflow: 'hidden',
             }}>
                 <div style={{
@@ -109,7 +109,7 @@ export default function TeamTab({ eventId, isPublished }) {
                     <div
                         onClick={(e) => e.stopPropagation()}
                         style={{
-                            width: '100%', maxWidth: 400, background: 'white',
+                            width: '100%', maxWidth: 400, background: 'var(--surface-elevated)',
                             borderRadius: 16, padding: 28, boxShadow: 'var(--shadow-modal)',
                         }}
                     >
@@ -224,7 +224,7 @@ function AssignManagerModal({ eventId, onDismiss }) {
             <div
                 onClick={(e) => e.stopPropagation()}
                 style={{
-                    width: '100%', maxWidth: 440, background: 'white',
+                    width: '100%', maxWidth: 440, background: 'var(--surface-elevated)',
                     borderRadius: 16, padding: 28, boxShadow: 'var(--shadow-modal)',
                 }}
             >
@@ -252,7 +252,7 @@ function AssignManagerModal({ eventId, onDismiss }) {
                                 width: '100%', padding: '9px 12px', fontSize: 14,
                                 border: '1px solid var(--border)', borderRadius: 8,
                                 fontFamily: 'inherit', boxSizing: 'border-box',
-                                color: 'var(--text-1)', background: 'white',
+                                color: 'var(--text-1)', background: 'var(--surface-elevated)',
                             }}
                         />
                     </div>
@@ -273,7 +273,7 @@ function AssignManagerModal({ eventId, onDismiss }) {
 function ErrorCard({ message, onRetry }) {
     return (
         <div style={{
-            background: 'white', border: '1px solid var(--border)',
+            background: 'var(--surface-elevated)', border: '1px solid var(--border)',
             borderRadius: 12, padding: 40, textAlign: 'center',
         }}>
             <Icons.alert size={28} style={{ color: 'var(--error)' }} />
@@ -295,10 +295,10 @@ function Skeleton() {
     };
     return (
         <div style={{
-            background: 'white', border: '1px solid var(--border)',
+            background: 'var(--surface-elevated)', border: '1px solid var(--border)',
             borderRadius: 12, overflow: 'hidden',
         }}>
-            <div style={{ ...row, height: 60, background: 'white' }} />
+            <div style={{ ...row, height: 60, background: 'var(--surface-elevated)' }} />
             <div style={row} />
             <div style={{ ...row, opacity: 0.6, borderBottom: 0 }} />
         </div>

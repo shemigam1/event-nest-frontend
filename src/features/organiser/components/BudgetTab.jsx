@@ -68,7 +68,7 @@ export default function BudgetTab({ eventId }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
             {/* Summary header */}
             <div style={{
-                background: 'white', border: '1px solid var(--border)',
+                background: 'var(--surface-elevated)', border: '1px solid var(--border)',
                 borderRadius: 12, padding: 24,
             }}>
                 <div style={{
@@ -166,7 +166,7 @@ export default function BudgetTab({ eventId }) {
 function NoBudgetCard({ onCreate }) {
     return (
         <div style={{
-            background: 'white', border: '1px solid var(--border)',
+            background: 'var(--surface-elevated)', border: '1px solid var(--border)',
             borderRadius: 12, padding: 60, textAlign: 'center',
         }}>
             <div style={{
@@ -224,7 +224,7 @@ function LineItemsCard({ title, items, eventId, canPay, canDelete }) {
 
     return (
         <div style={{
-            background: 'white', border: '1px solid var(--border)',
+            background: 'var(--surface-elevated)', border: '1px solid var(--border)',
             borderRadius: 12, overflow: 'hidden',
         }}>
             <div style={{
@@ -375,7 +375,7 @@ function BudgetFormModal({ eventId, existing, onDismiss }) {
                             width: '100%', padding: '9px 12px', fontSize: 14,
                             border: '1px solid var(--border)', borderRadius: 8,
                             resize: 'vertical', fontFamily: 'inherit',
-                            boxSizing: 'border-box', color: 'var(--text-1)', background: 'white',
+                            boxSizing: 'border-box', color: 'var(--text-1)', background: 'var(--surface-elevated)',
                         }}
                     />
                 </Field>
@@ -425,7 +425,7 @@ function AddLineItemModal({ eventId, onDismiss }) {
                         style={{
                             width: '100%', padding: '9px 12px', fontSize: 14,
                             border: '1px solid var(--border)', borderRadius: 8,
-                            background: 'white', color: 'var(--text-1)', fontFamily: 'inherit',
+                            background: 'var(--surface-elevated)', color: 'var(--text-1)', fontFamily: 'inherit',
                         }}
                     >
                         {CATEGORIES.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
@@ -466,7 +466,7 @@ function ModalOverlay({ onClose, children }) {
             <div
                 onClick={(e) => e.stopPropagation()}
                 style={{
-                    width: '100%', maxWidth: 480, background: 'white',
+                    width: '100%', maxWidth: 480, background: 'var(--surface-elevated)',
                     borderRadius: 16, padding: 28, boxShadow: 'var(--shadow-modal)',
                 }}
             >
@@ -495,7 +495,7 @@ function Input(props) {
                 width: '100%', padding: '9px 12px', fontSize: 14,
                 border: '1px solid var(--border)', borderRadius: 8,
                 fontFamily: 'inherit', boxSizing: 'border-box',
-                color: 'var(--text-1)', background: 'white',
+                color: 'var(--text-1)', background: 'var(--surface-elevated)',
             }}
         />
     );
@@ -506,7 +506,7 @@ function Skeleton() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {[200, 300].map((h, i) => (
                 <div key={i} style={{
-                    height: h, background: 'white', border: '1px solid var(--border)',
+                    height: h, background: 'var(--surface-elevated)', border: '1px solid var(--border)',
                     borderRadius: 12, animation: 'mp-flash 1.6s ease-in-out infinite',
                     opacity: 1 - i * 0.3,
                 }} />

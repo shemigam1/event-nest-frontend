@@ -135,7 +135,7 @@ export default function OrganizerContractsPage() {
                         style={{
                             width: '100%', padding: '9px 12px 9px 32px',
                             fontSize: 14, border: '1px solid var(--border)',
-                            borderRadius: 8, background: 'white',
+                            borderRadius: 8, background: 'var(--surface-elevated)',
                             color: 'var(--text-1)', boxSizing: 'border-box',
                             outline: 'none',
                         }}
@@ -164,7 +164,7 @@ export default function OrganizerContractsPage() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                     {[1, 2, 3].map((k) => (
                         <div key={k} style={{
-                            background: 'white', borderRadius: 12, border: '1px solid var(--border)',
+                            background: 'var(--surface-elevated)', borderRadius: 12, border: '1px solid var(--border)',
                             height: 80, animation: 'pulse 1.4s ease-in-out infinite',
                         }} />
                     ))}
@@ -174,7 +174,7 @@ export default function OrganizerContractsPage() {
             {/* Error */}
             {contractsQ.isError && (
                 <div style={{
-                    background: 'white', border: '1px solid var(--border)',
+                    background: 'var(--surface-elevated)', border: '1px solid var(--border)',
                     borderRadius: 12, padding: 40, textAlign: 'center',
                 }}>
                     <Icons.alert size={28} style={{ color: 'var(--error)' }} />
@@ -188,7 +188,7 @@ export default function OrganizerContractsPage() {
             {/* Empty */}
             {!contractsQ.isLoading && !contractsQ.isError && filtered.length === 0 && (
                 <div style={{
-                    background: 'white', border: '1px solid var(--border)',
+                    background: 'var(--surface-elevated)', border: '1px solid var(--border)',
                     borderRadius: 12, padding: 56, textAlign: 'center',
                 }}>
                     <Icons.list size={32} style={{ color: 'var(--text-3)', marginBottom: 12 }} />
@@ -258,7 +258,7 @@ function ContractCard({ contract }) {
     }
 
     return (
-        <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
+        <div style={{ background: 'var(--surface-elevated)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
             {/* header */}
             <div
                 role="button" tabIndex={0}
@@ -521,7 +521,7 @@ function AddMilestoneModal({ contractId, onDismiss }) {
                     <Field label="Description">
                         <textarea value={form.description} onChange={set('description')} rows={3}
                             placeholder="What the vendor needs to deliver…"
-                            style={{ width: '100%', padding: '9px 12px', fontSize: 14, border: '1px solid var(--border)', borderRadius: 8, resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box', color: 'var(--text-1)', background: 'white' }} />
+                            style={{ width: '100%', padding: '9px 12px', fontSize: 14, border: '1px solid var(--border)', borderRadius: 8, resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box', color: 'var(--text-1)', background: 'var(--surface-elevated)' }} />
                     </Field>
                     {err && <p style={{ fontSize: 13, color: 'var(--error)', margin: 0 }}>{err}</p>}
                     <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 4 }}>
@@ -553,7 +553,7 @@ function DisputeReasonModal({ milestone, onSubmit, onDismiss, busy }) {
                     <Field label="Reason *">
                         <textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={4} required
                             placeholder="Describe why you are disputing this milestone (min. 10 characters)…"
-                            style={{ width: '100%', padding: '9px 12px', fontSize: 14, border: '1px solid var(--border)', borderRadius: 8, resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box', color: 'var(--text-1)', background: 'white' }} />
+                            style={{ width: '100%', padding: '9px 12px', fontSize: 14, border: '1px solid var(--border)', borderRadius: 8, resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box', color: 'var(--text-1)', background: 'var(--surface-elevated)' }} />
                     </Field>
                     <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 4 }}>
                         <Button type="button" variant="secondary" size="md" onClick={onDismiss}>Cancel</Button>

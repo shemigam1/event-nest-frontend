@@ -528,7 +528,7 @@ const cardHeaderStyle = {
 };
 
 const emptyCardStyle = {
-    background: 'white',
+    background: 'var(--surface-elevated)',
     border: '1px solid var(--border)',
     borderRadius: 12,
     padding: 56,

@@ -54,9 +54,13 @@ export const vendorsApi = baseApi.injectEndpoints({
 
         // ── Caller's own vendor profile (self-service) ───────────────────────
         getMyVendorProfile: builder.query({
-            query: () => '/vendor/profile',
+            queryFn: async (_, _api, _extra, baseQuery) => {
+                const result = await baseQuery('/vendor/profile');
+                if (result.error?.status === 404) return { data: null };
+                if (result.error) return { error: result.error };
+                return { data: result.data?.data ?? result.data };
+            },
             providesTags: ['VendorVerification'],
-            transformResponse: (r) => r?.data ?? r,
         }),
 
         /** Self-register as a vendor. Status starts at PENDING. */

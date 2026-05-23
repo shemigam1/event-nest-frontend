@@ -270,7 +270,7 @@ export default function VendorDashboardPage() {
                             />
                         ) : (
                             <div style={{
-                                background: 'white',
+                                background: 'var(--surface-elevated)',
                                 border: '1px solid var(--border)',
                                 borderRadius: 12,
                                 overflow: 'hidden',
@@ -316,7 +316,7 @@ export default function VendorDashboardPage() {
                                 <ListSkeleton rows={3} />
                             ) : recent.length === 0 ? (
                                 <div style={{
-                                    background: 'white',
+                                    background: 'var(--surface-elevated)',
                                     border: '1px solid var(--border)',
                                     borderRadius: 12,
                                     padding: 18,
@@ -328,7 +328,7 @@ export default function VendorDashboardPage() {
                                 </div>
                             ) : (
                                 <div style={{
-                                    background: 'white',
+                                    background: 'var(--surface-elevated)',
                                     border: '1px solid var(--border)',
                                     borderRadius: 12,
                                     overflow: 'hidden',
@@ -348,7 +348,7 @@ export default function VendorDashboardPage() {
 
                         {/* Quick actions */}
                         <div style={{
-                            background: 'white',
+                            background: 'var(--surface-elevated)',
                             border: '1px solid var(--border)',
                             borderRadius: 12,
                             padding: 16,
@@ -593,7 +593,7 @@ function ActivityRow({ application: a, nowMs, isLast, onView }) {
                 width: '100%',
                 textAlign: 'left',
                 padding: '12px 16px',
-                background: 'white',
+                background: 'var(--surface-elevated)',
                 border: 0,
                 borderBottom: isLast ? 0 : '1px solid var(--border)',
                 cursor: 'pointer',
@@ -675,7 +675,7 @@ function QuickLink({ icon, label, onClick }) {
 function Tile({ label, value, valueNode, sub, icon, accent }) {
     return (
         <div style={{
-            background: 'white',
+            background: 'var(--surface-elevated)',
             border: '1px solid var(--border)',
             borderRadius: 12,
             padding: 18,
@@ -709,7 +709,7 @@ function Tile({ label, value, valueNode, sub, icon, accent }) {
 function EmptyCard({ icon, title, body, ctaLabel, onCta }) {
     return (
         <div style={{
-            background: 'white',
+            background: 'var(--surface-elevated)',
             border: '1px solid var(--border)',
             borderRadius: 12,
             padding: 40,
@@ -744,7 +744,7 @@ function EmptyCard({ icon, title, body, ctaLabel, onCta }) {
 function ListSkeleton({ rows = 3 }) {
     const row = (op = 1) => ({
         height: 76,
-        background: 'white',
+        background: 'var(--surface-elevated)',
         border: '1px solid var(--border)',
         borderRadius: 12,
         marginBottom: 10,
