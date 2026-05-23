@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router';
 import { useForgotPasswordMutation } from '../authApi';
 import AuthLayout from '@/components/ui/AuthLayout';
@@ -6,11 +6,21 @@ import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
 import { Icons } from '@/components/ui/Icon';
 
+const COOLDOWN_SECS = 60;
+
 export default function ForgotPasswordPage() {
     const [email, setEmail] = useState('');
     const [errorMessage, setErrorMessage] = useState('');
     const [successMessage, setSuccessMessage] = useState('');
+    const [cooldown, setCooldown] = useState(0);
     const [forgotPassword, { isLoading }] = useForgotPasswordMutation();
+
+    // Tick the cooldown down by 1 every second until it reaches 0.
+    useEffect(() => {
+        if (cooldown <= 0) return;
+        const id = setTimeout(() => setCooldown((c) => c - 1), 1000);
+        return () => clearTimeout(id);
+    }, [cooldown]);
 
     const isFormValid = email.trim() && email.includes('@');
 
@@ -21,11 +31,12 @@ export default function ForgotPasswordPage() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!isFormValid) return;
+        if (!isFormValid || cooldown > 0) return;
         try {
             await forgotPassword({ email: email.trim() }).unwrap();
             setSuccessMessage('Check your email for a password reset link. The link expires in 1 hour.');
             setEmail('');
+            setCooldown(COOLDOWN_SECS);
         } catch (err) {
             setErrorMessage(err?.data?.message || 'Could not send reset link. Please try again.');
         }
@@ -55,12 +66,15 @@ export default function ForgotPasswordPage() {
                         <Button
                             variant="secondary"
                             size="lg"
+                            disabled={cooldown > 0}
                             onClick={() => {
                                 setSuccessMessage('');
                                 setEmail('');
                             }}
                         >
-                            Send another link
+                            {cooldown > 0
+                                ? `Resend in ${cooldown}s`
+                                : 'Send another link'}
                         </Button>
                         <div style={{ textAlign: 'center', fontSize: 14, color: 'var(--text-2)' }}>
                             <Link to="/login" style={{ color: 'var(--mp-blue)', fontWeight: 600, textDecoration: 'none' }}>
@@ -110,10 +124,10 @@ export default function ForgotPasswordPage() {
                     type="submit"
                     size="lg"
                     variant="primary"
-                    disabled={isLoading || !isFormValid}
+                    disabled={isLoading || !isFormValid || cooldown > 0}
                     style={{ marginTop: 4 }}
                 >
-                    {isLoading ? 'Sending…' : 'Send reset link'}
+                    {isLoading ? 'Sending…' : cooldown > 0 ? `Resend in ${cooldown}s` : 'Send reset link'}
                 </Button>
 
                 <div style={{ textAlign: 'center', fontSize: 14, color: 'var(--text-2)', marginTop: 4 }}>

@@ -16,6 +16,7 @@ import TermsPage from '../features/legal/pages/TermsPage';
 import PrivacyPage from '../features/legal/pages/PrivacyPage';
 import BookingPage from '../features/bookings/pages/BookingPage';
 import TicketsPage from '../features/tickets/pages/TicketsPage';
+import ClaimGiftPage from '../features/tickets/pages/ClaimGiftPage';
 import MyEventsPage from '../features/events/pages/MyEventsPage';
 import CreateEventPage from '../features/events/pages/CreateEventPage';
 import EditEventPage from '../features/events/pages/EditEventPage';
@@ -75,6 +76,9 @@ const router = createBrowserRouter([
             // Vendor invite landing. Public because the recipient may not yet
             // have an EventNest account — completing the invite creates one.
             { path: '/vendor/invite/:token', element: <VendorInviteAcceptPage /> },
+            // Gift claim landing. Public so recipients can preview before signing up.
+            // After login/register they are redirected back here to complete the claim.
+            { path: '/tickets/claim/:token', element: <ClaimGiftPage /> },
 
             {
                 element: <PrivateRoute />,

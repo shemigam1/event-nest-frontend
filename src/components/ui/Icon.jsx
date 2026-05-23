@@ -60,6 +60,7 @@ export const Icons = {
   upload:    p => <Icon {...p} d="M12 20V8m0 0l-4 4m4-4l4 4M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2" />,
   cloud:     p => <Icon {...p} d="M7 18a5 5 0 010-10 7 7 0 0113.4 2A4 4 0 0119 18H7zM12 12v6m0-6l-2 2m2-2l2 2" />,
   link:      p => <Icon {...p} d="M10 14a5 5 0 007 0l3-3a5 5 0 00-7-7l-1 1M14 10a5 5 0 00-7 0l-3 3a5 5 0 007 7l1-1" />,
+  gift:      p => <Icon {...p} d={<><rect x="3" y="9" width="18" height="13" rx="1" /><path d="M3 9h18M12 9V22M8 9a3 3 0 010-6c2 0 4 3 4 6M16 9a3 3 0 000-6c-2 0-4 3-4 6" /></>} />,
 };
 
 export default Icon;

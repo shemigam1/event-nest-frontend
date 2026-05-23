@@ -7,6 +7,8 @@ import {
     useGetOutgoingTransfersQuery,
     useAcceptTransferMutation,
     useDeclineTransferMutation,
+    useGetMyPendingGiftsQuery,
+    useClaimGiftByIdMutation,
 } from '../ticketsApi';
 import { formatEventDate } from '@/utils/dateFormat';
 import Button from '@/components/ui/Button';
@@ -19,6 +21,7 @@ import { downloadTicketPdf } from '../pdf';
 
 const TABS = [
     { key: 'tickets',   label: 'My Tickets' },
+    { key: 'gifts',     label: 'Gifts' },
     { key: 'transfer',  label: 'Transfer a Ticket' },
     { key: 'transfers', label: 'Transfers' },
 ];
@@ -26,8 +29,10 @@ const TABS = [
 export default function TicketsPage() {
     const [tab, setTab] = useState('tickets');
     const [activeQr, setActiveQr] = useState(null);
-    const incomingQuery = useGetIncomingTransfersQuery();
-    const incomingCount = incomingQuery.data?.length ?? 0;
+    const incomingQuery  = useGetIncomingTransfersQuery();
+    const pendingGiftsQuery = useGetMyPendingGiftsQuery();
+    const incomingCount  = incomingQuery.data?.length ?? 0;
+    const giftsCount     = pendingGiftsQuery.data?.length ?? 0;
 
     return (
         <div style={{ background: 'var(--surface-subtle)', minHeight: '100vh' }}>
@@ -77,11 +82,21 @@ export default function TicketsPage() {
                                     {incomingCount}
                                 </span>
                             )}
+                            {t.key === 'gifts' && giftsCount > 0 && (
+                                <span style={{
+                                    fontSize: 11, fontWeight: 700,
+                                    background: '#E35B00', color: 'white',
+                                    borderRadius: 99, padding: '1px 6px', lineHeight: 1.6,
+                                }}>
+                                    {giftsCount}
+                                </span>
+                            )}
                         </button>
                     ))}
                 </div>
 
                 {tab === 'tickets'   && <MyTicketsTab onShowQr={setActiveQr} />}
+                {tab === 'gifts'     && <GiftsTab />}
                 {tab === 'transfer'  && <TransferTab />}
                 {tab === 'transfers' && <TransfersTab />}
             </div>
@@ -114,6 +129,141 @@ function MyTicketsTab({ onShowQr }) {
                     onShowQr={onShowQr}
                 />
             ))}
+        </div>
+    );
+}
+
+/* ── Gifts tab ──────────────────────────────────────────── */
+
+function GiftsTab() {
+    const navigate = useNavigate();
+    const giftsQuery = useGetMyPendingGiftsQuery();
+    const [claimGift, { isLoading: isClaiming }] = useClaimGiftByIdMutation();
+    const [results, setResults] = useState({});
+    const [claimingId, setClaimingId] = useState(null);
+
+    async function handleClaim(ticketId) {
+        setClaimingId(ticketId);
+        try {
+            await claimGift(ticketId).unwrap();
+            setResults((r) => ({ ...r, [ticketId]: 'claimed' }));
+        } catch (err) {
+            setResults((r) => ({ ...r, [ticketId]: err?.data?.message ?? 'Something went wrong. Try again.' }));
+        } finally {
+            setClaimingId(null);
+        }
+    }
+
+    if (giftsQuery.isLoading) return <SkeletonList count={2} />;
+    if (giftsQuery.isError)   return <ErrorState onRetry={giftsQuery.refetch} />;
+
+    const gifts = giftsQuery.data ?? [];
+    const hasAny = gifts.length > 0 || Object.values(results).some((v) => v === 'claimed');
+
+    if (!hasAny) {
+        return (
+            <div style={{
+                background: 'var(--surface-elevated)', border: '1px solid var(--border)',
+                borderRadius: 12, padding: 48, textAlign: 'center',
+            }}>
+                <Icons.gift size={32} style={{ color: 'var(--text-3)' }} />
+                <p style={{ margin: '12px 0 4px', fontWeight: 600, fontSize: 16, color: 'var(--text-1)' }}>
+                    No pending gifts
+                </p>
+                <p style={{ margin: 0, fontSize: 14, color: 'var(--text-2)' }}>
+                    When someone gifts you a ticket, it will appear here for you to claim.
+                </p>
+            </div>
+        );
+    }
+
+    return (
+        <div style={{ maxWidth: 640, display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <p style={{ margin: '0 0 4px', fontSize: 13, color: 'var(--text-2)' }}>
+                These tickets were gifted to your email address. Claim them to add them to your account.
+            </p>
+
+            {gifts.map((gift) => {
+                const outcome = results[gift.id];
+                const busy    = claimingId === gift.id;
+
+                if (outcome === 'claimed') {
+                    return (
+                        <div key={gift.id} style={{
+                            background: '#E6F4EA', border: '1px solid #A8D5B5',
+                            borderRadius: 12, padding: '14px 18px',
+                            display: 'flex', gap: 10, alignItems: 'center',
+                        }}>
+                            <Icons.check size={16} style={{ color: '#0F9D58', flexShrink: 0 }} />
+                            <span style={{ fontSize: 13, color: '#0F7B3E', fontWeight: 500 }}>
+                                Ticket for <strong>{gift.eventTitle}</strong> added to your account.{' '}
+                                <button
+                                    onClick={() => navigate('/tickets')}
+                                    style={{ background: 'none', border: 0, padding: 0, cursor: 'pointer', fontSize: 13, color: '#0F7B3E', fontWeight: 600, textDecoration: 'underline', fontFamily: 'inherit' }}
+                                >
+                                    View tickets
+                                </button>
+                            </span>
+                        </div>
+                    );
+                }
+
+                return (
+                    <div key={gift.id} style={{
+                        background: 'var(--surface-elevated)', border: '1px solid var(--border)',
+                        borderRadius: 12, overflow: 'hidden', boxShadow: 'var(--shadow-card)',
+                    }}>
+                        <div style={{ padding: '16px 18px', display: 'flex', gap: 14, alignItems: 'flex-start' }}>
+                            <div style={{
+                                width: 40, height: 40, borderRadius: 8,
+                                background: '#FFF3E0', display: 'flex',
+                                alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                            }}>
+                                <Icons.gift size={18} style={{ color: '#E35B00' }} />
+                            </div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-1)' }}>
+                                    {gift.eventTitle}
+                                </div>
+                                <div style={{ fontSize: 12, color: 'var(--text-2)', marginTop: 3 }}>
+                                    {gift.tierName}
+                                    {gift.eventStartTime && ` · ${formatEventDate(gift.eventStartTime)}`}
+                                    {gift.eventVenue && ` · ${gift.eventVenue}`}
+                                </div>
+                                <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 5 }}>
+                                    Pending claim
+                                </div>
+                            </div>
+                            <span style={{
+                                fontSize: 11, fontWeight: 700, letterSpacing: '0.05em',
+                                textTransform: 'uppercase', flexShrink: 0,
+                                color: '#E35B00', background: '#FFF3E0',
+                                padding: '3px 10px', borderRadius: 99,
+                            }}>
+                                Gift
+                            </span>
+                        </div>
+
+                        {typeof outcome === 'string' && outcome !== 'claimed' && (
+                            <div style={{ margin: '0 18px 10px', background: '#FBE9E9', border: '1px solid #FBB6B6', borderRadius: 8, padding: '8px 12px', fontSize: 12, color: '#D62828', display: 'flex', gap: 6, alignItems: 'center' }}>
+                                <Icons.alert size={13} style={{ flexShrink: 0 }} /> {outcome}
+                            </div>
+                        )}
+
+                        <div style={{ padding: '12px 18px', borderTop: '1px solid var(--border)' }}>
+                            <Button
+                                variant="primary"
+                                size="sm"
+                                onClick={() => handleClaim(gift.id)}
+                                disabled={busy || isClaiming}
+                                style={{ background: '#E35B00', borderColor: '#E35B00' }}
+                            >
+                                {busy ? 'Claiming…' : 'Claim ticket'}
+                            </Button>
+                        </div>
+                    </div>
+                );
+            })}
         </div>
     );
 }
