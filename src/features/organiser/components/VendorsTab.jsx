@@ -533,7 +533,7 @@ function ApplicationsPane({ eventId }) {
                                 onAccept={() => handleAccept(a)}
                                 onReject={() => setPendingReject(a)}
                                 onRate={() => setPendingRate(a)}
-                                onViewProfile={() => navigate(`/vendors/${a.vendorProfileId}`)}
+                                onViewProfile={() => navigate(`/vendors/${a.vendorProfileId}`, { state: { eventId } })}
                                 busy={
                                     (acceptState.isLoading && acceptState.originalArgs?.applicationId === a.id)
                                     || (rejectState.isLoading && pendingReject?.id === a.id)

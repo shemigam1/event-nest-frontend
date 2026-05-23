@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
-import { useParams, useNavigate } from 'react-router';
+import { useParams, useNavigate, useLocation } from 'react-router';
 import { useSelector } from 'react-redux';
-import { useGetVendorProfileQuery } from '@/features/organiser/vendorsApi';
+import { useGetVendorProfileQuery, useGetEventVendorProfileQuery } from '@/features/organiser/vendorsApi';
 import { useGetConversationsQuery } from '@/features/messages/messagesApi';
 import { selectIsAuthenticated } from '@/features/auth/authSlice';
 import TopNav from '@/components/ui/TopNav';
@@ -100,6 +100,7 @@ function StarRow({ rating, size = 14 }) {
 export default function VendorDetailPage() {
     const { id } = useParams();
     const navigate = useNavigate();
+    const location = useLocation();
     const [tab, setTab] = useState('overview');
 
     const isAuthenticated = useSelector(selectIsAuthenticated);
@@ -110,7 +111,14 @@ export default function VendorDetailPage() {
         navigate(`/messages?c=${existingConvId}`);
     };
 
-    const profile = useGetVendorProfileQuery(id);
+    // When navigated from the organiser's event applications pane, location.state
+    // carries the eventId so we can call the authenticated event-scoped endpoint
+    // which serves non-VERIFIED applicant vendors. Otherwise fall back to the
+    // public marketplace endpoint (VERIFIED only).
+    const eventId = location.state?.eventId ?? null;
+    const publicProfile  = useGetVendorProfileQuery(id, { skip: !!eventId });
+    const eventProfile   = useGetEventVendorProfileQuery({ eventId, vendorId: id }, { skip: !eventId });
+    const profile = eventId ? eventProfile : publicProfile;
 
     if (profile.isLoading) return <Shell><PageSkeleton /></Shell>;
 

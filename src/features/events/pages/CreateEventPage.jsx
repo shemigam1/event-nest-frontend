@@ -1467,11 +1467,9 @@ export default function CreateEventPage() {
                 await createTier({ eventId: event.id, ...tierPayload }).unwrap();
             }
 
-            // ── 4. Optionally publish. Admin approval has been retired — the
-            //       create endpoint already returns a PUBLISHED event. We keep
-            //       calling submitEvent for back-compat (it's a no-op on a
-            //       PUBLISHED event) and flip the submitted flag so the success
-            //       screen says "published" instead of "draft saved".
+            // ── 4. Optionally publish. The create endpoint returns a DRAFT event.
+            //       Calling submitEvent transitions DRAFT → PUBLISHED on the backend.
+            //       Skipping it (Save as draft path) leaves the event as DRAFT.
             if (shouldSubmit) {
                 await submitEvent(event.id).unwrap();
                 setSubmitted(true);

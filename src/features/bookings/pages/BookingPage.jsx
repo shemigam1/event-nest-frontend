@@ -309,7 +309,7 @@ function TierStep({ eventTitle, tiers, tierId, onSelect, onContinue }) {
                                 alignItems: 'center',
                                 padding: 16,
                                 textAlign: 'left',
-                                background: selected ? 'var(--mp-blue-50)' : 'white',
+                                background: selected ? 'var(--mp-blue-50)' : 'var(--surface-elevated)',
                                 border: `1px solid ${selected ? 'var(--mp-blue)' : 'var(--border)'}`,
                                 borderRadius: 12,
                                 opacity: isSoldOut ? 0.5 : 1,

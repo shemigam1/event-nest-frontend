@@ -50,6 +50,41 @@ export const ticketsApi = baseApi.injectEndpoints({
             invalidatesTags: ['Transfer'],
             transformResponse: (r) => r?.data ?? r,
         }),
+
+        // ── Gift endpoints ────────────────────────────────────────────────────
+
+        /** Public — fetches gift context before login. No auth token required. */
+        previewGift: builder.query({
+            query: (token) => `/tickets/claim/${token}/preview`,
+            transformResponse: (r) => r?.data ?? r,
+        }),
+
+        /** Claim via the raw token from the email link (requires auth). */
+        claimGiftByToken: builder.mutation({
+            query: (token) => ({
+                url: `/tickets/claim/${token}`,
+                method: 'POST',
+            }),
+            invalidatesTags: ['Ticket', 'Gift'],
+            transformResponse: (r) => r?.data ?? r,
+        }),
+
+        /** All PENDING_CLAIM gifts waiting for the authenticated user. */
+        getMyPendingGifts: builder.query({
+            query: () => '/me/pending-gifts',
+            providesTags: ['Gift'],
+            transformResponse: (r) => r?.data ?? [],
+        }),
+
+        /** Claim a pending gift by ticket ID — no email link needed. */
+        claimGiftById: builder.mutation({
+            query: (ticketId) => ({
+                url: `/me/gifts/${ticketId}/claim`,
+                method: 'POST',
+            }),
+            invalidatesTags: ['Ticket', 'Gift'],
+            transformResponse: (r) => r?.data ?? r,
+        }),
     }),
 });
 
@@ -60,4 +95,8 @@ export const {
     useGetOutgoingTransfersQuery,
     useAcceptTransferMutation,
     useDeclineTransferMutation,
+    usePreviewGiftQuery,
+    useClaimGiftByTokenMutation,
+    useGetMyPendingGiftsQuery,
+    useClaimGiftByIdMutation,
 } = ticketsApi;

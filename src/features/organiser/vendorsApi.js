@@ -103,6 +103,15 @@ export const vendorsApi = baseApi.injectEndpoints({
             transformResponse: (r) => r?.data ?? r,
         }),
 
+        // ── Event-scoped vendor profile (organiser context) ───────────────────
+        // Calls the authenticated endpoint so non-VERIFIED applicant vendors are
+        // visible to the organiser who received their application.
+        getEventVendorProfile: builder.query({
+            query: ({ eventId, vendorId }) => `/events/${eventId}/vendors/${vendorId}`,
+            providesTags: (result, error, { vendorId }) => [{ type: 'Vendor', id: vendorId }],
+            transformResponse: (r) => r?.data ?? r,
+        }),
+
         // ── Vendor APPLICATION flow (vendor-initiated) ───────────────────────
         getEventVendorApplications: builder.query({
             query: ({ eventId, status } = {}) => ({
@@ -177,6 +186,7 @@ export const {
     // Marketplace
     useGetVendorsQuery,
     useGetVendorProfileQuery,
+    useGetEventVendorProfileQuery,
     // Own profile + verification (new names)
     useGetMyVendorProfileQuery,
     useCreateMyVendorProfileMutation,

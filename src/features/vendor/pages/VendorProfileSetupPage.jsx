@@ -552,6 +552,13 @@ function ProfileForm({ initial, onCancel }) {
 
     const isSuspended = initial?.status === 'SUSPENDED';
     const isVerified  = initial?.status === 'VERIFIED';
+    const isPending   = initial?.status === 'PENDING';
+
+    // BVN and business registration number are write-once: once the vendor has
+    // saved either field the backend masks the value and we lock the input so
+    // the masked string is never mistakenly sent back as the raw value.
+    const bvnLocked = !isCreate && !!initial?.bvn;
+    const brnLocked = !isCreate && !!initial?.businessRegistrationNumber;
 
     const busy = createState.isLoading || updateState.isLoading;
 
@@ -569,7 +576,7 @@ function ProfileForm({ initial, onCancel }) {
             const n = Number(form.baseRate);
             if (!Number.isFinite(n) || n <= 0) return 'Base rate must be a positive number, or left blank.';
         }
-        if (form.bvn && !/^\d{11}$/.test(form.bvn.trim())) {
+        if (!bvnLocked && form.bvn && !/^\d{11}$/.test(form.bvn.trim())) {
             return 'BVN must be exactly 11 digits.';
         }
         if (form.businessEmail && !/^\S+@\S+\.\S+$/.test(form.businessEmail.trim())) {
@@ -601,9 +608,10 @@ function ProfileForm({ initial, onCancel }) {
             instagramHandle: form.instagramHandle.trim(),
             twitterHandle:   form.twitterHandle.trim(),
             facebookHandle:  form.facebookHandle.trim(),
-            // KYC
-            bvn:                        form.bvn.trim(),
-            businessRegistrationNumber: form.businessRegistrationNumber.trim(),
+            // KYC — omit locked fields so the masked display value is never
+            // written back to the backend as if it were the real secret.
+            ...(bvnLocked ? {} : { bvn: form.bvn.trim() }),
+            ...(brnLocked ? {} : { businessRegistrationNumber: form.businessRegistrationNumber.trim() }),
         };
 
         try {
@@ -792,24 +800,28 @@ function ProfileForm({ initial, onCancel }) {
                 subtitle="Required for verification. Private — only you and EventNest admins ever see these."
             >
                 <Input
-                    icon={<Icons.shield size={16} />}
+                    icon={bvnLocked ? <Icons.lock size={16} /> : <Icons.shield size={16} />}
                     label="Bank Verification Number (BVN)"
                     value={form.bvn}
                     onChange={(e) => patch('bvn', e.target.value.replace(/\D/g, '').slice(0, 11))}
-                    disabled={isSuspended}
+                    disabled={isSuspended || bvnLocked}
                     placeholder="11-digit BVN"
                     inputMode="numeric"
                     maxLength={11}
-                    hint="Your BVN is never shown on your public profile or shared with organisers."
+                    hint={bvnLocked
+                        ? 'BVN is locked after first submission. Contact support if you need to update it.'
+                        : 'Your BVN is never shown on your public profile or shared with organisers.'}
                 />
                 <Input
-                    icon={<Icons.building size={16} />}
+                    icon={brnLocked ? <Icons.lock size={16} /> : <Icons.building size={16} />}
                     label="Business registration number"
                     value={form.businessRegistrationNumber}
                     onChange={(e) => patch('businessRegistrationNumber', e.target.value)}
-                    disabled={isSuspended}
+                    disabled={isSuspended || brnLocked}
                     placeholder="e.g. RC-1234567"
-                    hint="Your CAC / RC number. Helps EventNest verify your business."
+                    hint={brnLocked
+                        ? 'Registration number is locked after first submission. Contact support if you need to update it.'
+                        : 'Your CAC / RC number. Helps EventNest verify your business.'}
                 />
             </SectionCard>
 
@@ -871,10 +883,13 @@ function ProfileForm({ initial, onCancel }) {
                             variant="secondary"
                             size="md"
                             onClick={handleSubmitForVerification}
-                            disabled={verifyState.isLoading || busy}
+                            disabled={verifyState.isLoading || busy || isPending}
                             iconLeft={<Icons.shield size={14} />}
+                            title={isPending ? 'Your submission is under admin review' : undefined}
                         >
-                            {verifyState.isLoading ? 'Submitting…' : 'Submit for verification'}
+                            {verifyState.isLoading ? 'Submitting…'
+                                : isPending ? 'Pending review…'
+                                : 'Submit for verification'}
                         </Button>
                     )}
                     <Button
