@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router";
+import { useNavigate, Link, useLocation } from "react-router";
 import { useDispatch } from "react-redux";
 import { useRegisterMutation } from "../authApi";
 import { setUser } from "../authSlice";
@@ -10,7 +10,10 @@ import { Icons } from "@/components/ui/Icon";
 
 export default function RegisterPage() {
     const navigate = useNavigate();
+    const location = useLocation();
     const dispatch = useDispatch();
+    // Preserve the intended destination so login can redirect there after auth.
+    const from = location.state?.from ?? null;
     const [formData, setFormData] = useState({ firstName: "", lastName: "", email: "", password: "" });
     const [acceptedTerms, setAcceptedTerms] = useState(false);
     const [showTermsError, setShowTermsError] = useState(false);
@@ -51,7 +54,8 @@ export default function RegisterPage() {
             // now; we can persist a server-side record later if needed).
             const created = await register(formData).unwrap();
             dispatch(setUser(created));
-            navigate("/login");
+            // Pass `from` forward so LoginPage can redirect to the right place
+            navigate("/login", { state: from ? { from } : undefined });
         } catch (err) {
             setErrorMessage(err?.data?.message || "Registration failed. Please try again.");
         }

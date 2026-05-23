@@ -83,10 +83,36 @@ function Skeleton() {
     );
 }
 
+/* ── Paginator ───────────────────────────────────── */
+function Paginator({ page, pageCount, onPrev, onNext }) {
+    return (
+        <div style={{
+            padding: '12px 20px',
+            borderTop: '1px solid var(--border)',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+        }}>
+            <Button size="sm" variant="ghost" onClick={onPrev} disabled={page === 0}>
+                ← Prev
+            </Button>
+            <span style={{ fontSize: 12, color: 'var(--text-3)' }}>
+                Page {page + 1} of {pageCount}
+            </span>
+            <Button size="sm" variant="ghost" onClick={onNext} disabled={page >= pageCount - 1}>
+                Next →
+            </Button>
+        </div>
+    );
+}
+
 /* ── Page ────────────────────────────────────────── */
 export default function ManageUsersPage() {
     const navigate = useNavigate();
-    const { data, isLoading, isError, refetch } = useGetAdminUsersQuery();
+    const [page, setPage] = useState(0);
+    const pageSize = 20;
+
+    const { data, isLoading, isError, refetch } = useGetAdminUsersQuery({ page, size: pageSize });
     const [enableUser, enableState] = useEnableUserMutation();
     const [disableUser, disableState] = useDisableUserMutation();
 
@@ -94,6 +120,8 @@ export default function ManageUsersPage() {
     const [actionError, setActionError] = useState('');
 
     const users = data?.content ?? [];
+    const total = data?.totalElements ?? 0;
+    const pageCount = Math.max(1, data?.totalPages ?? Math.ceil(total / pageSize));
     const busy = enableState.isLoading || disableState.isLoading;
 
     async function handleConfirm() {
@@ -139,7 +167,7 @@ export default function ManageUsersPage() {
                     <div style={{ background: 'var(--surface-elevated)', border: '1px solid var(--border)', borderRadius: 12, boxShadow: 'var(--shadow-card)', overflow: 'hidden' }}>
                         <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <span style={{ fontWeight: 600, color: 'var(--text-1)', fontSize: 14 }}>Platform users</span>
-                            <span style={{ fontSize: 13, color: 'var(--text-3)' }}>{data?.totalElements ?? users.length} users</span>
+                            <span style={{ fontSize: 13, color: 'var(--text-3)' }}>{total} users</span>
                         </div>
 
                         {users.length === 0 ? (
@@ -216,6 +244,14 @@ export default function ManageUsersPage() {
                                 </div>
                             );
                         })}
+                        {pageCount > 1 && (
+                            <Paginator
+                                page={page}
+                                pageCount={pageCount}
+                                onPrev={() => setPage((p) => Math.max(0, p - 1))}
+                                onNext={() => setPage((p) => Math.min(pageCount - 1, p + 1))}
+                            />
+                        )}
                     </div>
                 )}
             </div>

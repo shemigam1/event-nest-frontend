@@ -21,9 +21,16 @@ export const adminApi = baseApi.injectEndpoints({
 
         /* Users */
         getAdminUsers: builder.query({
-            query: () => '/admin/users',
+            query: ({ page = 0, size = 20 } = {}) =>
+                `/admin/users?page=${page}&size=${size}`,
             providesTags: ['User'],
-            transformResponse: (r) => r.data ?? r,
+            transformResponse: (r) => {
+                const d = r.data ?? r;
+                const content       = Array.isArray(d) ? d : (d?.content ?? []);
+                const totalElements = d?.totalElements ?? content.length;
+                const totalPages    = d?.totalPages    ?? (totalElements > 0 ? Math.ceil(totalElements / 20) : 1);
+                return { content, totalElements, totalPages };
+            },
         }),
         updateUserStatus: builder.mutation({
             query: ({ id, enabled }) => ({
