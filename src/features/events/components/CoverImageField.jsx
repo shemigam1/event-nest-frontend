@@ -132,7 +132,7 @@ export default function CoverImageField({
             {previewUrl ? (
                 <div style={{
                     border: '1px solid var(--border)', borderRadius: 12, padding: 12,
-                    background: 'white',
+                    background: 'var(--surface-elevated)',
                 }}>
                     <div style={{
                         position: 'relative',
@@ -194,7 +194,7 @@ export default function CoverImageField({
                         alignItems: 'center', justifyContent: 'center',
                         gap: 8,
                         width: '100%', minHeight: 160, padding: 24,
-                        background: 'white',
+                        background: 'var(--surface-elevated)',
                         border: '2px dashed var(--border)', borderRadius: 12,
                         color: 'var(--text-2)', fontSize: 14,
                         cursor: disabled ? 'not-allowed' : 'pointer',

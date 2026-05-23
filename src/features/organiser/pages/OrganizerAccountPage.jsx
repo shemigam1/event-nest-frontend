@@ -103,7 +103,7 @@ export default function OrganizerAccountPage() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                     {[1, 2].map(k => (
                         <div key={k} style={{
-                            background: 'white', borderRadius: 12, border: '1px solid var(--border)',
+                            background: 'var(--surface-elevated)', borderRadius: 12, border: '1px solid var(--border)',
                             height: 100, animation: 'pulse 1.4s ease-in-out infinite',
                         }} />
                     ))}
@@ -112,7 +112,7 @@ export default function OrganizerAccountPage() {
 
             {contractsQ.isError && (
                 <div style={{
-                    background: 'white', border: '1px solid var(--border)',
+                    background: 'var(--surface-elevated)', border: '1px solid var(--border)',
                     borderRadius: 12, padding: 40, textAlign: 'center',
                 }}>
                     <Icons.alert size={28} style={{ color: 'var(--error)' }} />
@@ -217,7 +217,7 @@ function FundingCard({ contract }) {
 
     return (
         <div style={{
-            background: 'white', border: '1px solid #F5D99B',
+            background: 'var(--surface-elevated)', border: '1px solid #F5D99B',
             borderRadius: 12, padding: '18px 20px',
             display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap',
         }}>
@@ -444,7 +444,7 @@ function EscrowCard({ contract }) {
     const [expanded, setExpanded] = useState(false);
 
     return (
-        <div style={{ background: 'white', border: '1px solid #B7DFC5', borderRadius: 12, overflow: 'hidden' }}>
+        <div style={{ background: 'var(--surface-elevated)', border: '1px solid #B7DFC5', borderRadius: 12, overflow: 'hidden' }}>
             <div
                 role="button" tabIndex={0}
                 onClick={() => setExpanded(x => !x)}
@@ -636,7 +636,7 @@ function AddMilestoneModal({ contractId, onDismiss }) {
                     <Field label="Description">
                         <textarea value={form.description} onChange={set('description')} rows={3}
                             placeholder="What the vendor needs to deliver…"
-                            style={{ width: '100%', padding: '9px 12px', fontSize: 14, border: '1px solid var(--border)', borderRadius: 8, resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box', color: 'var(--text-1)', background: 'white' }} />
+                            style={{ width: '100%', padding: '9px 12px', fontSize: 14, border: '1px solid var(--border)', borderRadius: 8, resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box', color: 'var(--text-1)', background: 'var(--surface-elevated)' }} />
                     </Field>
                     {err && <p style={{ fontSize: 13, color: 'var(--error)', margin: 0 }}>{err}</p>}
                     <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 4 }}>
@@ -668,7 +668,7 @@ function DisputeReasonModal({ milestone, onSubmit, onDismiss, busy }) {
                     <Field label="Reason *">
                         <textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={4} required
                             placeholder="Describe why you are disputing this milestone (min. 10 characters)…"
-                            style={{ width: '100%', padding: '9px 12px', fontSize: 14, border: '1px solid var(--border)', borderRadius: 8, resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box', color: 'var(--text-1)', background: 'white' }} />
+                            style={{ width: '100%', padding: '9px 12px', fontSize: 14, border: '1px solid var(--border)', borderRadius: 8, resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box', color: 'var(--text-1)', background: 'var(--surface-elevated)' }} />
                     </Field>
                     <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 4 }}>
                         <Button type="button" variant="secondary" size="md" onClick={onDismiss}>Cancel</Button>

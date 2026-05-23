@@ -78,7 +78,7 @@ export default function ProgrammeTab({ eventId, event }) {
                 />
             ) : (
                 <div style={{
-                    background: 'white', border: '1px solid var(--border)',
+                    background: 'var(--surface-elevated)', border: '1px solid var(--border)',
                     borderRadius: 12, overflow: 'hidden',
                 }}>
                     {[...items]
@@ -118,7 +118,7 @@ export default function ProgrammeTab({ eventId, event }) {
                     <div
                         onClick={(e) => e.stopPropagation()}
                         style={{
-                            width: '100%', maxWidth: 400, background: 'white',
+                            width: '100%', maxWidth: 400, background: 'var(--surface-elevated)',
                             borderRadius: 16, padding: 28, boxShadow: 'var(--shadow-modal)',
                         }}
                     >
@@ -305,7 +305,7 @@ function ProgrammeItemModal({ eventId, item, eventStartTime, eventEndTime, onDis
             <div
                 onClick={(e) => e.stopPropagation()}
                 style={{
-                    width: '100%', maxWidth: 520, background: 'white',
+                    width: '100%', maxWidth: 520, background: 'var(--surface-elevated)',
                     borderRadius: 16, padding: 28, boxShadow: 'var(--shadow-modal)',
                     margin: 'auto',
                 }}
@@ -341,7 +341,7 @@ function ProgrammeItemModal({ eventId, item, eventStartTime, eventEndTime, onDis
                                 width: '100%', padding: '9px 12px', fontSize: 14,
                                 border: '1px solid var(--border)', borderRadius: 8,
                                 resize: 'vertical', fontFamily: 'inherit',
-                                boxSizing: 'border-box', color: 'var(--text-1)', background: 'white',
+                                boxSizing: 'border-box', color: 'var(--text-1)', background: 'var(--surface-elevated)',
                             }}
                         />
                     </FieldGroup>
@@ -383,7 +383,7 @@ function TextInput(props) {
                 width: '100%', padding: '9px 12px', fontSize: 14,
                 border: '1px solid var(--border)', borderRadius: 8,
                 fontFamily: 'inherit', boxSizing: 'border-box',
-                color: 'var(--text-1)', background: 'white',
+                color: 'var(--text-1)', background: 'var(--surface-elevated)',
             }}
         />
     );
@@ -392,7 +392,7 @@ function TextInput(props) {
 function EmptyCard({ message, sub, action }) {
     return (
         <div style={{
-            background: 'white', border: '1px solid var(--border)',
+            background: 'var(--surface-elevated)', border: '1px solid var(--border)',
             borderRadius: 12, padding: 60, textAlign: 'center',
         }}>
             <div style={{
@@ -412,7 +412,7 @@ function EmptyCard({ message, sub, action }) {
 function ErrorCard({ message, onRetry }) {
     return (
         <div style={{
-            background: 'white', border: '1px solid var(--border)',
+            background: 'var(--surface-elevated)', border: '1px solid var(--border)',
             borderRadius: 12, padding: 40, textAlign: 'center',
         }}>
             <Icons.alert size={28} style={{ color: 'var(--error)' }} />
@@ -433,7 +433,7 @@ function Skeleton() {
         animation: 'mp-flash 1.6s ease-in-out infinite',
     };
     return (
-        <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
+        <div style={{ background: 'var(--surface-elevated)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
             <div style={{ ...row }} />
             <div style={{ ...row, opacity: 0.7 }} />
             <div style={{ ...row, opacity: 0.4, borderBottom: 0 }} />

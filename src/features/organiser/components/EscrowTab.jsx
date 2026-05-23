@@ -29,7 +29,7 @@ export default function EscrowTab() {
     if (isError) {
         return (
             <div style={{
-                background: 'white', border: '1px solid var(--border)',
+                background: 'var(--surface-elevated)', border: '1px solid var(--border)',
                 borderRadius: 12, padding: 40, textAlign: 'center',
             }}>
                 <Icons.alert size={28} style={{ color: 'var(--error)' }} />
@@ -104,7 +104,7 @@ export default function EscrowTab() {
                 </div>
             ) : (
                 <div style={{
-                    background: 'white', border: '1px solid var(--border)',
+                    background: 'var(--surface-elevated)', border: '1px solid var(--border)',
                     borderRadius: 12, overflow: 'hidden',
                 }}>
                     <div style={{
@@ -203,7 +203,7 @@ function ContractRow({ contract: c, isLast, onOpen }) {
 function StatTile({ label, value, icon, accent }) {
     return (
         <div style={{
-            background: 'white', border: '1px solid var(--border)',
+            background: 'var(--surface-elevated)', border: '1px solid var(--border)',
             borderRadius: 12, padding: 20, boxShadow: 'var(--shadow-card)',
         }}>
             <div style={{
@@ -239,7 +239,7 @@ function EscrowSkeleton() {
                 <div style={{ ...tile, opacity: 0.7 }} />
                 <div style={{ ...tile, opacity: 0.4 }} />
             </div>
-            <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
+            <div style={{ background: 'var(--surface-elevated)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
                 <div style={{ ...row, height: 50 }} />
                 <div style={row} />
                 <div style={{ ...row, opacity: 0.6 }} />

@@ -14,7 +14,7 @@ import {
 function StatTile({ label, value, icon, sub, testId }) {
     return (
         <div data-testid={testId} style={{
-            background: 'white',
+            background: 'var(--surface-elevated)',
             border: '1px solid var(--border)',
             borderRadius: 12,
             padding: 20,
@@ -47,7 +47,7 @@ export function UsersPanel() {
     );
 
     return (
-        <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: 12, boxShadow: 'var(--shadow-card)', overflow: 'hidden' }}>
+        <div style={{ background: 'var(--surface-elevated)', border: '1px solid var(--border)', borderRadius: 12, boxShadow: 'var(--shadow-card)', overflow: 'hidden' }}>
             <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontWeight: 600, color: 'var(--text-1)', fontSize: 14 }}>Platform users</span>
                 <span style={{ fontSize: 13, color: 'var(--text-3)' }}>{users.length} users</span>
@@ -91,7 +91,7 @@ export function UsersPanel() {
 function PanelSkeleton() {
     const row = { height: 72, borderBottom: '1px solid var(--border)', background: 'var(--surface-subtle)', animation: 'mp-flash 1.6s ease-in-out infinite' };
     return (
-        <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
+        <div style={{ background: 'var(--surface-elevated)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
             <div style={row} />
             <div style={{ ...row, opacity: 0.7 }} />
             <div style={{ ...row, opacity: 0.4, borderBottom: 0 }} />
@@ -137,7 +137,7 @@ function InviteAdminPanel() {
                         required
                         style={{
                             width: '100%', height: 44, padding: '0 14px',
-                            background: 'white', border: '1px solid var(--border)',
+                            background: 'var(--surface-elevated)', border: '1px solid var(--border)',
                             borderRadius: 12, fontSize: 15, color: 'var(--text-1)',
                             boxSizing: 'border-box',
                         }}
@@ -212,7 +212,7 @@ export default function AdminPage() {
                 <div
                     data-testid="admin-tabs"
                     className="mp-tab-scroll"
-                    style={{ display: 'flex', gap: 4, marginBottom: 20, background: 'white', border: '1px solid var(--border)', borderRadius: 12, padding: 4, width: 'fit-content', maxWidth: '100%' }}
+                    style={{ display: 'flex', gap: 4, marginBottom: 20, background: 'var(--surface-elevated)', border: '1px solid var(--border)', borderRadius: 12, padding: 4, width: 'fit-content', maxWidth: '100%' }}
                 >
                     {TABS.map(({ id, label }) => {
                         const active = tab === id;

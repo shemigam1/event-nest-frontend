@@ -229,7 +229,7 @@ function Header({ event, totalSold, totalCapacity, checkedIn, checkInRate, tab, 
     ];
 
     return (
-        <div style={{ background: 'white', borderBottom: '1px solid var(--border)' }}>
+        <div style={{ background: 'var(--surface-elevated)', borderBottom: '1px solid var(--border)' }}>
             <div style={{ maxWidth: 1280, margin: '0 auto', padding: '24px 24px 0' }}>
                 <BackLink />
 
@@ -417,7 +417,7 @@ function DashboardTab({
 
                     {!isPublished && totalSold === 0 && (
                         <div style={{
-                            background: 'white', border: '1px solid var(--border)',
+                            background: 'var(--surface-elevated)', border: '1px solid var(--border)',
                             borderRadius: 12, padding: 32, textAlign: 'center',
                             color: 'var(--text-2)',
                         }}>
@@ -441,7 +441,7 @@ function DashboardTab({
 function Tile({ label, value, sub, icon, delta }) {
     return (
         <div style={{
-            background: 'white', border: '1px solid var(--border)',
+            background: 'var(--surface-elevated)', border: '1px solid var(--border)',
             borderRadius: 12, padding: 20, boxShadow: 'var(--shadow-card)',
         }}>
             <div style={{
@@ -758,7 +758,7 @@ function TierLimitRow({ tier, eventId, isLast }) {
                     style={{
                         fontSize: 13, fontWeight: 500, padding: '5px 14px',
                         borderRadius: 8, border: '1px solid var(--border)',
-                        background: 'white', color: 'var(--text-2)', cursor: 'pointer',
+                        background: 'var(--surface-elevated)', color: 'var(--text-2)', cursor: 'pointer',
                     }}
                 >
                     {editing ? 'Cancel' : 'Edit limit'}
@@ -782,7 +782,7 @@ function TierLimitRow({ tier, eventId, isLast }) {
                                 onChange={(e) => setLimitDraft(e.target.value)}
                                 style={{
                                     width: 100, height: 36, padding: '0 12px',
-                                    background: 'white', border: '1px solid var(--border)',
+                                    background: 'var(--surface-elevated)', border: '1px solid var(--border)',
                                     borderRadius: 8, fontSize: 14, color: 'var(--text-1)',
                                 }}
                             />
@@ -829,7 +829,7 @@ function TierLimitRow({ tier, eventId, isLast }) {
                             disabled={isLoading}
                             style={{
                                 height: 32, padding: '0 14px', borderRadius: 8,
-                                border: '1px solid var(--border)', background: 'white',
+                                border: '1px solid var(--border)', background: 'var(--surface-elevated)',
                                 fontSize: 13, fontWeight: 500, cursor: 'pointer',
                                 color: 'var(--text-2)',
                             }}
@@ -977,7 +977,7 @@ function SettingsTab({ event, eventId, navigate }) {
 
             {/* Event modules */}
             <div style={{
-                background: 'white', border: '1px solid var(--border)',
+                background: 'var(--surface-elevated)', border: '1px solid var(--border)',
                 borderRadius: 12, overflow: 'hidden',
             }}>
                 <div style={{
@@ -1051,7 +1051,7 @@ function SettingsTab({ event, eventId, navigate }) {
                                 position: 'absolute', top: 3,
                                 left: m.value ? 23 : 3,
                                 width: 18, height: 18, borderRadius: 99,
-                                background: 'white',
+                                background: 'var(--surface-elevated)',
                                 boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
                                 transition: 'left 0.2s',
                             }} />
@@ -1062,7 +1062,7 @@ function SettingsTab({ event, eventId, navigate }) {
 
             {/* Free ticket limit */}
             <div style={{
-                background: 'white', border: '1px solid var(--border)',
+                background: 'var(--surface-elevated)', border: '1px solid var(--border)',
                 borderRadius: 12, padding: '16px 20px',
             }}>
                 <div style={{ marginBottom: 14 }}>
@@ -1147,7 +1147,7 @@ function SettingsTab({ event, eventId, navigate }) {
             {/* Ticket tiers — per-person limits */}
             {tiers.length > 0 && (
                 <div style={{
-                    background: 'white', border: '1px solid var(--border)',
+                    background: 'var(--surface-elevated)', border: '1px solid var(--border)',
                     borderRadius: 12, overflow: 'hidden',
                 }}>
                     <div style={{
@@ -1174,7 +1174,7 @@ function SettingsTab({ event, eventId, navigate }) {
 
             {/* Required vendor categories */}
             <div style={{
-                background: 'white', border: '1px solid var(--border)',
+                background: 'var(--surface-elevated)', border: '1px solid var(--border)',
                 borderRadius: 12, padding: '16px 20px',
             }}>
                 <div style={{ marginBottom: 14 }}>
@@ -1273,7 +1273,7 @@ function SettingsTab({ event, eventId, navigate }) {
 function SettingCard({ title, description, action, danger }) {
     return (
         <div style={{
-            background: 'white',
+            background: 'var(--surface-elevated)',
             border: `1px solid ${danger ? 'var(--error)' : 'var(--border)'}`,
             borderRadius: 12, padding: 20,
             display: 'flex', justifyContent: 'space-between', alignItems: 'center',
@@ -1369,7 +1369,7 @@ function DeleteDialog({ title, onConfirm, onDismiss, loading }) {
             <div
                 onClick={(e) => e.stopPropagation()}
                 style={{
-                    width: '100%', maxWidth: 400, background: 'white',
+                    width: '100%', maxWidth: 400, background: 'var(--surface-elevated)',
                     borderRadius: 16, padding: 28, boxShadow: 'var(--shadow-modal)',
                 }}
             >
@@ -1535,7 +1535,7 @@ function CheckInStaffSection({ eventId, isPublished = true }) {
                         </div>
                         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                             <code style={{
-                                flex: 1, background: 'white', border: '1px solid #FCD34D',
+                                flex: 1, background: 'var(--surface-elevated)', border: '1px solid #FCD34D',
                                 borderRadius: 6, padding: '6px 10px', fontSize: 13,
                                 fontFamily: 'monospace', color: 'var(--text-1)', wordBreak: 'break-all',
                             }}>
@@ -1629,7 +1629,7 @@ function CheckInStaffSection({ eventId, isPublished = true }) {
                     <div
                         onClick={(e) => e.stopPropagation()}
                         style={{
-                            width: '100%', maxWidth: 400, background: 'white',
+                            width: '100%', maxWidth: 400, background: 'var(--surface-elevated)',
                             borderRadius: 16, boxShadow: 'var(--shadow-modal)', padding: 28,
                         }}
                     >
@@ -1666,7 +1666,7 @@ function CheckInStaffSection({ eventId, isPublished = true }) {
 function Card({ children }) {
     return (
         <div style={{
-            background: 'white', border: '1px solid var(--border)',
+            background: 'var(--surface-elevated)', border: '1px solid var(--border)',
             borderRadius: 12, overflow: 'hidden', boxShadow: 'var(--shadow-card)',
         }}>
             {children}
@@ -1694,7 +1694,7 @@ function PageSkeleton() {
                 <div
                     key={i}
                     style={{
-                        height: h, background: 'white', border: '1px solid var(--border)',
+                        height: h, background: 'var(--surface-elevated)', border: '1px solid var(--border)',
                         borderRadius: 12, animation: 'mp-flash 1.6s ease-in-out infinite',
                         opacity: 1 - i * 0.2,
                     }}

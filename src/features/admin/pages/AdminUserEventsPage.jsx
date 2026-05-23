@@ -23,7 +23,7 @@ function CancelDialog({ event, onConfirm, onDismiss, loading }) {
         >
             <div
                 onClick={(e) => e.stopPropagation()}
-                style={{ width: '100%', maxWidth: 400, background: 'white', borderRadius: 16, boxShadow: 'var(--shadow-modal)', padding: 28 }}
+                style={{ width: '100%', maxWidth: 400, background: 'var(--surface-elevated)', borderRadius: 16, boxShadow: 'var(--shadow-modal)', padding: 28 }}
             >
                 <h2 className="mp-h3" style={{ margin: '0 0 8px', color: 'var(--text-1)' }}>Force cancel event?</h2>
                 <p className="body-sm" style={{ margin: '0 0 6px', color: 'var(--text-2)' }}>
@@ -102,10 +102,10 @@ export default function AdminUserEventsPage() {
 
                 {/* User profile card */}
                 {userQuery.isLoading ? (
-                    <div style={{ height: 100, background: 'white', border: '1px solid var(--border)', borderRadius: 12, marginBottom: 20, animation: 'mp-flash 1.6s ease-in-out infinite' }} />
+                    <div style={{ height: 100, background: 'var(--surface-elevated)', border: '1px solid var(--border)', borderRadius: 12, marginBottom: 20, animation: 'mp-flash 1.6s ease-in-out infinite' }} />
                 ) : user && (
                     <div style={{
-                        background: 'white', border: '1px solid var(--border)',
+                        background: 'var(--surface-elevated)', border: '1px solid var(--border)',
                         borderRadius: 16, padding: 24, marginBottom: 24,
                         boxShadow: 'var(--shadow-card)',
                         display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, flexWrap: 'wrap',
@@ -153,7 +153,7 @@ export default function AdminUserEventsPage() {
                 )}
 
                 {/* Events table */}
-                <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden', boxShadow: 'var(--shadow-card)' }}>
+                <div style={{ background: 'var(--surface-elevated)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden', boxShadow: 'var(--shadow-card)' }}>
                     <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <span style={{ fontWeight: 600, color: 'var(--text-1)', fontSize: 14 }}>
                             Events by {user ? `${user.firstName} ${user.lastName}` : 'organiser'}

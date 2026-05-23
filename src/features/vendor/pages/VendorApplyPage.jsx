@@ -202,7 +202,7 @@ export default function VendorApplyPage() {
 function EventHeaderCard({ event: e, totalCapacity }) {
     return (
         <div style={{
-            background: 'white',
+            background: 'var(--surface-elevated)',
             border: '1px solid var(--border)',
             borderRadius: 12,
             overflow: 'hidden',
@@ -363,7 +363,7 @@ function PitchForm({
 
     return (
         <form onSubmit={handleSubmit} style={{
-            background: 'white',
+            background: 'var(--surface-elevated)',
             border: '1px solid var(--border)',
             borderRadius: 12,
             padding: 20,
@@ -391,7 +391,7 @@ function PitchForm({
                             width: '100%',
                             height: 44,
                             padding: '0 14px',
-                            background: 'white',
+                            background: 'var(--surface-elevated)',
                             border: '1px solid var(--border)',
                             borderRadius: 12,
                             fontSize: 15,
@@ -473,7 +473,7 @@ function PitchForm({
 function SuccessCard({ onDone }) {
     return (
         <div style={{
-            background: 'white',
+            background: 'var(--surface-elevated)',
             border: '1px solid var(--border)',
             borderRadius: 12,
             padding: 24,
@@ -517,7 +517,7 @@ function AlreadyAppliedCard({ application, onView }) {
 
     return (
         <div style={{
-            background: 'white',
+            background: 'var(--surface-elevated)',
             border: '1px solid var(--border)',
             borderRadius: 12,
             padding: 20,
@@ -558,7 +558,7 @@ function AlreadyAppliedCard({ application, onView }) {
 function Card({ title, children }) {
     return (
         <div style={{
-            background: 'white',
+            background: 'var(--surface-elevated)',
             border: '1px solid var(--border)',
             borderRadius: 12,
             overflow: 'hidden',
@@ -580,7 +580,7 @@ function Card({ title, children }) {
 function NoticeCard({ icon, title, body }) {
     return (
         <div style={{
-            background: 'white',
+            background: 'var(--surface-elevated)',
             border: '1px solid var(--border)',
             borderRadius: 12,
             padding: 40,
@@ -603,7 +603,7 @@ function NoticeCard({ icon, title, body }) {
 function ErrorBox({ message, onBack }) {
     return (
         <div style={{
-            background: 'white',
+            background: 'var(--surface-elevated)',
             border: '1px solid var(--border)',
             borderRadius: 12,
             padding: 40,
@@ -638,7 +638,7 @@ function BackLink({ onClick }) {
 function PageSkeleton() {
     const block = (h, op = 1) => ({
         height: h,
-        background: 'white',
+        background: 'var(--surface-elevated)',
         border: '1px solid var(--border)',
         borderRadius: 12,
         animation: 'mp-flash 1.6s ease-in-out infinite',

@@ -100,7 +100,7 @@ function VendorPanel({ vendor }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
             {/* Profile card */}
             <div style={{
-                background: 'white', border: '1px solid var(--border)',
+                background: 'var(--surface-elevated)', border: '1px solid var(--border)',
                 borderRadius: 12, padding: 24,
             }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap' }}>
@@ -296,7 +296,7 @@ function ActionsCard({ vendor }) {
 
     return (
         <div style={{
-            background: 'white', border: '1px solid var(--border)',
+            background: 'var(--surface-elevated)', border: '1px solid var(--border)',
             borderRadius: 12, padding: 20,
         }}>
             <div className="mp-h4" style={{ margin: 0, color: 'var(--text-1)' }}>Admin actions</div>
@@ -379,7 +379,7 @@ function ReasonDialog({ title, description, confirmLabel, confirmDestructive, bu
         }}>
             <div onClick={(e) => e.stopPropagation()} style={{
                 width: '100%', maxWidth: 440,
-                background: 'white', borderRadius: 16,
+                background: 'var(--surface-elevated)', borderRadius: 16,
                 boxShadow: 'var(--shadow-modal)', padding: 24,
             }}>
                 <h3 className="mp-h3" style={{ margin: 0, color: 'var(--text-1)' }}>{title}</h3>
@@ -424,7 +424,7 @@ function ReasonDialog({ title, description, confirmLabel, confirmDestructive, bu
 function TrustHistoryPanel({ history, isLoading }) {
     return (
         <div style={{
-            background: 'white', border: '1px solid var(--border)',
+            background: 'var(--surface-elevated)', border: '1px solid var(--border)',
             borderRadius: 12, overflow: 'hidden',
             position: 'sticky', top: 20,
         }}>
@@ -533,7 +533,7 @@ function Shell({ children }) {
 function Skeleton() {
     return (
         <div style={{
-            background: 'white', border: '1px solid var(--border)',
+            background: 'var(--surface-elevated)', border: '1px solid var(--border)',
             borderRadius: 12, padding: 40, minHeight: 320,
             animation: 'mp-flash 1.6s ease-in-out infinite',
         }} />
@@ -543,7 +543,7 @@ function Skeleton() {
 function ErrorCard({ message, onBack }) {
     return (
         <div style={{
-            background: 'white', border: '1px solid var(--border)',
+            background: 'var(--surface-elevated)', border: '1px solid var(--border)',
             borderRadius: 12, padding: 60, textAlign: 'center',
         }}>
             <Icons.alert size={28} style={{ color: 'var(--error)' }} />

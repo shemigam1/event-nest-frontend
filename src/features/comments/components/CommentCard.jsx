@@ -184,7 +184,7 @@ export default function CommentCard({
                                     style={{
                                         position: 'absolute',
                                         right: 0, top: 30,
-                                        background: 'white',
+                                        background: 'var(--surface-elevated)',
                                         border: '1px solid var(--border)',
                                         borderRadius: 8,
                                         boxShadow: 'var(--shadow-card)',

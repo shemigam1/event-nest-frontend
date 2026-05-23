@@ -28,6 +28,8 @@ export const baseApi = createApi({
         'Kyc', 'HostProfile',
         // Organiser-issued vendor invitations
         'VendorInvites',
+        // Waitlist entries (keyed by tierId)
+        'Waitlist',
     ],
     endpoints: () => ({}),
 });

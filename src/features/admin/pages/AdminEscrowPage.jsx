@@ -52,7 +52,7 @@ export default function AdminEscrowPage() {
             <div style={{ padding: 32, display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {[1, 2, 3].map((k) => (
                     <div key={k} style={{
-                        background: 'white', borderRadius: 12,
+                        background: 'var(--surface-elevated)', borderRadius: 12,
                         border: '1px solid var(--border)', height: 100,
                         animation: 'pulse 1.4s ease-in-out infinite',
                     }} />
@@ -143,7 +143,7 @@ export default function AdminEscrowPage() {
 function DisputeCard({ dispute: d, onRule, onFlag, resolved }) {
     return (
         <div style={{
-            background: 'white',
+            background: 'var(--surface-elevated)',
             border: `1px solid ${resolved ? 'var(--border)' : '#F5C0C0'}`,
             borderRadius: 12,
             padding: '18px 20px',
@@ -295,7 +295,7 @@ function RulingModal({ dispute, onDismiss }) {
                             width: '100%', padding: '9px 12px', fontSize: 14,
                             border: '1px solid var(--border)', borderRadius: 8,
                             resize: 'vertical', fontFamily: 'inherit',
-                            boxSizing: 'border-box', color: 'var(--text-1)', background: 'white',
+                            boxSizing: 'border-box', color: 'var(--text-1)', background: 'var(--surface-elevated)',
                         }}
                     />
                 </div>
@@ -392,7 +392,7 @@ function FlagViolationModal({ dispute, onDismiss }) {
                             width: '100%', padding: '9px 12px', fontSize: 14,
                             border: '1px solid var(--border)', borderRadius: 8,
                             resize: 'vertical', fontFamily: 'inherit',
-                            boxSizing: 'border-box', color: 'var(--text-1)', background: 'white',
+                            boxSizing: 'border-box', color: 'var(--text-1)', background: 'var(--surface-elevated)',
                         }}
                     />
                 </div>
@@ -424,7 +424,7 @@ function FlagViolationModal({ dispute, onDismiss }) {
 function EmptyState() {
     return (
         <div style={{
-            background: 'white', border: '1px solid var(--border)',
+            background: 'var(--surface-elevated)', border: '1px solid var(--border)',
             borderRadius: 12, padding: 64, textAlign: 'center',
         }}>
             <svg width={40} height={40} viewBox="0 0 24 24" fill="none"

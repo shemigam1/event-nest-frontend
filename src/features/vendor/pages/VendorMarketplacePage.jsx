@@ -161,7 +161,7 @@ export default function VendorMarketplacePage() {
 
                 {isError && (
                     <div style={{
-                        background: 'white', border: '1px solid var(--border)',
+                        background: 'var(--surface-elevated)', border: '1px solid var(--border)',
                         borderRadius: 12, padding: 40, textAlign: 'center',
                     }}>
                         <Icons.alert size={28} style={{ color: 'var(--error)' }} />
@@ -176,7 +176,7 @@ export default function VendorMarketplacePage() {
 
                 {!isLoading && !isError && vendors.length === 0 && (
                     <div style={{
-                        background: 'white', border: '1px solid var(--border)',
+                        background: 'var(--surface-elevated)', border: '1px solid var(--border)',
                         borderRadius: 12, padding: 60, textAlign: 'center',
                     }}>
                         <div style={{
@@ -302,7 +302,7 @@ function VendorCard({ vendor, onView }) {
 
     return (
         <div style={{
-            background: 'white',
+            background: 'var(--surface-elevated)',
             border: '1px solid var(--border)',
             borderRadius: 12,
             padding: 20,
@@ -414,7 +414,7 @@ function TrustPill({ score }) {
 function GridSkeleton() {
     const card = {
         height: 260,
-        background: 'white',
+        background: 'var(--surface-elevated)',
         border: '1px solid var(--border)',
         borderRadius: 12,
         animation: 'mp-flash 1.6s ease-in-out infinite',

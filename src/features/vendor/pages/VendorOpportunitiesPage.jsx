@@ -105,7 +105,7 @@ export default function VendorOpportunitiesPage() {
 
                 {events.isError && (
                     <div style={{
-                        background: 'white',
+                        background: 'var(--surface-elevated)',
                         border: '1px solid var(--border)',
                         borderRadius: 12,
                         padding: 40,
@@ -127,7 +127,7 @@ export default function VendorOpportunitiesPage() {
 
                 {events.isSuccess && list.length > 0 && filtered.length === 0 && (
                     <div style={{
-                        background: 'white',
+                        background: 'var(--surface-elevated)',
                         border: '1px solid var(--border)',
                         borderRadius: 12,
                         padding: 40,
@@ -166,7 +166,7 @@ function OpportunityCard({ event, application, onApply, onView }) {
 
     return (
         <div style={{
-            background: 'white',
+            background: 'var(--surface-elevated)',
             border: '1px solid var(--border)',
             borderRadius: 12,
             overflow: 'hidden',
@@ -279,7 +279,7 @@ function ApplicationStatusPill({ status }) {
 function EmptyState() {
     return (
         <div style={{
-            background: 'white',
+            background: 'var(--surface-elevated)',
             border: '1px solid var(--border)',
             borderRadius: 12,
             padding: 60,
@@ -307,7 +307,7 @@ function EmptyState() {
 function GridSkeleton() {
     const card = {
         height: 280,
-        background: 'white',
+        background: 'var(--surface-elevated)',
         border: '1px solid var(--border)',
         borderRadius: 12,
         animation: 'mp-flash 1.6s ease-in-out infinite',

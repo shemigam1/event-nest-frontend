@@ -16,7 +16,7 @@ function Skeleton() {
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {[260, 40, 160, 280].map((h, i) => (
-                <div key={i} style={{ height: h, background: 'white', border: '1px solid var(--border)', borderRadius: 14, animation: 'mp-flash 1.6s ease-in-out infinite', opacity: 1 - i * 0.15 }} />
+                <div key={i} style={{ height: h, background: 'var(--surface-elevated)', border: '1px solid var(--border)', borderRadius: 14, animation: 'mp-flash 1.6s ease-in-out infinite', opacity: 1 - i * 0.15 }} />
             ))}
         </div>
     );
@@ -143,7 +143,7 @@ export default function AdminEventDetailPage() {
 
             {/* Event header */}
             <div style={{
-                background: 'white', border: '1px solid var(--border)',
+                background: 'var(--surface-elevated)', border: '1px solid var(--border)',
                 borderRadius: 16, padding: 28, marginBottom: 24, boxShadow: 'var(--shadow-card)',
             }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 20, flexWrap: 'wrap' }}>
@@ -206,7 +206,7 @@ export default function AdminEventDetailPage() {
                                 { label: 'Revenue',         value: totalRevenue === 0 ? '₦0' : `₦${totalRevenue.toLocaleString()}`, icon: <Icons.wallet size={15} /> },
                                 { label: 'Remaining seats', value: (totalCapacity - totalSold).toLocaleString(), icon: <Icons.scan size={15} /> },
                             ].map(({ label, value, sub, icon }) => (
-                                <div key={label} style={{ background: 'white', border: '1px solid var(--border)', borderRadius: 12, padding: 18, boxShadow: 'var(--shadow-card)' }}>
+                                <div key={label} style={{ background: 'var(--surface-elevated)', border: '1px solid var(--border)', borderRadius: 12, padding: 18, boxShadow: 'var(--shadow-card)' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 10, fontSize: 13, fontWeight: 500, color: 'var(--text-2)' }}>
                                         {icon}{label}
                                     </div>
@@ -218,7 +218,7 @@ export default function AdminEventDetailPage() {
                     )}
 
                     {tiers.length > 0 ? (
-                        <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden', boxShadow: 'var(--shadow-card)' }}>
+                        <div style={{ background: 'var(--surface-elevated)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden', boxShadow: 'var(--shadow-card)' }}>
                             <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', fontWeight: 600, color: 'var(--text-1)', fontSize: 14 }}>
                                 Ticket tiers ({tiers.length})
                             </div>
@@ -247,7 +247,7 @@ export default function AdminEventDetailPage() {
                             })}
                         </div>
                     ) : (
-                        <div style={{ padding: 48, textAlign: 'center', background: 'white', border: '1px solid var(--border)', borderRadius: 12, boxShadow: 'var(--shadow-card)' }}>
+                        <div style={{ padding: 48, textAlign: 'center', background: 'var(--surface-elevated)', border: '1px solid var(--border)', borderRadius: 12, boxShadow: 'var(--shadow-card)' }}>
                             <Icons.ticket size={28} style={{ color: 'var(--text-3)' }} />
                             <p className="mp-h4" style={{ margin: '12px 0 4px', color: 'var(--text-1)' }}>No ticket tiers</p>
                             <p className="body-sm" style={{ color: 'var(--text-2)', margin: 0 }}>The organiser has not added any ticket tiers yet.</p>
@@ -258,7 +258,7 @@ export default function AdminEventDetailPage() {
 
             {/* Bookings tab */}
             {tab === 'bookings' && isPublished && (
-                <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden', boxShadow: 'var(--shadow-card)' }}>
+                <div style={{ background: 'var(--surface-elevated)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden', boxShadow: 'var(--shadow-card)' }}>
                     <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <span style={{ fontWeight: 600, color: 'var(--text-1)', fontSize: 14 }}>Bookings</span>
                         <span style={{ fontSize: 13, color: 'var(--text-3)' }}>{bookings.length} total</span>
@@ -330,7 +330,7 @@ export default function AdminEventDetailPage() {
                 >
                     <div
                         onClick={(e) => e.stopPropagation()}
-                        style={{ width: '100%', maxWidth: 400, background: 'white', borderRadius: 16, boxShadow: 'var(--shadow-modal)', padding: 28 }}
+                        style={{ width: '100%', maxWidth: 400, background: 'var(--surface-elevated)', borderRadius: 16, boxShadow: 'var(--shadow-modal)', padding: 28 }}
                     >
                         <h2 className="mp-h3" style={{ margin: '0 0 8px', color: 'var(--text-1)' }}>Force cancel event?</h2>
                         <p className="body-sm" style={{ margin: '0 0 6px', color: 'var(--text-2)' }}>

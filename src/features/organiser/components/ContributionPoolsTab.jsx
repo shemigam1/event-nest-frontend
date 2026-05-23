@@ -104,7 +104,7 @@ function SummaryCard({ pool, onToggleActive, onTogglePublic, onEdit, busy }) {
 
     return (
         <div style={{
-            background: 'white',
+            background: 'var(--surface-elevated)',
             border: '1px solid var(--border)',
             borderRadius: 12,
             boxShadow: 'var(--shadow-card)',
@@ -253,7 +253,7 @@ function CreatePoolCard({ eventId }) {
 
     return (
         <div style={{
-            background: 'white',
+            background: 'var(--surface-elevated)',
             border: '1px solid var(--border)',
             borderRadius: 12,
             boxShadow: 'var(--shadow-card)',
@@ -351,7 +351,7 @@ function EditPoolDialog({ pool, onClose, onSave, busy }) {
         }}>
             <div onClick={(e) => e.stopPropagation()} style={{
                 width: '100%', maxWidth: 460,
-                background: 'white',
+                background: 'var(--surface-elevated)',
                 borderRadius: 16,
                 boxShadow: 'var(--shadow-modal)',
                 padding: 24,
@@ -412,7 +412,7 @@ function ContributionsList({ eventId }) {
 
     return (
         <div style={{
-            background: 'white',
+            background: 'var(--surface-elevated)',
             border: '1px solid var(--border)',
             borderRadius: 12,
             boxShadow: 'var(--shadow-card)',
@@ -538,7 +538,7 @@ function PaymentPill({ status }) {
 function Skeleton() {
     return (
         <div style={{
-            background: 'white', border: '1px solid var(--border)',
+            background: 'var(--surface-elevated)', border: '1px solid var(--border)',
             borderRadius: 12, padding: 24, minHeight: 200,
             animation: 'mp-flash 1.6s ease-in-out infinite',
         }} />
@@ -563,7 +563,7 @@ function ListSkeleton() {
 function ErrorBlock({ message, onRetry }) {
     return (
         <div style={{
-            background: 'white', border: '1px solid var(--border)',
+            background: 'var(--surface-elevated)', border: '1px solid var(--border)',
             borderRadius: 12, padding: 40, textAlign: 'center',
         }}>
             <Icons.alert size={28} style={{ color: 'var(--error)' }} />

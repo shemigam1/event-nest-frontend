@@ -6,6 +6,11 @@ import {
     useGetEventBySlugQuery,
     useGetEventTiersQuery,
 } from '../eventsApi';
+import {
+    useJoinWaitlistMutation,
+    useLeaveWaitlistMutation,
+    useGetMyWaitlistPositionQuery,
+} from '@/features/waitlist/waitlistApi';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 import { selectIsAuthenticated, selectCurrentUserId } from '@/features/auth/authSlice';
@@ -32,6 +37,48 @@ export default function EventDetailPage() {
     // Once event data is loaded, always use the UUID for downstream navigation
     const eventId = event.data?.id ?? identifier;
     const tiersQuery = useGetEventTiersQuery(eventId, { skip: !event.data });
+
+    // Waitlist state — derived from raw query data so hooks run unconditionally before
+    // any early-return guard (React rules of hooks).
+    const waitlistEnabled = event.data?.config?.waitlistEnabled ?? false;
+    const _tiers = tiersQuery.data ?? [];
+    const _availableCap = _tiers.reduce((s, t) => s + (t.availableCapacity ?? 0), 0);
+    const _allSoldOut = _tiers.length > 0 && _availableCap === 0;
+    const _firstSoldOutTier = _tiers.find(t => t.availableCapacity === 0) ?? _tiers[0];
+    const soldOutTierId = _firstSoldOutTier?.id;
+    const waitlistSkip =
+        !isAuthenticated || !event.data || !_allSoldOut || !waitlistEnabled || !soldOutTierId;
+
+    const { data: myWaitlistEntry } = useGetMyWaitlistPositionQuery(
+        { eventId, tierId: soldOutTierId ?? '' },
+        { skip: waitlistSkip },
+    );
+    const [joinWaitlist, { isLoading: joiningWaitlist }] = useJoinWaitlistMutation();
+    const [leaveWaitlist, { isLoading: leavingWaitlist }] = useLeaveWaitlistMutation();
+    const [waitlistMsg, setWaitlistMsg] = useState('');
+
+    const handleJoinWaitlist = async (tierId) => {
+        if (!isAuthenticated) {
+            navigate('/login', { state: { from: `/events/${eventId}` } });
+            return;
+        }
+        try {
+            const result = await joinWaitlist({ eventId, tierId }).unwrap();
+            setWaitlistMsg(`You're #${result.position} on the waitlist. We'll notify you when a spot opens.`);
+        } catch (err) {
+            const msg = err?.data?.message ?? 'Could not join the waitlist. Please try again.';
+            setWaitlistMsg(msg);
+        }
+    };
+
+    const handleLeaveWaitlist = async (tierId) => {
+        try {
+            await leaveWaitlist({ eventId, tierId }).unwrap();
+            setWaitlistMsg('You have been removed from the waitlist.');
+        } catch {
+            setWaitlistMsg('Could not leave the waitlist. Please try again.');
+        }
+    };
 
     const handleBook = () => {
         if (!isAuthenticated) {
@@ -86,7 +133,7 @@ export default function EventDetailPage() {
 
             <div style={{ maxWidth: 1200, margin: '-80px auto 0', padding: '0 24px 64px', position: 'relative' }}>
                 <div className="mp-detail-grid" style={{
-                    background: 'white',
+                    background: 'var(--surface-elevated)',
                     border: '1px solid var(--border)',
                     borderRadius: 16,
                     boxShadow: 'var(--shadow-elevated)',
@@ -188,7 +235,7 @@ export default function EventDetailPage() {
                                 {!tiersQuery.isLoading && tiers.length === 0 && (
                                     <div style={{
                                         padding: 14,
-                                        background: 'white',
+                                        background: 'var(--surface-elevated)',
                                         border: '1px solid var(--border)',
                                         borderRadius: 10,
                                         fontSize: 13,
@@ -203,55 +250,62 @@ export default function EventDetailPage() {
                                 ))}
                             </div>
 
-                            <Button
-                                size="lg"
-                                variant="primary"
-                                style={{ width: '100%', marginTop: 16 }}
-                                iconRight={!isOwnEvent && <Icons.arrowR size={16} />}
-                                onClick={handleBook}
-                                disabled={cantBook}
-                            >
-                                {isOwnEvent
-                                    ? 'Your event'
-                                    : allSoldOut
-                                        ? 'Sold out'
-                                        : e.status !== 'PUBLISHED'
-                                            ? 'Not on sale'
-                                            : 'Book seats'}
-                            </Button>
+                            {/* Primary CTA — book or join waitlist */}
+                            {allSoldOut && waitlistEnabled && !isOwnEvent ? (
+                                <WaitlistCta
+                                    tierId={soldOutTierId}
+                                    entry={myWaitlistEntry}
+                                    joining={joiningWaitlist}
+                                    leaving={leavingWaitlist}
+                                    msg={waitlistMsg}
+                                    onJoin={handleJoinWaitlist}
+                                    onLeave={handleLeaveWaitlist}
+                                />
+                            ) : (
+                                <>
+                                    <Button
+                                        size="lg"
+                                        variant="primary"
+                                        style={{ width: '100%', marginTop: 16 }}
+                                        iconRight={!isOwnEvent && <Icons.arrowR size={16} />}
+                                        onClick={handleBook}
+                                        disabled={cantBook}
+                                    >
+                                        {isOwnEvent
+                                            ? 'Your event'
+                                            : allSoldOut
+                                                ? 'Sold out'
+                                                : e.status !== 'PUBLISHED'
+                                                    ? 'Not on sale'
+                                                    : 'Book seats'}
+                                    </Button>
 
-                            {isOwnEvent && (
-                                <div style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: 6,
-                                    justifyContent: 'center',
-                                    fontSize: 12,
-                                    color: 'var(--text-3)',
-                                    marginTop: 12,
-                                }}>
-                                    <Icons.alert size={14} /> Organisers cannot book their own events
-                                </div>
-                            )}
+                                    {isOwnEvent && (
+                                        <div style={{
+                                            display: 'flex', alignItems: 'center', gap: 6,
+                                            justifyContent: 'center', fontSize: 12,
+                                            color: 'var(--text-3)', marginTop: 12,
+                                        }}>
+                                            <Icons.alert size={14} /> Organisers cannot book their own events
+                                        </div>
+                                    )}
 
-                            {!isOwnEvent && (
-                                <div style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: 6,
-                                    justifyContent: 'center',
-                                    fontSize: 12,
-                                    color: 'var(--text-3)',
-                                    marginTop: 12,
-                                }}>
-                                    <Icons.shield size={14} /> Assigned seats · No overbooking
-                                </div>
+                                    {!isOwnEvent && (
+                                        <div style={{
+                                            display: 'flex', alignItems: 'center', gap: 6,
+                                            justifyContent: 'center', fontSize: 12,
+                                            color: 'var(--text-3)', marginTop: 12,
+                                        }}>
+                                            <Icons.shield size={14} /> Assigned seats · No overbooking
+                                        </div>
+                                    )}
+                                </>
                             )}
                         </div>
 
                         {!isOwnEvent && e.status === 'PUBLISHED' && (
                             <div style={{
-                                background: 'white',
+                                background: 'var(--surface-elevated)',
                                 border: '1px solid var(--border)',
                                 borderRadius: 12,
                                 padding: 18,
@@ -350,7 +404,7 @@ function TierRow({ tier }) {
     return (
         <div style={{
             padding: 14,
-            background: 'white',
+            background: 'var(--surface-elevated)',
             border: '1px solid var(--border)',
             borderRadius: 10,
             opacity: isSoldOut ? 0.6 : 1,
@@ -392,7 +446,7 @@ function DetailSkeleton() {
             <div className="mp-placeholder" style={{ height: 320 }} />
             <div style={{ maxWidth: 1200, margin: '-80px auto 0', padding: '0 24px 64px' }}>
                 <div style={{
-                    background: 'white',
+                    background: 'var(--surface-elevated)',
                     borderRadius: 16,
                     padding: 32,
                     boxShadow: 'var(--shadow-elevated)',
@@ -436,7 +490,7 @@ function ShareRow({ title }) {
         display: 'inline-flex', alignItems: 'center', gap: 6,
         padding: '6px 12px', borderRadius: 8,
         border: '1px solid var(--border)',
-        background: 'white', cursor: 'pointer',
+        background: 'var(--surface-elevated)', cursor: 'pointer',
         fontSize: 13, fontWeight: 500,
         color: 'var(--text-2)', fontFamily: 'inherit',
         transition: 'border-color 0.15s, color 0.15s',
@@ -541,6 +595,90 @@ function RefundPolicyNotice({ policy, contactEmail }) {
                             : 'Contact the organiser to request a refund.'}
                 </div>
             </div>
+        </div>
+    );
+}
+
+/**
+ * Waitlist call-to-action shown in the booking aside when all tiers are sold out
+ * and the organiser has enabled the waitlist feature.
+ *
+ * - Not on waitlist → "Join waitlist" button
+ * - Already on waitlist → shows position + "Leave waitlist" link
+ * - After action → shows a brief confirmation message
+ */
+function WaitlistCta({ tierId, entry, joining, leaving, msg, onJoin, onLeave }) {
+    const isOnWaitlist = Boolean(entry);
+
+    return (
+        <div style={{ marginTop: 16 }}>
+            <div style={{
+                padding: '14px 16px',
+                background: 'oklch(97% 0.01 260)',
+                border: '1px solid oklch(85% 0.06 260)',
+                borderRadius: 12,
+                marginBottom: 10,
+                display: 'flex',
+                gap: 10,
+                alignItems: 'flex-start',
+            }}>
+                <Icons.bell size={16} style={{ color: 'var(--mp-blue)', flexShrink: 0, marginTop: 2 }} />
+                <div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-1)', marginBottom: 4 }}>
+                        {isOnWaitlist
+                            ? `You're #${entry.position} on the waitlist`
+                            : 'This tier is sold out'}
+                    </div>
+                    <p style={{ fontSize: 12, color: 'var(--text-2)', margin: 0, lineHeight: 1.5 }}>
+                        {isOnWaitlist
+                            ? `We'll notify you by email when a ${entry.tierName ?? 'ticket'} becomes available.`
+                            : 'Join the waitlist and we\'ll let you know if a spot opens up.'}
+                    </p>
+                </div>
+            </div>
+
+            {msg && (
+                <p style={{
+                    fontSize: 12, color: 'var(--text-2)',
+                    margin: '0 0 8px', padding: '8px 12px',
+                    background: 'var(--surface-subtle)',
+                    borderRadius: 8, border: '1px solid var(--border)',
+                }}>
+                    {msg}
+                </p>
+            )}
+
+            {!isOnWaitlist ? (
+                <Button
+                    size="lg"
+                    variant="primary"
+                    style={{ width: '100%' }}
+                    onClick={() => onJoin(tierId)}
+                    disabled={joining}
+                >
+                    {joining ? 'Joining…' : 'Join waitlist'}
+                </Button>
+            ) : (
+                <button
+                    type="button"
+                    onClick={() => onLeave(tierId)}
+                    disabled={leaving}
+                    style={{
+                        width: '100%',
+                        marginTop: 6,
+                        padding: '9px 16px',
+                        borderRadius: 8,
+                        border: '1px solid var(--border)',
+                        background: 'transparent',
+                        cursor: leaving ? 'not-allowed' : 'pointer',
+                        fontSize: 13,
+                        color: 'var(--text-3)',
+                        fontFamily: 'inherit',
+                    }}
+                >
+                    {leaving ? 'Leaving…' : 'Leave waitlist'}
+                </button>
+            )}
         </div>
     );
 }

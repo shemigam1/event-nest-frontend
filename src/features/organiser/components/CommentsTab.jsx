@@ -4,7 +4,7 @@ export default function CommentsTab({ eventId, isOrganiser = true }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       <div style={{
-        background: 'white', border: '1px solid var(--border)',
+        background: 'var(--surface-elevated)', border: '1px solid var(--border)',
         borderRadius: 12, padding: '16px 20px',
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
       }}>

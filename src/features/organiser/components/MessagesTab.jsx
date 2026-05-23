@@ -31,7 +31,7 @@ export default function MessagesTab() {
     if (isError) {
         return (
             <div style={{
-                background: 'white', border: '1px solid var(--border)',
+                background: 'var(--surface-elevated)', border: '1px solid var(--border)',
                 borderRadius: 12, padding: 40, textAlign: 'center',
             }}>
                 <Icons.alert size={28} style={{ color: 'var(--error)' }} />
@@ -102,7 +102,7 @@ export default function MessagesTab() {
                 </div>
             ) : (
                 <div style={{
-                    background: 'white', border: '1px solid var(--border)',
+                    background: 'var(--surface-elevated)', border: '1px solid var(--border)',
                     borderRadius: 12, overflow: 'hidden',
                 }}>
                     <div style={{
@@ -250,7 +250,7 @@ function ConvSkeleton() {
     };
     return (
         <div style={{
-            background: 'white', border: '1px solid var(--border)',
+            background: 'var(--surface-elevated)', border: '1px solid var(--border)',
             borderRadius: 12, overflow: 'hidden',
         }}>
             <div style={{ ...row, height: 50 }} />

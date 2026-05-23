@@ -119,7 +119,7 @@ export default function VendorContractsPage() {
                         placeholder="Search by title, event or organiser…"
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
-                        style={{ width: '100%', padding: '9px 12px 9px 32px', fontSize: 14, border: '1px solid var(--border)', borderRadius: 8, background: 'white', color: 'var(--text-1)', boxSizing: 'border-box', outline: 'none' }}
+                        style={{ width: '100%', padding: '9px 12px 9px 32px', fontSize: 14, border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface-elevated)', color: 'var(--text-1)', boxSizing: 'border-box', outline: 'none' }}
                     />
                 </div>
                 <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
@@ -139,7 +139,7 @@ export default function VendorContractsPage() {
             {contractsQ.isLoading && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                     {[1, 2, 3].map(k => (
-                        <div key={k} style={{ background: 'white', borderRadius: 12, border: '1px solid var(--border)', height: 80, animation: 'pulse 1.4s ease-in-out infinite' }} />
+                        <div key={k} style={{ background: 'var(--surface-elevated)', borderRadius: 12, border: '1px solid var(--border)', height: 80, animation: 'pulse 1.4s ease-in-out infinite' }} />
                     ))}
                 </div>
             )}
@@ -149,7 +149,7 @@ export default function VendorContractsPage() {
             )}
 
             {!contractsQ.isLoading && !contractsQ.isError && filtered.length === 0 && (
-                <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: 12, padding: 56, textAlign: 'center' }}>
+                <div style={{ background: 'var(--surface-elevated)', border: '1px solid var(--border)', borderRadius: 12, padding: 56, textAlign: 'center' }}>
                     <Icons.lock size={32} style={{ color: 'var(--text-3)', marginBottom: 12 }} />
                     <p style={{ margin: '0 0 4px', fontWeight: 600, fontSize: 16, color: 'var(--text-1)' }}>
                         {allContracts.length === 0 ? 'No contracts yet' : 'No contracts match your filter'}
@@ -197,7 +197,7 @@ function ContractCard({ contract: c }) {
     const milestones = c.milestones ?? [];
 
     return (
-        <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
+        <div style={{ background: 'var(--surface-elevated)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
             {/* header */}
             <div
                 role="button" tabIndex={0}
@@ -298,7 +298,7 @@ function Chip({ label, val }) {
 
 function ErrorBlock({ message, onRetry }) {
     return (
-        <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: 12, padding: 40, textAlign: 'center' }}>
+        <div style={{ background: 'var(--surface-elevated)', border: '1px solid var(--border)', borderRadius: 12, padding: 40, textAlign: 'center' }}>
             <Icons.alert size={28} style={{ color: 'var(--error)' }} />
             <p style={{ marginTop: 8, color: 'var(--text-2)', fontSize: 14 }}>{message}</p>
             <Button variant="secondary" size="sm" onClick={onRetry} style={{ marginTop: 12 }}>Retry</Button>
