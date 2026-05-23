@@ -512,7 +512,7 @@ function NotFound({ onBack }) {
 }
 
 const cardStyle = {
-    background: 'white',
+    background: 'var(--surface-elevated)',
     border: '1px solid var(--border)',
     borderRadius: 12,
     overflow: 'hidden',
