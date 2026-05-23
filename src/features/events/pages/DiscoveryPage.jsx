@@ -200,17 +200,18 @@ export default function DiscoveryPage() {
                             </p>
                         </div>
 
-                        {/* Create your own event CTA — only for authed users */}
-                        {isAuthenticated && (
-                            <Button
-                                variant="primary"
-                                size="md"
-                                onClick={() => navigate('/events/new')}
-                                iconLeft={<Icons.plus size={16} />}
-                            >
-                                Create your own event
-                            </Button>
-                        )}
+                        {/* Create your own event CTA — visible to all, auth-gates on click */}
+                        <Button
+                            variant="primary"
+                            size="md"
+                            onClick={() => isAuthenticated
+                                ? navigate('/events/new')
+                                : navigate('/login', { state: { from: '/events/new' } })
+                            }
+                            iconLeft={<Icons.plus size={16} />}
+                        >
+                            Create your own event
+                        </Button>
                     </div>
 
                     <div style={{

@@ -18,6 +18,7 @@ export const MOCK_EVENTS = [
         rejectionReason: null,
         createdAt: '2026-01-01T00:00:00',
         updatedAt: '2026-01-01T00:00:00',
+        coverImageUrl: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800&auto=format&fit=crop',
     },
     {
         id: 'evt_002',
@@ -32,6 +33,7 @@ export const MOCK_EVENTS = [
         rejectionReason: null,
         createdAt: '2026-01-02T00:00:00',
         updatedAt: '2026-01-02T00:00:00',
+        coverImageUrl: 'https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=800&auto=format&fit=crop',
     },
     {
         id: 'evt_003',
@@ -46,6 +48,7 @@ export const MOCK_EVENTS = [
         rejectionReason: null,
         createdAt: '2026-01-03T00:00:00',
         updatedAt: '2026-01-03T00:00:00',
+        coverImageUrl: 'https://images.unsplash.com/photo-1475721027785-f74eccf877e2?w=800&auto=format&fit=crop',
     },
 ];
 
@@ -135,6 +138,7 @@ export const MOCK_PENDING_EVENTS = [
         rejectionReason: null,
         createdAt: '2026-05-01T00:00:00',
         updatedAt: '2026-05-01T00:00:00',
+        coverImageUrl: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800&auto=format&fit=crop',
     },
     {
         id: 'evt_pending_002',
@@ -148,6 +152,7 @@ export const MOCK_PENDING_EVENTS = [
         rejectionReason: null,
         createdAt: '2026-05-02T00:00:00',
         updatedAt: '2026-05-02T00:00:00',
+        coverImageUrl: 'https://images.unsplash.com/photo-1475721027785-f74eccf877e2?w=800&auto=format&fit=crop',
     },
 ];
 
@@ -225,6 +230,7 @@ export const MOCK_ORGANIZER_EVENTS = [
         totalBookings: 124,
         createdAt: '2026-01-01T00:00:00',
         updatedAt: '2026-01-01T00:00:00',
+        coverImageUrl: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800&auto=format&fit=crop',
     },
     {
         id: 'evt_org_pending',
@@ -241,6 +247,7 @@ export const MOCK_ORGANIZER_EVENTS = [
         totalBookings: 0,
         createdAt: '2026-05-01T00:00:00',
         updatedAt: '2026-05-01T00:00:00',
+        coverImageUrl: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800&auto=format&fit=crop',
     },
     {
         id: 'evt_org_draft',
@@ -257,6 +264,7 @@ export const MOCK_ORGANIZER_EVENTS = [
         totalBookings: 0,
         createdAt: '2026-05-03T00:00:00',
         updatedAt: '2026-05-03T00:00:00',
+        coverImageUrl: 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?w=800&auto=format&fit=crop',
     },
     {
         id: 'evt_org_rejected',
@@ -273,6 +281,7 @@ export const MOCK_ORGANIZER_EVENTS = [
         totalBookings: 0,
         createdAt: '2026-05-02T00:00:00',
         updatedAt: '2026-05-06T00:00:00',
+        coverImageUrl: 'https://images.unsplash.com/photo-1475721027785-f74eccf877e2?w=800&auto=format&fit=crop',
     },
 ];
 

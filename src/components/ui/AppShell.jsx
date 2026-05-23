@@ -84,7 +84,7 @@ export default function AppShell() {
         ALWAYS_NO_SIDEBAR.has(p) ||
         isCheckinRoute ||
         isVendorInvite ||
-        (!isAuthenticated && isPublicBrowsingPage);
+        !isAuthenticated;
 
     if (isNoSidebarPage) {
         return (
@@ -130,15 +130,16 @@ function Sidebar() {
     const location = useLocation();
     const [notifOpen, setNotifOpen] = useState(false);
 
-    const isAdmin        = useSelector(selectIsAdmin);
-    const isCheckinStaff = useSelector(selectIsCheckinStaff);
-    const user           = useSelector(selectCurrentUser);
-    const email          = useSelector(selectAuthEmail);
+    const isAuthenticated  = useSelector(selectIsAuthenticated);
+    const isAdmin          = useSelector(selectIsAdmin);
+    const isCheckinStaff   = useSelector(selectIsCheckinStaff);
+    const user             = useSelector(selectCurrentUser);
+    const email            = useSelector(selectAuthEmail);
     const activeWorkspace  = useSelector(selectActiveWorkspace);
     const vendorModeActive = useSelector(selectVendorModeActive);
 
-    const { data: notifData } = useGetMyNotificationsQuery();
-    const { data: unreadCount = 0 } = useGetUnreadNotificationCountQuery();
+    const { data: notifData } = useGetMyNotificationsQuery(undefined, { skip: !isAuthenticated });
+    const { data: unreadCount = 0 } = useGetUnreadNotificationCountQuery(undefined, { skip: !isAuthenticated });
     const [markRead] = useMarkNotificationAsReadMutation();
     const notifications = notifData?.content ?? [];
 

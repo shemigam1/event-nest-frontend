@@ -141,7 +141,7 @@ export default function VendorMarketplacePage() {
                                     padding: '6px 14px',
                                     borderRadius: 99,
                                     border: active ? '2px solid var(--mp-blue)' : '1px solid var(--border)',
-                                    background: active ? 'var(--mp-blue-50, #EAF1FE)' : 'white',
+                                    background: active ? 'var(--mp-blue-50, #EAF1FE)' : 'var(--surface-elevated)',
                                     color: active ? 'var(--mp-blue)' : 'var(--text-2)',
                                     fontWeight: active ? 600 : 500,
                                     fontSize: 13,
