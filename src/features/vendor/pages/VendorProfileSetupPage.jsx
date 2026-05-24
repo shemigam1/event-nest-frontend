@@ -912,7 +912,7 @@ function ProfileForm({ initial, onCancel }) {
 function PageShell({ children, isCreate }) {
     return (
         <div style={{ background: 'var(--surface-subtle)', minHeight: '100vh' }}>
-            <div style={{ maxWidth: 1000, margin: '0 auto', padding: '32px 24px 80px' }}>
+            <div className="mp-page-wrap" style={{ maxWidth: 1000, margin: '0 auto', padding: '32px 24px 80px' }}>
                 <div style={{ marginBottom: 24 }}>
                     <h1 className="mp-h1" style={{ margin: 0, color: 'var(--text-1)' }}>
                         {isCreate ? 'Set up your vendor profile' : 'My vendor profile'}

@@ -188,7 +188,7 @@ export default function BookingPage() {
 function PageShell({ children }) {
     return (
         <div style={{ background: 'var(--surface-subtle)', minHeight: '100vh' }}>
-            <div style={{ maxWidth: 720, margin: '0 auto', padding: '32px 24px 80px' }}>
+            <div className="mp-page-wrap" style={{ maxWidth: 720, margin: '0 auto', padding: '32px 24px 80px' }}>
                 {children}
             </div>
         </div>
@@ -197,7 +197,7 @@ function PageShell({ children }) {
 
 function Card({ children }) {
     return (
-        <div style={{
+        <div className="mp-card-pad" style={{
             background: 'var(--surface-elevated)',
             border: '1px solid var(--border)',
             borderRadius: 16,

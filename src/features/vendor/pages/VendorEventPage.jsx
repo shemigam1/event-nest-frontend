@@ -426,7 +426,7 @@ function ContractCard({ contract, loading }) {
 function PageShell({ children }) {
     return (
         <div style={{ background: 'var(--surface-subtle)', minHeight: '100vh' }}>
-            <div style={{ maxWidth: 900, margin: '0 auto', padding: '32px 24px 80px' }}>
+            <div className="mp-page-wrap" style={{ maxWidth: 900, margin: '0 auto', padding: '32px 24px 80px' }}>
                 {children}
             </div>
         </div>

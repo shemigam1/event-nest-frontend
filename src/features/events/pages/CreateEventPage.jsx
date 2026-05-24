@@ -1499,7 +1499,7 @@ export default function CreateEventPage() {
 
     return (
         <div style={{ background: 'var(--surface-subtle)', minHeight: '100vh' }}>
-            <div style={{ maxWidth: 680, margin: '0 auto', padding: '40px 24px 80px' }}>
+            <div className="mp-page-wrap" style={{ maxWidth: 680, margin: '0 auto', padding: '40px 24px 80px' }}>
                 {step < 4 && <StepIndicator currentStep={step} />}
                 {step === 1 && (
                     <BasicsStep

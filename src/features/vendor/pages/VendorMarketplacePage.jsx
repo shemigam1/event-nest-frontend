@@ -84,7 +84,7 @@ export default function VendorMarketplacePage() {
             {/* Anonymous viewers get the marketing top nav; authenticated viewers
                 see AppShell's sidebar + TopBar wrapping the route. */}
             {!isAuthenticated && <TopNav />}
-            <div style={{ maxWidth: 1200, margin: '0 auto', padding: '32px 24px 80px' }}>
+            <div className="mp-page-wrap" style={{ maxWidth: 1200, margin: '0 auto', padding: '32px 24px 80px' }}>
 
                 {/* Header */}
                 <div style={{

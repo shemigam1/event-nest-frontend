@@ -177,7 +177,7 @@ export default function DiscoveryPage() {
 
             {/* ── Header strip ── */}
             <div style={{ background: 'var(--surface-elevated)', borderBottom: '1px solid var(--border)' }}>
-                <div style={{ maxWidth: 1280, margin: '0 auto', padding: '32px 24px 24px' }}>
+                <div className="mp-page-wrap" style={{ maxWidth: 1280, margin: '0 auto', padding: '32px 24px 24px' }}>
                     <div style={{
                         display: 'flex',
                         justifyContent: 'space-between',
@@ -229,7 +229,7 @@ export default function DiscoveryPage() {
             </div>
 
             {/* ── Main content ── */}
-            <div style={{ maxWidth: 1280, margin: '0 auto', padding: '32px 24px 64px' }}>
+            <div className="mp-page-wrap" style={{ maxWidth: 1280, margin: '0 auto', padding: '32px 24px 64px' }}>
                 {/* Trending strip — only when not searching and we have results */}
                 {!isError && !isLoading && trending.length > 0 && filter === 'all' && (
                     <TrendingStrip

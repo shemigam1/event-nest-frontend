@@ -561,3 +561,124 @@ select:focus-visible {
 * { scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent; }
 *::-webkit-scrollbar { width: 8px; height: 8px; }
 *::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 99px; }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   RESPONSIVE FOUNDATION
+   Breakpoints (mobile-first):
+     - default          → mobile         (< 768px)
+     - md  ≥ 768px      → tablet
+     - lg  ≥ 1024px     → desktop
+     - xl  ≥ 1280px     → wide
+   Most styling is inline across the codebase, so we expose a small set of
+   utility classes pages can drop in to switch layouts at breakpoints.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  --bp-md: 768px;
+  --bp-lg: 1024px;
+  --bp-xl: 1280px;
+
+  /* Mobile-friendly tap target — Apple/Material guidelines */
+  --tap: 44px;
+}
+
+/* Prevent iOS Safari from auto-zooming text inputs (fires when font-size < 16px) */
+@media (max-width: 767px) {
+  input, textarea, select { font-size: 16px; }
+}
+
+/* Container — sets max width + responsive horizontal padding */
+.mp-container {
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding-left: 16px;
+  padding-right: 16px;
+}
+@media (min-width: 768px) {
+  .mp-container { padding-left: 24px; padding-right: 24px; }
+}
+
+/* Visibility utilities — `.mp-hide-mobile` and `.mp-hide-desktop` are
+   defined earlier in this file (768/769 breakpoint). We add only the
+   tablet-up variant here for completeness. */
+.mp-hide-tablet-up { display: revert; }
+@media (min-width: 768px)  { .mp-hide-tablet-up { display: none !important; } }
+
+/* Stack — flex direction column on mobile, row on tablet+. Apply to a flex parent. */
+.mp-stack-mobile { flex-direction: column !important; align-items: stretch !important; }
+@media (min-width: 768px) {
+  .mp-stack-mobile { flex-direction: row !important; align-items: center !important; }
+}
+
+/* Responsive event grid — 1 col mobile, 2 col tablet, auto-fill desktop */
+.mp-events-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: 1fr;
+}
+@media (min-width: 768px) {
+  .mp-events-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+}
+@media (min-width: 1024px) {
+  .mp-events-grid { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
+}
+
+/* Mobile-safe padding — pages can apply for consistent edge spacing */
+.mp-page-padding {
+  padding: 16px;
+}
+@media (min-width: 768px) {
+  .mp-page-padding { padding: 24px; }
+}
+@media (min-width: 1024px) {
+  .mp-page-padding { padding: 32px; }
+}
+
+/* Tap target — ensures min 44x44 touch area on interactive elements */
+.mp-tap-target {
+  min-width: var(--tap);
+  min-height: var(--tap);
+}
+
+/* Mobile-only sidebar drawer (driven by AppShell) */
+@keyframes mp-drawer-in {
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(0); }
+}
+@keyframes mp-drawer-backdrop-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.mp-mobile-sidebar-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(2,16,45,0.5);
+  z-index: 49;
+  animation: mp-drawer-backdrop-in 180ms ease-out;
+}
+.mp-mobile-sidebar-drawer {
+  position: fixed; top: 0; left: 0; bottom: 0;
+  z-index: 50;
+  animation: mp-drawer-in 200ms ease-out;
+  width: min(280px, 85vw);
+  box-shadow: 8px 0 32px rgba(2,16,45,0.2);
+}
+
+/* Tighter horizontal scroll for the existing .mp-tab-scroll class on mobile */
+.mp-tab-scroll {
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+
+/* Mobile-friendly form rows: stack label + input on narrow viewports */
+@media (max-width: 767px) {
+  .mp-form-row { flex-direction: column !important; align-items: stretch !important; gap: 8px !important; }
+  .mp-form-row > * { width: 100% !important; max-width: none !important; }
+}
+
+/* Reduce heading sizes on small screens */
+@media (max-width: 767px) {
+  .mp-h1 { font-size: 24px !important; line-height: 1.2 !important; }
+  .mp-h2 { font-size: 20px !important; }
+  .mp-h3 { font-size: 17px !important; }
+}

@@ -288,7 +288,7 @@ export default function VendorInviteAcceptPage() {
                                 icon={<Icons.mail size={16} />}
                             />
                         )}
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                        <div className="mp-grid-stack" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                             <Input
                                 label="First name"
                                 value={form.firstName}
@@ -356,7 +356,7 @@ function Shell({ children }) {
             background: 'var(--surface-subtle)',
             padding: '48px 24px',
         }}>
-            <div style={{
+            <div className="mp-card-pad" style={{
                 maxWidth: 560, margin: '0 auto',
                 background: 'var(--surface-elevated, white)',
                 border: '1px solid var(--border)',

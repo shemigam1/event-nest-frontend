@@ -55,15 +55,34 @@ export default function AppShell() {
         return typeof window !== 'undefined' && window.matchMedia('(max-width: 1023px)').matches;
     });
 
+    // Mobile drawer state — only relevant under 1024px. Closed by default;
+    // the TopBar hamburger toggles it, route changes auto-close.
+    const [mobileOpen, setMobileOpen] = useState(false);
+
     useEffect(() => {
         try { localStorage.setItem(STORAGE_KEY, collapsed ? '1' : '0'); } catch { /* ignore */ }
     }, [collapsed]);
+
+    // Auto-close mobile drawer on route change so navigating somewhere
+    // doesn't leave the overlay open on top of the destination page.
+    useEffect(() => { setMobileOpen(false); }, [location.pathname]);
+
+    // Lock body scroll when mobile drawer is open
+    useEffect(() => {
+        if (!mobileOpen) return;
+        const prev = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+        return () => { document.body.style.overflow = prev; };
+    }, [mobileOpen]);
 
     const ctx = useMemo(() => ({
         collapsed,
         toggle: () => setCollapsed((c) => !c),
         setCollapsed,
-    }), [collapsed]);
+        mobileOpen,
+        openMobile: () => setMobileOpen(true),
+        closeMobile: () => setMobileOpen(false),
+    }), [collapsed, mobileOpen]);
 
     const ALWAYS_NO_SIDEBAR = new Set([
         '/', '/login', '/register', '/forgot-password', '/reset-password',
@@ -96,12 +115,31 @@ export default function AppShell() {
 
     return (
         <SidebarContext.Provider value={ctx}>
-            <div style={{
+            <div className="mp-app-shell" style={{
                 display: 'flex',
                 minHeight: '100vh',
                 background: 'var(--surface-subtle)',
             }}>
+                {/* Sidebar — on desktop renders inline as sticky rail.
+                    On mobile the inline aside is hidden via .mp-hide-mobile
+                    on its own element, and we render a drawer overlay only
+                    when mobileOpen. */}
                 <Sidebar />
+
+                {/* Mobile drawer overlay */}
+                {mobileOpen && (
+                    <>
+                        <div
+                            className="mp-mobile-sidebar-backdrop"
+                            onClick={() => setMobileOpen(false)}
+                            aria-hidden="true"
+                        />
+                        <div className="mp-mobile-sidebar-drawer">
+                            <Sidebar mobile />
+                        </div>
+                    </>
+                )}
+
                 <main style={{
                     flex: 1,
                     minWidth: 0,
@@ -123,8 +161,12 @@ export default function AppShell() {
 const EXPANDED_WIDTH = 240;
 const COLLAPSED_WIDTH = 64;
 
-function Sidebar() {
-    const { collapsed, toggle } = useSidebar();
+function Sidebar({ mobile = false }) {
+    const { collapsed: collapsedDesktop, toggle, closeMobile } = useSidebar();
+    // In the mobile drawer overlay we always render fully expanded — there's
+    // no rail-collapse there. Keep the local name `collapsed` so the rest of
+    // the JSX below doesn't need any changes.
+    const collapsed = mobile ? false : collapsedDesktop;
     const navigate = useNavigate();
     const dispatch = useDispatch();
     const location = useLocation();
@@ -186,21 +228,22 @@ function Sidebar() {
         return isVendorMode ? VENDOR_NAV : USER_NAV;
     })();
 
-    const width = collapsed ? COLLAPSED_WIDTH : EXPANDED_WIDTH;
+    const width = mobile ? '100%' : (collapsed ? COLLAPSED_WIDTH : EXPANDED_WIDTH);
 
     return (
         <>
         <aside
             aria-label="Primary navigation"
+            className={mobile ? undefined : 'mp-hide-mobile'}
             style={{
-                position: 'sticky',
+                position: mobile ? 'static' : 'sticky',
                 top: 0,
                 alignSelf: 'flex-start',
                 height: '100vh',
                 width,
                 flexShrink: 0,
                 background: 'var(--surface-elevated)',
-                borderRight: '1px solid var(--border)',
+                borderRight: mobile ? 'none' : '1px solid var(--border)',
                 display: 'flex',
                 flexDirection: 'column',
                 transition: 'width 0.18s ease',
@@ -217,9 +260,9 @@ function Sidebar() {
                 minHeight: 60,
             }}>
                 <button
-                    onClick={toggle}
-                    aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-                    title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+                    onClick={mobile ? closeMobile : toggle}
+                    aria-label={mobile ? 'Close menu' : (collapsed ? 'Expand sidebar' : 'Collapse sidebar')}
+                    title={mobile ? 'Close menu' : (collapsed ? 'Expand sidebar' : 'Collapse sidebar')}
                     style={{
                         width: 32, height: 32, borderRadius: 8,
                         border: 0, background: 'transparent',
@@ -230,7 +273,7 @@ function Sidebar() {
                     onMouseOver={(e) => { e.currentTarget.style.background = 'var(--surface-subtle)'; }}
                     onMouseOut={(e) => { e.currentTarget.style.background = 'transparent'; }}
                 >
-                    {collapsed ? <Icons.chevronR size={16} /> : <Icons.chevronL size={16} />}
+                    {mobile ? <Icons.x size={18} /> : (collapsed ? <Icons.chevronR size={16} /> : <Icons.chevronL size={16} />)}
                 </button>
             </div>
 
