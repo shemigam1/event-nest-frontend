@@ -23,7 +23,7 @@ import { formatEventDate } from '@/utils/dateFormat';
      │   │                                              │   │
      │   │  ┌─────────────┐   Short code: ABC-123       │   │
      │   │  │  [QR code]  │   Long  code: <ticketId>    │   │
-     │   │  │             │   Status:     ACTIVE        │   │
+     │   │  │             │   Status:     Valid          │   │
      │   │  └─────────────┘                             │   │
      │   │                                              │   │
      │   │  Present this QR at the gate. Do not share.  │   │
@@ -50,6 +50,18 @@ const COLOURS = {
 function setFill(doc, c)   { doc.setFillColor(c[0], c[1], c[2]); }
 function setStroke(doc, c) { doc.setDrawColor(c[0], c[1], c[2]); }
 function setText(doc, c)   { doc.setTextColor(c[0], c[1], c[2]); }
+
+/** Maps raw TicketStatus enum values to human-readable labels for the PDF.
+ *  PENDING_CLAIM is a backend bookkeeping state; to the recipient the ticket is Valid. */
+const STATUS_LABELS = {
+    VALID:         'Valid',
+    PENDING_CLAIM: 'Valid',
+    USED:          'Used',
+    REFUNDED:      'Refunded',
+};
+function ticketStatusLabel(status) {
+    return STATUS_LABELS[status] ?? status;
+}
 
 /**
  * Generate and trigger a download of the PDF for the given ticket.
@@ -172,7 +184,7 @@ async function drawCardContent(doc, ticket) {
         codesY += 12;
     }
     if (ticket.status) {
-        drawCodeLine(doc, codesX, codesY, 'Status', ticket.status);
+        drawCodeLine(doc, codesX, codesY, 'Status', ticketStatusLabel(ticket.status));
         codesY += 12;
     }
 

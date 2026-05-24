@@ -3,7 +3,10 @@ import { baseApi } from '@/services/baseApi';
 export const ticketsApi = baseApi.injectEndpoints({
     endpoints: (builder) => ({
         getMyTickets: builder.query({
-            query: () => '/me/tickets',
+            query: ({ eventId } = {}) => ({
+                url: '/me/tickets',
+                params: eventId ? { eventId } : undefined,
+            }),
             providesTags: ['Ticket'],
             transformResponse: (response) => {
                 const d = response.data ?? response;
@@ -17,37 +20,34 @@ export const ticketsApi = baseApi.injectEndpoints({
                 method: 'POST',
                 body: { toEmail: recipientEmail },
             }),
-            invalidatesTags: ['Ticket', 'Transfer'],
-            transformResponse: (r) => r?.data ?? r,
-        }),
-
-        getIncomingTransfers: builder.query({
-            query: () => '/me/transfers/incoming',
-            providesTags: ['Transfer'],
-            transformResponse: (r) => r?.data ?? [],
-        }),
-
-        getOutgoingTransfers: builder.query({
-            query: () => '/me/transfers/outgoing',
-            providesTags: ['Transfer'],
-            transformResponse: (r) => r?.data ?? [],
-        }),
-
-        acceptTransfer: builder.mutation({
-            query: (transferId) => ({
-                url: `/tickets/transfers/${transferId}/accept`,
-                method: 'POST',
-            }),
-            invalidatesTags: ['Ticket', 'Transfer'],
-            transformResponse: (r) => r?.data ?? r,
-        }),
-
-        declineTransfer: builder.mutation({
-            query: (transferId) => ({
-                url: `/tickets/transfers/${transferId}`,
-                method: 'DELETE',
-            }),
-            invalidatesTags: ['Transfer'],
+            /**
+             * Immediately removes the transferred ticket from every getMyTickets
+             * cache entry the moment the server confirms success — so the sender
+             * never sees their own ticket again even while the background refetch
+             * is still in flight.
+             *
+             * `eventId` is optional extra context forwarded by the UI so we can
+             * also patch the per-event cached list when the user transferred from
+             * the event-filtered view (/tickets?eventId=…).
+             */
+            async onQueryStarted({ ticketId, eventId }, { dispatch, queryFulfilled }) {
+                try {
+                    await queryFulfilled;
+                    const removeFn = (draft) => {
+                        const idx = draft.findIndex((t) => t.id === ticketId);
+                        if (idx !== -1) draft.splice(idx, 1);
+                    };
+                    // Patch the general (un-filtered) list
+                    dispatch(ticketsApi.util.updateQueryData('getMyTickets', undefined, removeFn));
+                    // Patch the per-event list if we know the eventId
+                    if (eventId) {
+                        dispatch(ticketsApi.util.updateQueryData('getMyTickets', { eventId }, removeFn));
+                    }
+                } catch {
+                    // Mutation failed — leave the cache unchanged
+                }
+            },
+            invalidatesTags: ['Ticket'],
             transformResponse: (r) => r?.data ?? r,
         }),
 
@@ -91,10 +91,6 @@ export const ticketsApi = baseApi.injectEndpoints({
 export const {
     useGetMyTicketsQuery,
     useTransferTicketMutation,
-    useGetIncomingTransfersQuery,
-    useGetOutgoingTransfersQuery,
-    useAcceptTransferMutation,
-    useDeclineTransferMutation,
     usePreviewGiftQuery,
     useClaimGiftByTokenMutation,
     useGetMyPendingGiftsQuery,

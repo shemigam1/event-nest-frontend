@@ -1,6 +1,12 @@
+import { useEffect } from 'react';
 import CommentSection from '@/features/comments/components/CommentSection';
+import { useMarkCommentsSeenMutation } from '@/features/comments/commentsApi';
 
 export default function CommentsTab({ eventId, isOrganiser = true }) {
+    const [markSeen] = useMarkCommentsSeenMutation();
+    useEffect(() => {
+        if (isOrganiser && eventId) markSeen(eventId);
+    }, [eventId, isOrganiser]);
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       <div style={{

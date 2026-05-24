@@ -11,6 +11,7 @@ import { formatEventDate } from '@/utils/dateFormat';
 import { formatNaira } from '@/utils/currency';
 import Button from '@/components/ui/Button';
 import { Icons } from '@/components/ui/Icon';
+import AddToCalendar from '@/components/ui/AddToCalendar';
 
 const MAX_PER_BOOKING = 20;
 
@@ -170,6 +171,8 @@ export default function BookingPage() {
                 {step === 3 && booking && (
                     <SuccessStep
                         eventTitle={event.data.title}
+                        eventStartTime={event.data.startTime}
+                        venue={event.data.venueName ?? event.data.venue}
                         booking={booking}
                         onTickets={() => navigate('/tickets')}
                         onMore={() => navigate('/events')}
@@ -520,7 +523,7 @@ function ReviewRow({ label, value, sub }) {
 
 /* ── Step 3: Success ─────────────────────────────────────── */
 
-function SuccessStep({ eventTitle, booking, onTickets, onMore }) {
+function SuccessStep({ eventTitle, eventStartTime, venue, booking, onTickets, onMore }) {
     const seats = (booking.tickets ?? []).map((t) => t.seatNumber).filter(Boolean);
     const qty = booking.quantity ?? seats.length;
     return (
@@ -565,6 +568,25 @@ function SuccessStep({ eventTitle, booking, onTickets, onMore }) {
                             </span>
                         ))}
                     </div>
+                </div>
+            )}
+
+            {/* Add to calendar */}
+            {eventStartTime && (
+                <div style={{
+                    marginTop: 24, padding: '16px 20px',
+                    background: 'var(--surface-subtle)',
+                    border: '1px solid var(--border)',
+                    borderRadius: 12, textAlign: 'left',
+                }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-2)', marginBottom: 10 }}>
+                        Add to your calendar
+                    </div>
+                    <AddToCalendar
+                        title={eventTitle}
+                        startTime={eventStartTime}
+                        venue={venue}
+                    />
                 </div>
             )}
 

@@ -8,7 +8,7 @@ import {
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import { Icons } from '@/components/ui/Icon';
-import { formatNaira } from '@/utils/currency';
+import { formatNaira, nairaToKobo } from '@/utils/currency';
 import { formatEventDate } from '@/utils/dateFormat';
 
 /* ────────────────────────────────────────────────────────────────────────────
@@ -69,8 +69,8 @@ function PoolView({ pool, eventId }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
             <SummaryCard
                 pool={pool}
-                onToggleActive={() => patch({ isActive: !pool.isActive })}
-                onTogglePublic={() => patch({ isPublic: !pool.isPublic })}
+                onToggleActive={() => patch({ isActive: !pool.active })}
+                onTogglePublic={() => patch({ isPublic: !pool.public })}
                 onEdit={() => setEditing(true)}
                 busy={updateState.isLoading}
             />
@@ -122,8 +122,8 @@ function SummaryCard({ pool, onToggleActive, onTogglePublic, onEdit, busy }) {
                         <h2 className="mp-h3" style={{ margin: 0, color: 'var(--text-1)' }}>
                             {pool.title}
                         </h2>
-                        <StatusPill kind={pool.isActive ? 'open' : 'closed'} />
-                        <StatusPill kind={pool.isPublic ? 'public' : 'private'} />
+                        <StatusPill kind={pool.active ? 'open' : 'closed'} />
+                        <StatusPill kind={pool.public ? 'public' : 'private'} />
                     </div>
                     {pool.description && (
                         <p className="body-sm" style={{ marginTop: 8, color: 'var(--text-2)', textWrap: 'pretty' }}>
@@ -181,13 +181,20 @@ function SummaryCard({ pool, onToggleActive, onTogglePublic, onEdit, busy }) {
             </div>
 
             {/* Quick toggles */}
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                <Button size="sm" variant={pool.isActive ? 'ghost' : 'primary'} onClick={onToggleActive} disabled={busy}>
-                    {pool.isActive ? 'Close pool' : 'Reopen pool'}
-                </Button>
-                <Button size="sm" variant="ghost" onClick={onTogglePublic} disabled={busy}>
-                    {pool.isPublic ? 'Make private' : 'Make public'}
-                </Button>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    <Button size="sm" variant={pool.active ? 'ghost' : 'primary'} onClick={onToggleActive} disabled={busy}>
+                        {pool.active ? 'Close pool' : 'Reopen pool'}
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={onTogglePublic} disabled={busy}>
+                        {pool.public ? 'Hide from guests' : 'Show to guests'}
+                    </Button>
+                </div>
+                <p style={{ margin: 0, fontSize: 12, color: 'var(--text-3)', lineHeight: 1.5 }}>
+                    {pool.public
+                        ? 'Currently visible on the public event page — anyone can see and contribute.'
+                        : 'Currently hidden from the public event page — only signed-in attendees can contribute via the event link.'}
+                </p>
             </div>
         </div>
     );
@@ -233,8 +240,8 @@ function CreatePoolCard({ eventId }) {
         setError('');
         const title = form.title.trim();
         if (!title) { setError('Title is required.'); return; }
-        const goal = form.goalAmount === '' ? null : Number(form.goalAmount);
-        if (goal != null && (!Number.isFinite(goal) || goal <= 0)) {
+        const goalNaira = form.goalAmount === '' ? null : Number(form.goalAmount);
+        if (goalNaira != null && (!Number.isFinite(goalNaira) || goalNaira <= 0)) {
             setError('Goal must be a positive number, or left blank for open-ended.');
             return;
         }
@@ -243,7 +250,8 @@ function CreatePoolCard({ eventId }) {
                 eventId,
                 title,
                 description: form.description.trim() || null,
-                goalAmount: goal,
+                // Input is in naira; backend stores kobo
+                goalAmount: goalNaira != null ? nairaToKobo(goalNaira) : null,
                 isPublic: form.isPublic,
             }).unwrap();
         } catch (e) {
@@ -317,7 +325,8 @@ function EditPoolDialog({ pool, onClose, onSave, busy }) {
     const [form, setForm] = useState({
         title: pool.title || '',
         description: pool.description || '',
-        goalAmount: pool.goalAmount ?? '',
+        // pool.goalAmount is in kobo; show it to the user in naira
+        goalAmount: pool.goalAmount != null ? Number(pool.goalAmount) / 100 : '',
         clearGoal: false,
     });
 
@@ -335,9 +344,10 @@ function EditPoolDialog({ pool, onClose, onSave, busy }) {
         };
         if (form.clearGoal) {
             payload.clearGoal = true;
-        } else if (form.goalAmount !== '' && form.goalAmount !== pool.goalAmount) {
+        } else if (form.goalAmount !== '') {
             const n = Number(form.goalAmount);
-            if (Number.isFinite(n) && n > 0) payload.goalAmount = n;
+            // Convert naira input to kobo for the backend
+            if (Number.isFinite(n) && n > 0) payload.goalAmount = nairaToKobo(n);
         }
         onSave(payload);
     }

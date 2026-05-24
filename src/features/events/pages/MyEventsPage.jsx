@@ -5,6 +5,7 @@ import { useGetOrganizerEventsQuery } from '@/features/organiser/organizerApi';
 import { useGetPublishedEventsQuery } from '../eventsApi';
 import { formatEventDate } from '@/utils/dateFormat';
 import Button from '@/components/ui/Button';
+import { StatusBadge } from '@/components/ui/Badge';
 import { Icons } from '@/components/ui/Icon';
 import MessagesTab        from '@/features/organiser/components/MessagesTab';
 import EscrowTab          from '@/features/organiser/components/EscrowTab';
@@ -89,6 +90,9 @@ function MyEventCard({ event, role, onClick }) {
                 <h3 className="mp-h4" style={{ margin: 0, color: 'var(--text-1)' }}>
                     {event.title}
                 </h3>
+                {role === 'ORGANISER' && event.status && event.status !== 'PUBLISHED' && (
+                    <div><StatusBadge status={event.status} size="sm" /></div>
+                )}
                 <div style={{
                     display: 'flex', flexDirection: 'column', gap: 6,
                     fontSize: 14, color: 'var(--text-2)',
@@ -113,6 +117,7 @@ function MyEventCard({ event, role, onClick }) {
 const TIME_TABS = [
     { id: 'upcoming', label: 'Upcoming' },
     { id: 'past',     label: 'Past' },
+    { id: 'drafts',   label: 'Drafts' },
 ];
 const ROLE_CHIPS = [
     { id: 'all',       label: 'All' },
@@ -241,7 +246,15 @@ export default function MyEventsPage() {
 
     const filtered = useMemo(() => {
         return items.filter(({ event, role }) => {
+            // Drafts tab: only organiser events with DRAFT status
+            if (timeTab === 'drafts') {
+                return role === 'ORGANISER' && event.status === 'DRAFT';
+            }
+            // Role filter
             if (roleChip !== 'all' && role !== roleChip) return false;
+            // Draft organiser events live exclusively in the Drafts tab
+            if (role === 'ORGANISER' && event.status === 'DRAFT') return false;
+            // Time filter
             const t = event.startTime ? new Date(event.startTime).getTime() : null;
             const isPast = t != null && t < now;
             if (timeTab === 'upcoming' && isPast) return false;
@@ -256,7 +269,7 @@ export default function MyEventsPage() {
 
     function handleClick({ event, role }) {
         if (role === 'ORGANISER') navigate(`/organiser/events/${event.id}`);
-        else                       navigate('/tickets');
+        else                       navigate(`/events/${event.id}`);
     }
 
     return (
@@ -432,10 +445,11 @@ export default function MyEventsPage() {
 
 function EmptyState({ timeTab, roleChip, onBrowse, onCreate }) {
     const msg = (() => {
-        if (timeTab === 'past') return 'Nothing in your past events yet.';
-        if (roleChip === 'ORGANISER') return 'You haven’t created any events yet.';
-        if (roleChip === 'ATTENDEE')  return 'You haven’t booked any upcoming events.';
-        return 'No upcoming events yet.';
+        if (timeTab === "drafts")     return "You don’t have any draft events.";
+        if (timeTab === "past")       return "Nothing in your past events yet.";
+        if (roleChip === "ORGANISER") return "You haven’t created any events yet.";
+        if (roleChip === "ATTENDEE")  return "You haven’t booked any upcoming events.";
+        return "No upcoming events yet.";
     })();
 
     return (

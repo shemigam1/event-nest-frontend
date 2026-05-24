@@ -305,17 +305,36 @@ export default function CommentCard({
                                 {comment.replyCount > 0 && (
                                     <button
                                         onClick={() => onToggleReplies?.(comment.id)}
+                                        aria-expanded={repliesOpen}
                                         style={{
-                                            background: 'none', border: 0, padding: 0,
+                                            display: 'inline-flex', alignItems: 'center', gap: 5,
+                                            padding: '3px 9px 3px 7px',
+                                            background: repliesOpen ? 'var(--mp-blue)' : 'var(--surface-subtle)',
+                                            border: '1px solid',
+                                            borderColor: repliesOpen ? 'var(--mp-blue)' : 'var(--border)',
+                                            borderRadius: 99,
                                             cursor: 'pointer',
-                                            color: 'var(--mp-blue)',
+                                            color: repliesOpen ? '#fff' : 'var(--mp-blue)',
                                             fontFamily: 'inherit', fontSize: 12, fontWeight: 600,
-                                            display: 'inline-flex', alignItems: 'center', gap: 3,
+                                            transition: 'background 0.15s, color 0.15s, border-color 0.15s',
+                                        }}
+                                        onMouseOver={(e) => {
+                                            if (!repliesOpen) {
+                                                e.currentTarget.style.background = '#EAF1FE';
+                                                e.currentTarget.style.borderColor = 'var(--mp-blue)';
+                                            }
+                                        }}
+                                        onMouseOut={(e) => {
+                                            if (!repliesOpen) {
+                                                e.currentTarget.style.background = 'var(--surface-subtle)';
+                                                e.currentTarget.style.borderColor = 'var(--border)';
+                                            }
                                         }}
                                     >
+                                        <Icons.message size={12} />
                                         {repliesOpen
-                                            ? 'Hide replies'
-                                            : `View ${comment.replyCount} ${comment.replyCount === 1 ? 'reply' : 'replies'}`}
+                                            ? `Hide ${comment.replyCount} ${comment.replyCount === 1 ? 'reply' : 'replies'}`
+                                            : `${comment.replyCount} ${comment.replyCount === 1 ? 'reply' : 'replies'}`}
                                     </button>
                                 )}
                             </>
