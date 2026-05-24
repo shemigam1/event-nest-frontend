@@ -48,6 +48,19 @@ export default function VenueAutocomplete({
     const [selectedPlace, setSelectedPlace] = useState(null);
     const enabled = hasGoogleMapsKey();
 
+    // The Google web component's event listeners are bound ONCE inside the
+    // mount effect below — if we let them close over `onChange` / `onPlaceSelect`
+    // / `selectedPlace` directly, they pin the *first-render* versions of those
+    // values. The parent form's wrapper closes over `data`, so a stale closure
+    // means typing in the venue field rewinds the whole form to its initial
+    // state. Funnel through refs so the handlers always see the latest values.
+    const onChangeRef = useRef(onChange);
+    const onPlaceSelectRef = useRef(onPlaceSelect);
+    const selectedPlaceRef = useRef(selectedPlace);
+    useEffect(() => { onChangeRef.current = onChange; }, [onChange]);
+    useEffect(() => { onPlaceSelectRef.current = onPlaceSelect; }, [onPlaceSelect]);
+    useEffect(() => { selectedPlaceRef.current = selectedPlace; }, [selectedPlace]);
+
     // Mount the PlaceAutocompleteElement once.
     useEffect(() => {
         if (!enabled || !slotRef.current) return;
@@ -108,8 +121,8 @@ export default function VenueAutocomplete({
                             neighbourhood,
                         };
                         setSelectedPlace(summary);
-                        onChange?.({ target: { value: address } });
-                        onPlaceSelect?.(summary);
+                        onChangeRef.current?.({ target: { value: address } });
+                        onPlaceSelectRef.current?.(summary);
                     } catch (err) {
                         // eslint-disable-next-line no-console
                         console.warn('[VenueAutocomplete] place fetch failed:', err);
@@ -121,8 +134,9 @@ export default function VenueAutocomplete({
                 // Submit with a typed-but-unpicked venue would lose the text.
                 ac.addEventListener('input', () => {
                     const v = ac.value ?? '';
-                    if (selectedPlace && v !== selectedPlace.address) setSelectedPlace(null);
-                    onChange?.({ target: { value: v } });
+                    const sp = selectedPlaceRef.current;
+                    if (sp && v !== sp.address) setSelectedPlace(null);
+                    onChangeRef.current?.({ target: { value: v } });
                 });
 
                 // The slot div is React-empty (see render) so we own it
