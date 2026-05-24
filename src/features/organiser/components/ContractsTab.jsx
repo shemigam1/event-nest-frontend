@@ -798,19 +798,18 @@ function ContractModal({ eventId, contract, onDismiss }) {
       if (isEdit) {
         const body = {};
         if (form.title.trim()) body.title = form.title.trim();
-        if (form.description.trim()) body.description = form.description.trim();
+        if (form.description.trim()) body.scope = form.description.trim();
         if (form.terms.trim()) body.terms = form.terms.trim();
-        if (form.amount) body.amount = Number(form.amount);
+        if (form.amount) body.totalValue = Number(form.amount);
         await updateContract({ contractId: contract.id, ...body }).unwrap();
       } else {
         await createContract({
           eventId,
           title: form.title.trim(),
-          description: form.description.trim() || undefined,
+          scope: form.description.trim() || undefined,
           terms: form.terms.trim() || undefined,
-          amount: Number(form.amount),
-          vendorId: selectedApp.applicantId,
-          vendorApplicationId: selectedApp.id,
+          totalValue: Number(form.amount),
+          vendorId: selectedApp.vendorProfileId,
         }).unwrap();
       }
       onDismiss();
@@ -879,7 +878,7 @@ function ContractModal({ eventId, contract, onDismiss }) {
                   <option value="">Select a vendor…</option>
                   {acceptedApps.map((a) => (
                     <option key={a.id} value={a.id}>
-                      {a.applicantName ?? a.vendorName ?? a.applicantId}
+                      {a.businessName ?? a.vendorEmail}
                     </option>
                   ))}
                 </select>

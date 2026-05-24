@@ -56,7 +56,10 @@ export default function OrganizerEventPage() {
     const tiersQuery = useGetEventTiersQuery(eventId);
     const bookingsQuery = useGetEventBookingsQuery(eventId);
     const analyticsQuery = useGetEventAnalyticsQuery(eventId);
-    const { data: unseenComments = 0 } = useGetUnseenCommentCountQuery(eventId, { pollingInterval: 30000 });
+    const { data: unseenComments = 0 } = useGetUnseenCommentCountQuery(eventId, {
+        pollingInterval: tab === 'comments' ? 0 : 60_000,
+        skip: !eventId,
+    });
 
     if (eventQuery.isLoading || tiersQuery.isLoading) {
         return (

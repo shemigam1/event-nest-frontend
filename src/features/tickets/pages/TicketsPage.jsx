@@ -139,21 +139,58 @@ function MyTicketsTab({ onShowQr, eventId }) {
     if (tickets.isError)   return <ErrorState onRetry={tickets.refetch} />;
     if ((tickets.data?.length ?? 0) === 0) return <EmptyState onBrowse={() => navigate('/events')} />;
 
+    // When viewing all tickets (no eventId filter), group by event so the user
+    // can find tickets without scanning through a flat list.
+    const content = eventId ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {tickets.data.map((t) => (
+                <TicketCard
+                    key={t.id}
+                    ticket={t}
+                    eventStartTime={t.eventStartTime}
+                    venue={t.eventVenue}
+                    onShowQr={onShowQr}
+                    onTransfer={() => setTransferTarget(t)}
+                />
+            ))}
+        </div>
+    ) : (
+        Object.values(
+            tickets.data.reduce((acc, t) => {
+                const key = t.eventId ?? t.id;
+                (acc[key] ??= { title: t.eventTitle, tickets: [] }).tickets.push(t);
+                return acc;
+            }, {})
+        ).map(({ title, tickets: group }) => (
+            <section key={title} style={{ marginBottom: 32 }}>
+                <h2 style={{
+                    fontSize: 16, fontWeight: 700,
+                    color: 'var(--text-1)',
+                    margin: '0 0 12px',
+                    paddingBottom: 8,
+                    borderBottom: '1px solid var(--border)',
+                }}>
+                    {title}
+                </h2>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                    {group.map((t) => (
+                        <TicketCard
+                            key={t.id}
+                            ticket={t}
+                            eventStartTime={t.eventStartTime}
+                            venue={t.eventVenue}
+                            onShowQr={onShowQr}
+                            onTransfer={() => setTransferTarget(t)}
+                        />
+                    ))}
+                </div>
+            </section>
+        ))
+    );
+
     return (
         <>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                {tickets.data.map((t) => (
-                    <TicketCard
-                        key={t.id}
-                        ticket={t}
-                        eventStartTime={t.eventStartTime}
-                        venue={t.eventVenue}
-                        onShowQr={onShowQr}
-                        onTransfer={() => setTransferTarget(t)}
-                    />
-                ))}
-            </div>
-
+            {content}
             {transferTarget && (
                 <TransferModal
                     ticket={transferTarget}
