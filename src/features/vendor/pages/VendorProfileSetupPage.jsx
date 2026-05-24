@@ -76,7 +76,7 @@ export default function VendorProfileSetupPage() {
 
     return (
         <PageShell>
-            <div style={{
+            <div className="mp-grid-stack" style={{
                 display: 'grid',
                 gridTemplateColumns: 'minmax(0, 1fr) 300px',
                 gap: 20,
@@ -936,7 +936,7 @@ function Skeleton() {
         borderRadius: 14, animation: 'mp-flash 1.6s ease-in-out infinite',
     });
     return (
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 300px', gap: 20 }}>
+        <div className="mp-grid-stack" style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 300px', gap: 20 }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 <div style={block(180)} />
                 <div style={{ ...block(220), opacity: 0.9 }} />

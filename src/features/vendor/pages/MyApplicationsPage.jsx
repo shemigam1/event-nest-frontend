@@ -409,7 +409,7 @@ function AllApplicationsView({
     return (
         <>
             {/* Tiles */}
-            <div style={{
+            <div className="mp-stat-grid" style={{
                 display: 'grid',
                 gridTemplateColumns: 'repeat(4, 1fr)',
                 gap: 16,

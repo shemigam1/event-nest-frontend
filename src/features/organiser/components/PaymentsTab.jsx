@@ -37,7 +37,7 @@ export default function PaymentsTab({ events = [], isLoading }) {
             </div>
 
             {/* Stat tiles */}
-            <div style={{
+            <div className="mp-stat-grid" style={{
                 display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)',
                 gap: 14, marginBottom: 24,
             }}>
@@ -246,7 +246,7 @@ function PaySkeleton() {
     };
     return (
         <div>
-            <div style={{
+            <div className="mp-stat-grid" style={{
                 display: 'grid', gridTemplateColumns: 'repeat(4,1fr)',
                 gap: 14, marginBottom: 24,
             }}>

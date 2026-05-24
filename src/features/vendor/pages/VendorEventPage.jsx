@@ -321,7 +321,7 @@ function ContractCard({ contract, loading }) {
 
             <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 18 }}>
                 {/* Money summary */}
-                <div style={{
+                <div className="mp-stat-grid" style={{
                     display: 'grid',
                     gridTemplateColumns: 'repeat(3, 1fr)',
                     gap: 12,

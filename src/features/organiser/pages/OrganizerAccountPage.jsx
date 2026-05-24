@@ -76,7 +76,7 @@ export default function OrganizerAccountPage() {
 
             {/* Summary cards */}
             {!contractsQ.isLoading && (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 36 }}>
+                <div className="mp-stat-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 36 }}>
                     <SummaryCard
                         icon={<Icons.wallet size={20} />}
                         label="Total value locked"
