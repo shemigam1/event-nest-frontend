@@ -28,3 +28,4 @@ CLAUDE.md
 *.sw?
 
 .claude/.env.local
+.claude/
