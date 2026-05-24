@@ -67,7 +67,7 @@ export default function EscrowTab() {
             </div>
 
             {/* Stats */}
-            <div style={{
+            <div className="mp-stat-grid" style={{
                 display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)',
                 gap: 14, marginBottom: 24,
             }}>
@@ -234,7 +234,7 @@ function EscrowSkeleton() {
     };
     return (
         <div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14, marginBottom: 24 }}>
+            <div className="mp-stat-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14, marginBottom: 24 }}>
                 <div style={tile} />
                 <div style={{ ...tile, opacity: 0.7 }} />
                 <div style={{ ...tile, opacity: 0.4 }} />

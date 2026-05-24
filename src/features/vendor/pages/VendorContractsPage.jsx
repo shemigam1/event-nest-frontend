@@ -103,7 +103,7 @@ export default function VendorContractsPage() {
 
             {/* Summary */}
             {allContracts.length > 0 && (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 28 }}>
+                <div className="mp-stat-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 28 }}>
                     <StatCard label="Active contracts" value={totalActive} accent="blue" />
                     <StatCard label="Total earned" value={ngn(totalEarned)} accent="success" />
                     <StatCard label="Outstanding" value={ngn(outstanding)} accent="neutral" />
@@ -225,7 +225,7 @@ function ContractCard({ contract: c }) {
             {expanded && (
                 <div style={{ padding: '20px 20px 24px' }}>
                     {/* money summary */}
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 20, background: 'var(--surface-subtle)', borderRadius: 10, padding: '14px 16px' }}>
+                    <div className="mp-stat-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 20, background: 'var(--surface-subtle)', borderRadius: 10, padding: '14px 16px' }}>
                         <MoneyRow label="Contract value"  value={ngn(c.amount ?? c.totalValue)} />
                         <MoneyRow label="Released to you" value={ngn(c.releasedAmount)} accent="success" />
                         <MoneyRow label="Outstanding"     value={ngn(c.outstandingBalance)} />

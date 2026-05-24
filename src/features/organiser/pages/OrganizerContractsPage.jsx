@@ -128,7 +128,7 @@ export default function OrganizerContractsPage() {
 
             {/* Summary strip */}
             {allContracts.length > 0 && (
-                <div style={{
+                <div className="mp-stat-grid" style={{
                     display: 'grid',
                     gridTemplateColumns: 'repeat(3, 1fr)',
                     gap: 16,
