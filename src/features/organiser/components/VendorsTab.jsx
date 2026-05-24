@@ -483,7 +483,7 @@ function ApplicationsPane({ eventId }) {
     );
 
     return (
-        <div style={{
+        <div className="mp-grid-stack" style={{
             display: 'grid',
             gridTemplateColumns: 'minmax(0, 1fr) 300px',
             gap: 20,
@@ -1122,7 +1122,7 @@ function Skeleton() {
     };
     return (
         <div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16, marginBottom: 20 }}>
+            <div className="mp-stat-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16, marginBottom: 20 }}>
                 <div style={tile} />
                 <div style={{ ...tile, opacity: 0.8 }} />
                 <div style={{ ...tile, opacity: 0.6 }} />
