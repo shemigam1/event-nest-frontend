@@ -45,6 +45,7 @@ import VendorDashboardPage from '../features/vendor/pages/VendorDashboardPage';
 import CheckInPage from '../features/checkin/pages/CheckInPage';
 import CheckInScannerPage from '../features/checkin/pages/CheckInScannerPage';
 import PaymentResultPage from '../features/bookings/pages/PaymentResultPage';
+import PaymentsTransactionsPage from '../features/payments/pages/PaymentsTransactionsPage';
 import VendorMarketplacePage from '../features/vendor/pages/VendorMarketplacePage';
 import VendorDetailPage from '../features/vendor/pages/VendorDetailPage';
 import VendorProfileSetupPage from '../features/vendor/pages/VendorProfileSetupPage';
@@ -99,6 +100,7 @@ const router = createBrowserRouter([
                     { path: '/organiser/contracts',  element: <OrganizerContractsPage /> },
                     { path: '/organiser/account',    element: <OrganizerAccountPage /> },
                     { path: '/organiser/disputes',   element: <OrganizerDisputesPage /> },
+                    { path: '/payments/transactions/:eventId', element: <PaymentsTransactionsPage /> },
                     { path: '/vendor/contracts',     element: <VendorContractsPage /> },
                     { path: '/vendor/disputes',      element: <VendorDisputesPage /> },
                     { path: '/vendor',               element: <VendorDashboardPage /> },

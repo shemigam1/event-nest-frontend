@@ -498,7 +498,10 @@ function EscrowPanel({ contractId, contractStatus }) {
     const [err, setErr] = useState('');
 
     const escrow     = escrowQ.data;
-    const canAddMilestone = ['FUNDED', 'ACTIVE'].includes(contractStatus);
+    // Milestones can be added any time before activation (DRAFT/COUNTERSIGNED/SIGNED).
+    // Previously this read ['FUNDED', 'ACTIVE'] which mixed EscrowStatus and
+    // ContractStatus values and never matched, so the button never appeared.
+    const canAddMilestone = ['DRAFT', 'COUNTERSIGNED', 'SIGNED'].includes(contractStatus);
     const canRelease      = contractStatus === 'ACTIVE';
 
     async function act(fn, label) {

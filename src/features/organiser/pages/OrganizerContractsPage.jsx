@@ -15,6 +15,7 @@ import Button from '@/components/ui/Button';
 import Modal from '@/components/ui/Modal';
 import Input from '@/components/ui/Input';
 import { Icons } from '@/components/ui/Icon';
+import CancelContractModal from '../components/CancelContractModal';
 
 /* ─── helpers ─────────────────────────────────────────── */
 
@@ -261,15 +262,21 @@ function ContractCard({ contract }) {
     const [expanded, setExpanded] = useState(false);
     const [editing, setEditing] = useState(false);
     const [err, setErr] = useState('');
+    const [showCancel, setShowCancel] = useState(false);
 
     const [fundEscrow, fundState]   = useFundEscrowMutation();
     const [rescind, rescindState]   = useRescindContractMutation();
-    const [cancel, cancelState]     = useCancelContractMutation();
+    // We keep useCancelContractMutation imported so the mutation registers and
+    // its cache invalidation runs — but the actual call happens inside the modal.
+    const [, cancelState]           = useCancelContractMutation();
 
     const busy = fundState.isLoading || rescindState.isLoading || cancelState.isLoading;
     const s    = STATUS_STYLE[contract.status] ?? STATUS_STYLE.DRAFT;
     const isDone    = contract.status === 'COMPLETED' || contract.status === 'CANCELLED';
-    const hasEscrow = ['SIGNED', 'ACTIVE', 'COMPLETED', 'CANCELLED'].includes(contract.status);
+    // Show the escrow panel for every status so the organiser can add milestones
+    // at any pre-fund point (DRAFT/COUNTERSIGNED/SIGNED) and see the breakdown
+    // through to COMPLETED.
+    const hasEscrow = ['DRAFT', 'COUNTERSIGNED', 'SIGNED', 'ACTIVE', 'COMPLETED', 'CANCELLED'].includes(contract.status);
 
     async function run(action, label) {
         setErr('');
@@ -361,7 +368,7 @@ function ContractCard({ contract }) {
                                 </Button>
                             )}
                             <Button variant="destructive" size="sm" disabled={busy}
-                                onClick={() => run(() => cancel(contract.id), 'cancel')}>
+                                onClick={() => setShowCancel(true)}>
                                 {cancelState.isLoading ? 'Cancelling…' : 'Cancel'}
                             </Button>
                         </div>
@@ -377,6 +384,14 @@ function ContractCard({ contract }) {
                     {/* escrow */}
                     {hasEscrow && <EscrowPanel contractId={contract.id} contractStatus={contract.status} />}
                 </div>
+            )}
+
+            {showCancel && (
+                <CancelContractModal
+                    contractId={contract.id}
+                    contractTitle={contract.title}
+                    onDismiss={() => setShowCancel(false)}
+                />
             )}
         </div>
     );
@@ -402,7 +417,8 @@ function EscrowPanel({ contractId, contractStatus }) {
     const [err, setErr] = useState('');
 
     const escrow     = escrowQ.data;
-    const canAddMilestone = contractStatus === 'SIGNED';
+    // Milestones can be added any time before activation (DRAFT/COUNTERSIGNED/SIGNED).
+    const canAddMilestone = ['DRAFT', 'COUNTERSIGNED', 'SIGNED'].includes(contractStatus);
     const canRelease      = contractStatus === 'ACTIVE';
 
     async function act(fn, label) {
@@ -417,8 +433,10 @@ function EscrowPanel({ contractId, contractStatus }) {
             animation: 'pulse 1.4s ease-in-out infinite' }} />
     );
     if (escrowQ.isError || !escrow) {
-        // SIGNED contract — escrow doesn't exist yet (created lazily on first addMilestone).
-        if (contractStatus === 'SIGNED') return (
+        // Pre-fund contract (DRAFT/COUNTERSIGNED/SIGNED) — escrow doesn't exist yet,
+        // it's created lazily on the first addMilestone call. Show the add prompt
+        // instead of an error.
+        if (canAddMilestone) return (
             <div style={{ marginTop: 20, borderTop: '1px solid var(--border)', paddingTop: 20 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
                     <h4 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: 'var(--text-1)' }}>Escrow account</h4>

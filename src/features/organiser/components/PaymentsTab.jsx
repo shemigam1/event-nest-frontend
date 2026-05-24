@@ -1,3 +1,4 @@
+import { Link } from 'react-router';
 import { Icons } from '@/components/ui/Icon';
 import { formatNaira, formatNairaCompact } from '@/utils/currency';
 import { formatEventDate } from '@/utils/dateFormat';
@@ -10,7 +11,10 @@ export default function PaymentsTab({ events = [], isLoading }) {
     const occupancyPct  = totalCapacity > 0
         ? Math.round((totalSold / totalCapacity) * 100) : 0;
 
-    // Sort paid events by revenue desc; separate free events with bookings
+    // Sort paid events by revenue desc; separate free events with bookings;
+    // then "quiet" events (no revenue, no bookings yet) so the organiser can
+    // still click in and see the per-event transactions page rather than
+    // hitting a dead-end empty state on the tab.
     const paidEvents = [...events]
         .filter((e) => (e.totalRevenue ?? 0) > 0)
         .sort((a, b) => (b.totalRevenue ?? 0) - (a.totalRevenue ?? 0));
@@ -19,7 +23,15 @@ export default function PaymentsTab({ events = [], isLoading }) {
         (e) => (e.totalRevenue ?? 0) === 0 && (e.soldCount ?? 0) > 0
     );
 
-    const hasData = paidEvents.length > 0 || freeEvents.length > 0;
+    const quietEvents = events.filter(
+        (e) => (e.totalRevenue ?? 0) === 0 && (e.soldCount ?? 0) === 0
+    );
+
+    // The "No payment data" empty state now only triggers when the organiser
+    // has zero events at all. Otherwise we render every event as a clickable
+    // row — even ones with no bookings yet — because the detail page handles
+    // the per-event empty state cleanly.
+    const hasAnyEvents = events.length > 0;
     const topRevenue = paidEvents[0]?.totalRevenue ?? 1;
 
     if (isLoading) return <PaySkeleton />;
@@ -64,8 +76,8 @@ export default function PaymentsTab({ events = [], isLoading }) {
                 />
             </div>
 
-            {/* Empty state */}
-            {!hasData ? (
+            {/* Empty state — only when the organiser truly has no events. */}
+            {!hasAnyEvents ? (
                 <div style={{ textAlign: 'center', padding: '56px 24px' }}>
                     <div style={{
                         width: 56, height: 56, borderRadius: 99, margin: '0 auto 16px',
@@ -78,7 +90,7 @@ export default function PaymentsTab({ events = [], isLoading }) {
                         No payment data yet
                     </div>
                     <p className="body-sm" style={{ color: 'var(--text-2)', margin: '8px 0 0' }}>
-                        Revenue and sales data will appear here once your events start selling tickets.
+                        Create an event to start tracking ticket sales and payments here.
                     </p>
                 </div>
             ) : (
@@ -94,13 +106,16 @@ export default function PaymentsTab({ events = [], isLoading }) {
                         <span style={{ fontWeight: 600, color: 'var(--text-1)', fontSize: 14 }}>
                             Revenue by event
                         </span>
-                        {totalRevenue > 0 && (
-                            <span className="mp-num" style={{
-                                fontSize: 13, fontWeight: 700, color: 'var(--mp-blue)',
-                            }}>
-                                {formatNairaCompact(totalRevenue)} total
-                            </span>
-                        )}
+                        <span style={{ fontSize: 12, color: 'var(--text-3)' }}>
+                            {totalRevenue > 0 && (
+                                <span className="mp-num" style={{
+                                    fontWeight: 700, color: 'var(--mp-blue)', marginRight: 8,
+                                }}>
+                                    {formatNairaCompact(totalRevenue)} total
+                                </span>
+                            )}
+                            Click an event to view its transactions →
+                        </span>
                     </div>
 
                     {/* Paid events */}
@@ -109,7 +124,11 @@ export default function PaymentsTab({ events = [], isLoading }) {
                             key={e.id}
                             event={e}
                             topRevenue={topRevenue}
-                            isLast={i === paidEvents.length - 1 && freeEvents.length === 0}
+                            isLast={
+                                i === paidEvents.length - 1
+                                && freeEvents.length === 0
+                                && quietEvents.length === 0
+                            }
                         />
                     ))}
 
@@ -130,7 +149,30 @@ export default function PaymentsTab({ events = [], isLoading }) {
                             key={e.id}
                             event={e}
                             topRevenue={topRevenue}
-                            isLast={i === freeEvents.length - 1}
+                            isLast={i === freeEvents.length - 1 && quietEvents.length === 0}
+                        />
+                    ))}
+
+                    {/* Quiet events — no bookings yet, but still drillable so the
+                        organiser can confirm there are no transactions and share
+                        the URL with collaborators. */}
+                    {quietEvents.length > 0 && (paidEvents.length > 0 || freeEvents.length > 0) && (
+                        <div style={{
+                            padding: '10px 20px',
+                            background: 'var(--surface-subtle)',
+                            borderTop: '1px solid var(--border)',
+                            fontSize: 12, color: 'var(--text-3)', fontWeight: 500,
+                        }}>
+                            Events with no bookings yet
+                        </div>
+                    )}
+
+                    {quietEvents.map((e, i) => (
+                        <EventRevenueRow
+                            key={e.id}
+                            event={e}
+                            topRevenue={topRevenue}
+                            isLast={i === quietEvents.length - 1}
                         />
                     ))}
                 </div>
@@ -149,10 +191,19 @@ function EventRevenueRow({ event: e, topRevenue, isLast }) {
         ? Math.max(4, (revenue / topRevenue) * 100) : 0;
 
     return (
-        <div style={{
-            padding: '16px 20px',
-            borderBottom: isLast ? 0 : '1px solid var(--border)',
-        }}>
+        <Link
+            to={`/payments/transactions/${e.id}`}
+            style={{
+                display: 'block',
+                padding: '16px 20px',
+                borderBottom: isLast ? 0 : '1px solid var(--border)',
+                color: 'inherit',
+                textDecoration: 'none',
+                transition: 'background 0.12s',
+            }}
+            onMouseOver={(ev) => { ev.currentTarget.style.background = 'var(--surface-subtle)'; }}
+            onMouseOut={(ev)  => { ev.currentTarget.style.background = 'transparent'; }}
+        >
             {/* Top row: title + revenue */}
             <div style={{
                 display: 'flex', justifyContent: 'space-between',
@@ -207,7 +258,7 @@ function EventRevenueRow({ event: e, topRevenue, isLast }) {
                     }} />
                 </div>
             )}
-        </div>
+        </Link>
     );
 }
 

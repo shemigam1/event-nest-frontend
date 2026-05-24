@@ -284,6 +284,10 @@ function ActiveSession({ credentials, eventDays, selectedDayId: initialDayId, on
     const [checkIn, { isLoading }] = useScanTicketMutation();
     const [batchScan]              = useBatchScanTicketsMutation();
     const isOnline                 = useOnlineStatus();
+    const [forceOffline, setForceOffline] = useState(false);
+    // Staff can manually force offline mode even when the network is up
+    // (e.g. backend is down but navigator.onLine is still true).
+    const effectivelyOnline        = isOnline && !forceOffline;
 
     const [qrInput, setQrInput]           = useState('');
     const [result, setResult]             = useState(null);
@@ -313,9 +317,9 @@ function ActiveSession({ credentials, eventDays, selectedDayId: initialDayId, on
         setLocalScanned(loadLocalScanned(credentials.eventId, selectedDayId));
     }, [selectedDayId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    // Auto-sync queued offline scans when connectivity is restored
+    // Auto-sync queued offline scans when connectivity is restored or offline mode is manually exited
     useEffect(() => {
-        if (!isOnline) return;
+        if (!effectivelyOnline) return;
         const queue = loadQueue(credentials.eventId);
         if (queue.length === 0) return;
         setSyncStatus('syncing');
@@ -328,7 +332,7 @@ function ActiveSession({ credentials, eventDays, selectedDayId: initialDayId, on
                 setTimeout(() => setSyncStatus(null), 3000);
             })
             .catch(() => setSyncStatus('error'));
-    }, [isOnline]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [effectivelyOnline]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Only count first scans as successes — repeated scans of the same ticket
     // come back as success:true with firstScan:false and shouldn't double-count.
@@ -377,7 +381,7 @@ function ActiveSession({ credentials, eventDays, selectedDayId: initialDayId, on
 
         setQrInput('');
 
-        if (isOnline) {
+        if (effectivelyOnline) {
             try {
                 const data = await checkIn({
                     eventId:    credentials.eventId,
@@ -458,19 +462,33 @@ function ActiveSession({ credentials, eventDays, selectedDayId: initialDayId, on
                     </span>
                 </div>
 
-                {/* Offline indicator */}
-                {!isOnline && (
-                    <div style={{
+                {/* Offline mode toggle — also acts as the offline indicator.
+                    When the network is genuinely down the button is non-interactive (cursor:default).
+                    When online, clicking it forces / exits offline mode so staff can test or
+                    work around a backend outage while the browser still shows as "connected". */}
+                <button
+                    onClick={isOnline ? () => setForceOffline((f) => !f) : undefined}
+                    style={{
                         display: 'flex', alignItems: 'center', gap: 6,
-                        background: '#FFF8E1', border: '1px solid #FDE68A',
+                        background: !effectivelyOnline ? '#FFF8E1' : 'transparent',
+                        border: `1px solid ${!effectivelyOnline ? '#FDE68A' : 'var(--border)'}`,
                         borderRadius: 99, padding: '4px 12px', flexShrink: 0,
-                    }}>
-                        <span style={{ fontSize: 12, fontWeight: 700, color: '#92400E' }}>Offline</span>
-                        {queueLen > 0 && (
-                            <span style={{ fontSize: 12, color: '#92400E' }}>· {queueLen} queued</span>
-                        )}
-                    </div>
-                )}
+                        cursor: isOnline ? 'pointer' : 'default',
+                        fontSize: 12, fontWeight: 700,
+                        color: !effectivelyOnline ? '#92400E' : 'var(--text-3)',
+                        transition: 'background 0.15s, border-color 0.15s, color 0.15s',
+                    }}
+                    title={isOnline
+                        ? (forceOffline
+                            ? 'Click to exit offline mode and sync queued scans'
+                            : 'Click to force offline mode (useful when backend is down but network is up)')
+                        : 'Network is offline — scans are queued locally'}
+                >
+                    {!effectivelyOnline
+                        ? (forceOffline && isOnline ? 'Manual offline' : 'Offline')
+                        : 'Go offline'}
+                    {queueLen > 0 && ` · ${queueLen} queued`}
+                </button>
 
                 {syncStatus === 'syncing' && (
                     <span style={{ fontSize: 12, color: 'var(--text-3)', flexShrink: 0 }}>Syncing…</span>
