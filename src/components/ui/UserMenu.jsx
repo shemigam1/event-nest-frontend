@@ -142,13 +142,11 @@ export default function UserMenu({ onDark = false, onOpenSidebar }) {
                     ) : (
                         <>
                             {/*
-                              "My events" now points at /organiser (the
-                              former Organiser Console). The old /dashboard
-                              entry is dropped — login lands users on the
-                              public events browse, and the sidebar gives
-                              them quick access to the rest.
+                              "My events" points at /my-events — the unified
+                              hub for attended + organised events, with drafts
+                              visible under the Drafts tab.
                             */}
-                            <MenuItem icon={<Icons.calendar size={16} />} onClick={() => go('/organiser')}>
+                            <MenuItem icon={<Icons.calendar size={16} />} onClick={() => go('/my-events')}>
                                 My events
                             </MenuItem>
                             <MenuItem icon={<Icons.ticket size={16} />} onClick={() => go('/tickets')}>

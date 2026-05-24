@@ -70,6 +70,7 @@ function Badge({ style, label }) {
 /* ─── Page ────────────────────────────────────────────── */
 
 export default function OrganizerContractsPage() {
+    const navigate = useNavigate();
     const [activeFilter, setActiveFilter] = useState('ALL');
     const [search, setSearch] = useState('');
     const contractsQ = useGetMyContractsQuery();
@@ -96,6 +97,25 @@ export default function OrganizerContractsPage() {
 
     return (
         <div style={{ padding: '32px 40px', maxWidth: 900, margin: '0 auto' }}>
+            {/* Back */}
+            <button
+                type="button"
+                onClick={() => navigate('/my-events')}
+                style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 6,
+                    background: 'none', border: 0, padding: 0, cursor: 'pointer',
+                    fontSize: 13, fontWeight: 500,
+                    color: 'var(--text-2)', fontFamily: 'inherit',
+                    marginBottom: 20,
+                    transition: 'color 0.15s',
+                }}
+                onMouseOver={(e) => { e.currentTarget.style.color = 'var(--mp-blue)'; }}
+                onMouseOut={(e)  => { e.currentTarget.style.color = 'var(--text-2)'; }}
+            >
+                <Icons.arrowL size={14} />
+                My events
+            </button>
+
             {/* Header */}
             <div style={{ marginBottom: 28 }}>
                 <h1 className="mp-h1" style={{ margin: '0 0 4px', color: 'var(--text-1)', fontSize: 24 }}>

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { useSelector } from 'react-redux';
 import {
@@ -11,6 +11,8 @@ import {
     useLeaveWaitlistMutation,
     useGetMyWaitlistPositionQuery,
 } from '@/features/waitlist/waitlistApi';
+import { useGetProgrammeQuery } from '@/features/organiser/programmeApi';
+import { useGetMyBookingsQuery } from '@/features/bookings/bookingsApi';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 import { selectIsAuthenticated, selectCurrentUserId } from '@/features/auth/authSlice';
@@ -22,6 +24,7 @@ import TopNav from '@/components/ui/TopNav';
 import { StatusBadge } from '@/components/ui/Badge';
 import { Icons } from '@/components/ui/Icon';
 import CommentSection from '@/features/comments/components/CommentSection';
+import ContributionWidget from '../components/ContributionWidget';
 
 export default function EventDetailPage() {
     const { identifier } = useParams();
@@ -56,6 +59,16 @@ export default function EventDetailPage() {
     const [joinWaitlist, { isLoading: joiningWaitlist }] = useJoinWaitlistMutation();
     const [leaveWaitlist, { isLoading: leavingWaitlist }] = useLeaveWaitlistMutation();
     const [waitlistMsg, setWaitlistMsg] = useState('');
+
+    // Programme — public endpoint, skip until event id is resolved
+    const programmeQuery = useGetProgrammeQuery(eventId, { skip: !event.data });
+
+    // Bookings — skip for unauthenticated visitors (used to surface the "View tickets" CTA)
+    const bookingsQuery = useGetMyBookingsQuery(undefined, { skip: !isAuthenticated });
+    const hasMyTickets = useMemo(() =>
+        (bookingsQuery.data ?? []).some((b) => b.eventId === eventId),
+        [bookingsQuery.data, eventId],
+    );
 
     const handleJoinWaitlist = async (tierId) => {
         if (!isAuthenticated) {
@@ -190,6 +203,46 @@ export default function EventDetailPage() {
                                 contactEmail={e.refundContactEmail}
                             />
                         )}
+
+                        {/* "View your tickets" CTA — shown to authenticated attendees */}
+                        {isAuthenticated && !isOwnEvent && hasMyTickets && (
+                            <div style={{
+                                marginTop: 24,
+                                background: 'linear-gradient(135deg, #EAF1FE 0%, #F0F7FF 100%)',
+                                border: '1px solid #C2D9F7',
+                                borderRadius: 14,
+                                padding: '20px 24px',
+                                display: 'flex',
+                                gap: 16,
+                                alignItems: 'center',
+                            }}>
+                                <div style={{
+                                    width: 44, height: 44, borderRadius: 10,
+                                    background: 'var(--mp-blue)', display: 'flex',
+                                    alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                                }}>
+                                    <Icons.ticket size={20} style={{ color: 'white' }} />
+                                </div>
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-1)' }}>
+                                        You have tickets for this event
+                                    </div>
+                                    <div style={{ fontSize: 13, color: 'var(--text-2)', marginTop: 3 }}>
+                                        View your QR code, download your PDF, or transfer a ticket.
+                                    </div>
+                                </div>
+                                <Button
+                                    variant="primary"
+                                    size="md"
+                                    onClick={() => navigate(`/tickets?eventId=${eventId}`)}
+                                    iconRight={<Icons.arrowR size={14} />}
+                                    style={{ flexShrink: 0 }}
+                                >
+                                    View my tickets
+                                </Button>
+                            </div>
+                        )}
+
                     </div>
 
                     {/* Right: booking aside */}
@@ -343,10 +396,24 @@ export default function EventDetailPage() {
                     </aside>
                 </div>
 
+                {/* Secondary cards — contribution pool, programme, tickets.
+                    Pulled out of the cramped left column so they breathe at full width. */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 20 }}>
+                    <ContributionWidget eventId={eventId} />
+
+                    {isAuthenticated && hasMyTickets && (programmeQuery.data ?? []).length > 0 && (
+                        <ProgrammeCta
+                            identifier={identifier}
+                            itemCount={(programmeQuery.data ?? []).length}
+                        />
+                    )}
+
+                </div>
+
                 {/* Discussion thread — gated by EventConfig.commentsEnabled
                     on the backend (default true). Component renders its
                     own "module off" notice on 409. */}
-                <div style={{ marginTop: 20 }}>
+                <div style={{ marginTop: 12 }}>
                     <CommentSection
                         eventId={eventId}
                         eventStatus={e.status}
@@ -680,6 +747,56 @@ function WaitlistCta({ tierId, entry, joining, leaving, msg, onJoin, onLeave }) 
                 </button>
             )}
         </div>
+    );
+}
+
+/* ── Programme CTA — ticket-holders only ─────────────────────── */
+
+/**
+ * Clickable card that navigates to the dedicated programme page.
+ * Only rendered when the user has a ticket for this event AND the
+ * organiser has published at least one programme item.
+ */
+function ProgrammeCta({ identifier, itemCount }) {
+    const navigate = useNavigate();
+    return (
+        <button
+            type="button"
+            onClick={() => navigate(`/events/${identifier}/programme`)}
+            style={{
+                width: '100%', display: 'flex', alignItems: 'center', gap: 16,
+                background: 'var(--surface-subtle)',
+                border: '1px solid var(--border)',
+                borderRadius: 12, padding: '16px 20px',
+                cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
+                transition: 'border-color 0.15s, background 0.15s',
+            }}
+            onMouseOver={(e) => {
+                e.currentTarget.style.borderColor = 'var(--mp-blue)';
+                e.currentTarget.style.background = '#EAF1FE';
+            }}
+            onMouseOut={(e) => {
+                e.currentTarget.style.borderColor = 'var(--border)';
+                e.currentTarget.style.background = 'var(--surface-subtle)';
+            }}
+        >
+            <span style={{
+                width: 44, height: 44, borderRadius: 10,
+                background: 'var(--mp-blue)', display: 'flex',
+                alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+            }}>
+                <Icons.calendar size={18} style={{ color: 'white' }} />
+            </span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-1)' }}>
+                    Programme of Events
+                </div>
+                <div style={{ fontSize: 13, color: 'var(--text-2)', marginTop: 3 }}>
+                    {itemCount} {itemCount === 1 ? 'item' : 'items'} · See the full schedule
+                </div>
+            </div>
+            <Icons.arrowR size={18} style={{ color: 'var(--text-3)', flexShrink: 0 }} />
+        </button>
     );
 }
 

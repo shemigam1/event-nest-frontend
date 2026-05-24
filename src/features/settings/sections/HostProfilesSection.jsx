@@ -73,6 +73,10 @@ function LogoPicker({ profileId, logoUrl, onUploaded }) {
 
     async function handleFile(file) {
         if (!file || !profileId) return;
+        if (file.size > 2 * 1024 * 1024) {
+            setError('Logo must be under 2 MB.');
+            return;
+        }
         if (!/^image\/(png|jpeg|jpg)$/i.test(file.type)) {
             setError('Logo must be a PNG or JPG image.');
             return;
@@ -133,7 +137,7 @@ function LogoPicker({ profileId, logoUrl, onUploaded }) {
                 <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 6 }}>
                     {!profileId
                         ? 'Save the profile first, then upload a logo.'
-                        : 'PNG or JPG. Shown on your public event pages.'}
+                        : 'PNG or JPG, max 2 MB. Shown on your public event pages.'}
                 </div>
                 {error && (
                     <div style={{ fontSize: 12, color: 'var(--error)', marginTop: 4 }}>{error}</div>

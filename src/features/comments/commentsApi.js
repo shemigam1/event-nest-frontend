@@ -65,6 +65,17 @@ export const commentsApi = baseApi.injectEndpoints({
            currentUserLiked + adjusts likeCount on the matching item in
            every cached query that contains this comment, so the UI is
            instant. Falls back to a refetch on error. */
+        getUnseenCommentCount: builder.query({
+            query: (eventId) => `/events/${eventId}/comments/unseen-count`,
+            providesTags: (result, error, eventId) => [{ type: 'CommentUnseen', id: eventId }],
+            transformResponse: (r) => r?.data ?? 0,
+        }),
+
+        markCommentsSeen: builder.mutation({
+            query: (eventId) => ({ url: `/events/${eventId}/comments/mark-seen`, method: 'POST' }),
+            invalidatesTags: (result, error, eventId) => [{ type: 'CommentUnseen', id: eventId }],
+        }),
+
         toggleCommentLike: builder.mutation({
             query: (commentId) => ({
                 url: `/comments/${commentId}/like`,
@@ -123,4 +134,6 @@ export const {
     useUpdateCommentMutation,
     useDeleteCommentMutation,
     useToggleCommentLikeMutation,
+    useGetUnseenCommentCountQuery,
+    useMarkCommentsSeenMutation,
 } = commentsApi;

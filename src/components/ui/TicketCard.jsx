@@ -4,57 +4,7 @@ import { StatusBadge } from './Badge';
 import { formatEventDate } from '@/utils/dateFormat';
 import { downloadTicketPdf } from '@/features/tickets/pdf';
 import { Icons } from './Icon';
-
-/* ── Calendar helpers ──────────────────────────────────────── */
-
-/** Convert ISO date string to Google / iCal format: YYYYMMDDTHHmmssZ */
-function toCalFmt(iso, offsetHours = 0) {
-    const d = new Date(iso);
-    if (offsetHours) d.setTime(d.getTime() + offsetHours * 60 * 60 * 1000);
-    return d.toISOString().replace(/[-:.]/g, '').slice(0, 15) + 'Z';
-}
-
-function buildGoogleUrl(title, startIso, venue, description) {
-    const start = toCalFmt(startIso);
-    const end   = toCalFmt(startIso, 2);           // default 2 h duration
-    const p = new URLSearchParams({
-        action: 'TEMPLATE',
-        text: title,
-        dates: `${start}/${end}`,
-        ...(venue       && { location: venue }),
-        ...(description && { details: description }),
-    });
-    return `https://calendar.google.com/calendar/render?${p}`;
-}
-
-function downloadIcs(title, startIso, venue, description) {
-    const start = toCalFmt(startIso);
-    const end   = toCalFmt(startIso, 2);
-    const lines = [
-        'BEGIN:VCALENDAR',
-        'VERSION:2.0',
-        'PRODID:-//EventNest//EN',
-        'BEGIN:VEVENT',
-        `DTSTART:${start}`,
-        `DTEND:${end}`,
-        `SUMMARY:${title}`,
-        description ? `DESCRIPTION:${description}` : '',
-        venue       ? `LOCATION:${venue}`          : '',
-        'END:VEVENT',
-        'END:VCALENDAR',
-    ].filter(Boolean).join('\r\n');
-
-    const blob = new Blob([lines], { type: 'text/calendar;charset=utf-8' });
-    const url  = URL.createObjectURL(blob);
-    const a    = Object.assign(document.createElement('a'), {
-        href: url,
-        download: `${title.replace(/[^\w\s-]/g, '')}.ics`,
-    });
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-}
+import { buildGoogleUrl, downloadIcs } from '@/utils/calendarUtils';
 
 /* ── Add-to-Calendar button row ────────────────────────────── */
 
@@ -127,13 +77,20 @@ function AddToCalendar({ ticket, startTime, venue }) {
  *
  * `eventStartTime` (optional ISO string) is rendered into "When";
  * `venue` (optional) is rendered into "Where".
+ * `onTransfer` (optional) — when provided and the ticket is transferable,
+ *   renders a "Transfer ticket" link inside the card footer.
  */
-export default function TicketCard({ ticket, eventStartTime, venue, onShowQr }) {
+export default function TicketCard({ ticket, eventStartTime, venue, onShowQr, onTransfer }) {
     // Accept the values from props (legacy) or from the ticket object directly
     const resolvedStartTime = eventStartTime ?? ticket.eventStartTime ?? null;
     const resolvedVenue     = venue ?? ticket.eventVenue ?? null;
     const muted = ticket.status === 'USED' || ticket.status === 'REFUNDED';
     const [generating, setGenerating] = useState(false);
+
+    const transferable = onTransfer
+        && ticket.transfersEnabled
+        && ticket.status === 'VALID'
+        && !ticket.pendingClaim;  // PENDING_CLAIM tickets are not transferable
 
     async function handleDownload() {
         if (generating) return;
@@ -194,6 +151,27 @@ export default function TicketCard({ ticket, eventStartTime, venue, onShowQr }) 
                     startTime={resolvedStartTime}
                     venue={resolvedVenue}
                 />
+
+                {transferable && (
+                    <div style={{ marginTop: 14 }}>
+                        <button
+                            type="button"
+                            onClick={onTransfer}
+                            style={{
+                                display: 'inline-flex', alignItems: 'center', gap: 6,
+                                background: 'none', border: 0, padding: 0, cursor: 'pointer',
+                                fontSize: 13, fontWeight: 500,
+                                color: 'var(--text-2)', fontFamily: 'inherit',
+                                transition: 'color 0.15s',
+                            }}
+                            onMouseOver={(e) => { e.currentTarget.style.color = 'var(--mp-blue)'; }}
+                            onMouseOut={(e) => { e.currentTarget.style.color = 'var(--text-2)'; }}
+                        >
+                            <Icons.send size={13} />
+                            Transfer ticket
+                        </button>
+                    </div>
+                )}
 
                 {(ticket.shortCode || ticket.qrCode) && (
                     <div style={{

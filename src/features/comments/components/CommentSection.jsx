@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useSelector } from 'react-redux';
 import {
@@ -36,12 +36,25 @@ export default function CommentSection({
 
     const list = useGetEventCommentsQuery(
         { eventId, page, size: PAGE_SIZE },
-        { skip: !isAuthenticated },
+        {
+            skip: !isAuthenticated,
+            // Silent background poll every 60 s — only fires when the tab is visible.
+            // See DESIGN_DECISIONS.md for why SSE is intentionally NOT used here.
+            pollingInterval: 60_000,
+            skipPollingIfUnfocused: true,
+            refetchOnWindowFocus: true,
+        },
     );
     const [createComment, createState] = useCreateCommentMutation();
 
+    // Tracks the total count the user last "saw" so we can surface a
+    // "N new comments" banner when the background poll finds more.
+    const lastSeenTotal = useRef(null);
+    const [newCount, setNewCount] = useState(0);
+
     // Single now anchor per render pass so relative timestamps line up.
-    const [nowMs] = useState(() => Date.now());
+    // Refreshed whenever the user explicitly refetches.
+    const [nowMs, setNowMs] = useState(() => Date.now());
 
     /* Backend rejects writes on non-published events. We render the
        composer in a disabled state with copy explaining why instead of
@@ -87,6 +100,33 @@ export default function CommentSection({
     const comments      = useMemo(() => list.data?.content ?? [], [list.data]);
     const hasMore       = totalPages > 0 && page < totalPages - 1;
 
+    // Detect background poll arrivals: if totalElements grew since the user
+    // last read, surface the "N new" banner.
+    useMemo(() => {
+        if (!list.isSuccess) return;
+        if (lastSeenTotal.current === null) {
+            // First successful load — mark as seen silently.
+            lastSeenTotal.current = totalElements;
+            return;
+        }
+        const delta = totalElements - lastSeenTotal.current;
+        if (delta > 0) setNewCount(delta);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [totalElements, list.isSuccess]);
+
+    function handleRefresh() {
+        setNewCount(0);
+        lastSeenTotal.current = totalElements;
+        setNowMs(Date.now());
+        setPage(0);
+        list.refetch();
+    }
+
+    function dismissNewBanner() {
+        setNewCount(0);
+        lastSeenTotal.current = totalElements;
+    }
+
     if (isDisabled) {
         return (
             <SectionShell>
@@ -123,6 +163,34 @@ export default function CommentSection({
                         </span>
                     )}
                 </div>
+
+                {/* Manual refresh button */}
+                <button
+                    type="button"
+                    onClick={handleRefresh}
+                    disabled={list.isFetching}
+                    aria-label="Refresh comments"
+                    title="Refresh comments"
+                    style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 5,
+                        background: 'none', border: 0, padding: '4px 6px',
+                        cursor: list.isFetching ? 'not-allowed' : 'pointer',
+                        borderRadius: 6, color: 'var(--text-3)',
+                        fontFamily: 'inherit', fontSize: 12, fontWeight: 500,
+                        transition: 'color 0.15s, background 0.15s',
+                    }}
+                    onMouseOver={(e) => { if (!list.isFetching) e.currentTarget.style.color = 'var(--mp-blue)'; }}
+                    onMouseOut={(e) => { e.currentTarget.style.color = 'var(--text-3)'; }}
+                >
+                    <Icons.signal
+                        size={14}
+                        style={{
+                            animation: list.isFetching ? 'spin 0.8s linear infinite' : 'none',
+                            opacity: list.isFetching ? 0.5 : 1,
+                        }}
+                    />
+                    {list.isFetching ? 'Refreshing…' : 'Refresh'}
+                </button>
             </div>
 
             <div style={{ padding: '14px 20px 0' }}>
@@ -166,6 +234,41 @@ export default function CommentSection({
                         {canPost ? 'Be the first to say something.' : 'No comments yet.'}
                     </p>
                 </div>
+            )}
+
+            {/* "N new comments" banner — appears when background poll detects new arrivals */}
+            {newCount > 0 && (
+                <button
+                    type="button"
+                    onClick={handleRefresh}
+                    style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        gap: 8, width: '100%',
+                        padding: '10px 20px',
+                        background: 'var(--mp-blue)',
+                        color: 'white', border: 0,
+                        fontSize: 13, fontWeight: 600,
+                        cursor: 'pointer', fontFamily: 'inherit',
+                        transition: 'background 0.15s',
+                    }}
+                    onMouseOver={(e) => { e.currentTarget.style.background = '#2a3bb5'; }}
+                    onMouseOut={(e) => { e.currentTarget.style.background = 'var(--mp-blue)'; }}
+                >
+                    <Icons.arrowL size={13} style={{ transform: 'rotate(90deg)' }} />
+                    {newCount} new {newCount === 1 ? 'comment' : 'comments'} — click to load
+                    <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); dismissNewBanner(); }}
+                        aria-label="Dismiss"
+                        style={{
+                            background: 'rgba(255,255,255,0.2)', border: 0, borderRadius: 4,
+                            color: 'white', fontSize: 11, padding: '1px 6px',
+                            cursor: 'pointer', fontFamily: 'inherit', marginLeft: 4,
+                        }}
+                    >
+                        dismiss
+                    </button>
+                </button>
             )}
 
             {list.isSuccess && comments.length > 0 && (
