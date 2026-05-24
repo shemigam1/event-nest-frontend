@@ -16,7 +16,7 @@ export default function Brand({ size = 20, color, kicker }) {
       }}>
         N
       </span>
-      <span style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.1 }}>
+      <span className="mp-brand-text" style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.1 }}>
         <span style={{ fontSize: size, fontWeight: 700, color: c, letterSpacing: '-0.02em' }}>
           EventNest
         </span>

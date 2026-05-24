@@ -398,6 +398,24 @@ a:hover { text-decoration: underline; }
   -webkit-overflow-scrolling: touch;
 }
 
+/* Landing/public TopNav — tighten padding + gap on phones so brand + buttons fit. */
+@media (max-width: 640px) {
+  .mp-topnav {
+    padding-left: 14px !important;
+    padding-right: 14px !important;
+    gap: 10px !important;
+  }
+  .mp-topnav button {
+    font-size: 13px !important;
+  }
+}
+
+/* Hide the "EventNest" wordmark on the tightest viewports — keep just the N
+   badge so the rest of the nav (Browse events, Log in, Sign up) has room. */
+@media (max-width: 420px) {
+  .mp-brand-text { display: none !important; }
+}
+
 /* TopNav adjustments for mobile */
 @media (max-width: 768px) {
   nav[data-testid="topnav"] {
