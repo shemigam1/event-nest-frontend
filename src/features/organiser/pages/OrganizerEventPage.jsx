@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useGetUnseenCommentCountQuery } from '@/features/comments/commentsApi';
 import { useNavigate, useParams, Link } from 'react-router';
 import {
     useGetEventTiersQuery,
@@ -55,6 +56,10 @@ export default function OrganizerEventPage() {
     const tiersQuery = useGetEventTiersQuery(eventId);
     const bookingsQuery = useGetEventBookingsQuery(eventId);
     const analyticsQuery = useGetEventAnalyticsQuery(eventId);
+    const { data: unseenComments = 0 } = useGetUnseenCommentCountQuery(eventId, {
+        pollingInterval: tab === 'comments' ? 0 : 60_000,
+        skip: !eventId,
+    });
 
     if (eventQuery.isLoading || tiersQuery.isLoading) {
         return (
@@ -75,7 +80,7 @@ export default function OrganizerEventPage() {
                         Event not found
                     </p>
                     <Button variant="secondary" size="md"
-                        onClick={() => navigate('/organiser')}
+                        onClick={() => navigate('/my-events')}
                         style={{ marginTop: 16 }}>
                         Back to my events
                     </Button>
@@ -105,6 +110,7 @@ export default function OrganizerEventPage() {
                 checkInRate={checkInRate}
                 tab={tab}
                 onTabChange={setTab}
+                unseenComments={unseenComments}
             />
 
             <div style={{ maxWidth: 1280, margin: '0 auto', padding: '24px 24px 80px' }}>
@@ -197,7 +203,7 @@ function Shell({ children }) {
 function BackLink() {
     return (
         <Link
-            to="/organiser"
+            to="/my-events"
             style={{
                 display: 'inline-flex', alignItems: 'center', gap: 6,
                 color: 'var(--text-2)', fontSize: 14, textDecoration: 'none',
@@ -211,7 +217,7 @@ function BackLink() {
 
 /* ───────────────────────────── header ──────────────────────────── */
 
-function Header({ event, totalSold, totalCapacity, checkedIn, checkInRate, tab, onTabChange }) {
+function Header({ event, totalSold, totalCapacity, checkedIn, checkInRate, tab, onTabChange, unseenComments = 0 }) {
     const isLive = event.status === 'PUBLISHED';
     const tabs = [
         ...(isLive ? [{ id: 'dashboard', label: 'Live dashboard' }] : []),
@@ -222,7 +228,7 @@ function Header({ event, totalSold, totalCapacity, checkedIn, checkInRate, tab, 
         { id: 'contracts',     label: 'Contracts' },
         { id: 'budget',        label: 'Budget' },
         { id: 'team',          label: 'Team' },
-        { id: 'comments',      label: 'Comments' },
+        { id: 'comments',      label: 'Comments', badge: unseenComments > 0 ? unseenComments : null },
         { id: 'ratings',       label: 'Ratings' },
         { id: 'contributions', label: 'Contributions' },
         { id: 'settings',      label: 'Settings' },
@@ -299,6 +305,15 @@ function Header({ event, totalSold, totalCapacity, checkedIn, checkInRate, tab, 
                                 }}
                             >
                                 {t.label}
+                                {t.badge && (
+                                    <span style={{
+                                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                        minWidth: 16, height: 16, borderRadius: 99, fontSize: 11, fontWeight: 700,
+                                        background: 'var(--error)', color: '#fff', marginLeft: 6, padding: '0 4px',
+                                    }}>
+                                        {t.badge > 99 ? '99+' : t.badge}
+                                    </span>
+                                )}
                             </button>
                         );
                     })}
@@ -882,7 +897,7 @@ function SettingsTab({ event, eventId, navigate }) {
         setActionError('');
         try {
             await deleteEvent(eventId).unwrap();
-            navigate('/organiser');
+            navigate('/my-events');
         } catch (err) {
             setActionError(err?.data?.message || 'Could not delete. Please try again.');
             setShowDeleteDialog(false);

@@ -7,6 +7,7 @@ import { POLL_INTERVAL_MS, MAX_POLLS } from '../paymentConfig';
 import Button from '@/components/ui/Button';
 import TopNav from '@/components/ui/TopNav';
 import { Icons } from '@/components/ui/Icon';
+import AddToCalendar from '@/components/ui/AddToCalendar';
 
 export default function PaymentResultPage() {
     const [params] = useSearchParams();
@@ -20,6 +21,7 @@ export default function PaymentResultPage() {
     const [verifyPayment] = useVerifyPaymentMutation();
     const [status, setStatus] = useState('verifying');
     const [pollCount, setPollCount] = useState(0);
+    const [eventInfo, setEventInfo] = useState(null); // { title, startTime, venue }
     const timerRef = useRef(null);
 
     useEffect(() => {
@@ -38,13 +40,10 @@ export default function PaymentResultPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    // Auto-redirect once payment resolves — replace history so back button
-    // doesn't return here.
+    // Auto-redirect for terminal failure states.
+    // Note: we do NOT auto-redirect on 'paid' — the user may want to interact
+    // with the "Add to calendar" buttons before navigating away.
     useEffect(() => {
-        if (status === 'paid') {
-            timerRef.current = setTimeout(() => navigate('/tickets', { replace: true }), 2000);
-            return () => clearTimeout(timerRef.current);
-        }
         if (status === 'failed') {
             timerRef.current = setTimeout(() => navigate('/events', { replace: true }), 2000);
             return () => clearTimeout(timerRef.current);
@@ -56,6 +55,12 @@ export default function PaymentResultPage() {
             const result = await verifyPayment(transactionRef).unwrap();
             const payStatus = result.status ?? result.paymentStatus;
             if (payStatus === 'PAID') {
+                // Extract event details for the calendar CTA (fields vary by backend version)
+                const title     = result.eventTitle     ?? result.booking?.eventTitle     ?? null;
+                const startTime = result.eventStartTime ?? result.booking?.eventStartTime ?? null;
+                const venue     = result.eventVenue     ?? result.venue
+                                ?? result.booking?.eventVenue ?? null;
+                if (title && startTime) setEventInfo({ title, startTime, venue });
                 setStatus('paid');
             } else if (payStatus === 'FAILED') {
                 setStatus('failed');
@@ -94,7 +99,7 @@ export default function PaymentResultPage() {
                     }}
                 >
                     {status === 'verifying' && <VerifyingView pollCount={pollCount} />}
-                    {status === 'paid' && <PaidView onTickets={() => navigate('/tickets')} onMore={() => navigate('/events')} />}
+                    {status === 'paid' && <PaidView eventInfo={eventInfo} onTickets={() => navigate('/tickets')} onMore={() => navigate('/events')} />}
                     {status === 'failed' && <FailedView onRetry={() => navigate(-2)} onBrowse={() => navigate('/events')} />}
                     {status === 'pending_timeout' && <PendingTimeoutView onTickets={() => navigate('/tickets')} />}
                     {status === 'error' && <ErrorView onBrowse={() => navigate('/events')} />}
@@ -119,7 +124,7 @@ function VerifyingView({ pollCount }) {
     );
 }
 
-function PaidView({ onTickets, onMore }) {
+function PaidView({ eventInfo, onTickets, onMore }) {
     return (
         <>
             <div style={{
@@ -132,10 +137,31 @@ function PaidView({ onTickets, onMore }) {
             <h2 className="mp-h2" style={{ margin: '20px 0 8px', color: 'var(--text-1)' }}>
                 Payment confirmed!
             </h2>
-            <p style={{ fontSize: 14, color: 'var(--text-2)', margin: '0 0 28px' }}>
-                Your tickets have been issued. Check your email for confirmation.
+            <p style={{ fontSize: 14, color: 'var(--text-2)', margin: 0 }}>
+                Your tickets have been issued. Check your email for confirmation
+                {eventInfo ? ' and a calendar invite.' : '.'}
             </p>
-            <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
+
+            {/* Add to calendar — shown when we can resolve event details from verify response */}
+            {eventInfo && (
+                <div style={{
+                    marginTop: 24, padding: '16px 20px',
+                    background: 'var(--surface-subtle)',
+                    border: '1px solid var(--border)',
+                    borderRadius: 12, textAlign: 'left',
+                }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-2)', marginBottom: 10 }}>
+                        Add to your calendar
+                    </div>
+                    <AddToCalendar
+                        title={eventInfo.title}
+                        startTime={eventInfo.startTime}
+                        venue={eventInfo.venue}
+                    />
+                </div>
+            )}
+
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap', marginTop: 24 }}>
                 <Button variant="primary" size="lg" icon={<Icons.ticket size={16} />} onClick={onTickets}>
                     View tickets
                 </Button>

@@ -486,7 +486,7 @@ export default function EditEventPage() {
                 <div style={{ textAlign: 'center', padding: 48 }}>
                     <Icons.alert size={32} style={{ color: 'var(--error)' }} />
                     <p className="mp-h3" style={{ margin: '12px 0 16px', color: 'var(--text-1)' }}>Event not found</p>
-                    <Button variant="secondary" onClick={() => navigate('/organiser')}>Back to console</Button>
+                    <Button variant="secondary" onClick={() => navigate('/my-events')}>Back to console</Button>
                 </div>
             </Shell>
         );
@@ -518,9 +518,8 @@ export default function EditEventPage() {
                     <div>
                         <strong>Editing a live event</strong>
                         <ul style={{ margin: '6px 0 0', paddingLeft: 18, lineHeight: 1.7 }}>
-                            <li>Only the <strong>description</strong> and <strong>unsold tiers</strong> can be edited.</li>
+                            <li>Only the <strong>description</strong> and <strong>unsold tiers</strong> can be edited. You can also add new tiers.</li>
                             <li><strong>Name</strong> and <strong>venue</strong> are locked.</li>
-                            <li>All changes are subject to admin approval. The current live version remains unchanged until approved.</li>
                         </ul>
                     </div>
                 </div>
@@ -565,7 +564,7 @@ export default function EditEventPage() {
             )}
             {saved && (
                 <div style={{ marginBottom: 16, padding: '10px 16px', background: 'var(--success-bg)', color: 'var(--success)', borderRadius: 10, fontSize: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <Icons.check size={15} /> Changes saved.{isPublished ? ' Submitted for admin review — the live version is unchanged.' : ''}
+                    <Icons.check size={15} /> Changes saved.
                 </div>
             )}
 
@@ -637,11 +636,9 @@ export default function EditEventPage() {
             <div style={{ background: 'var(--surface-elevated)', border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden', marginBottom: 24, boxShadow: 'var(--shadow-card)' }}>
                 <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ fontWeight: 600, color: 'var(--text-1)', fontSize: 14 }}>Ticket tiers</span>
-                    {isDraft && (
-                        <Button size="sm" variant="secondary" icon={<Icons.plus size={13} />} onClick={() => setShowAddTier((s) => !s)}>
-                            Add tier
-                        </Button>
-                    )}
+                    <Button size="sm" variant="secondary" icon={<Icons.plus size={13} />} onClick={() => setShowAddTier((s) => !s)}>
+                        Add tier
+                    </Button>
                 </div>
 
                 {tiers.length === 0 && !showAddTier && (
@@ -662,7 +659,7 @@ export default function EditEventPage() {
                     </div>
                 )}
 
-                {showAddTier && isDraft && (
+                {showAddTier && (
                     <AddTierForm eventId={eventId} onDone={() => setShowAddTier(false)} />
                 )}
             </div>
@@ -673,7 +670,7 @@ export default function EditEventPage() {
                     Cancel
                 </Button>
                 <Button variant="primary" size="lg" onClick={handleSave} disabled={submitting}>
-                    {updateState.isLoading ? 'Saving…' : isPublished ? 'Submit for review' : 'Save draft'}
+                    {updateState.isLoading ? 'Saving…' : isPublished ? 'Save changes' : 'Save draft'}
                 </Button>
                 {isDraft && (
                     <Button variant="primary" size="lg" iconRight={<Icons.arrowR size={15} />} onClick={handleSaveAndSubmit} disabled={submitting}>
@@ -685,67 +682,140 @@ export default function EditEventPage() {
     );
 }
 
-/* ── Add tier inline form (draft only) ───────────── */
+/* ── Add tier inline form ─────────────────────────── */
 function AddTierForm({ eventId, onDone }) {
     const [createTier, { isLoading }] = useCreateTierMutation();
-    const [form, setForm] = useState({ name: '', isFree: true, price: '', rowPrefix: '', rowCount: '10', seatsPerRow: '10' });
+    const [form, setForm] = useState({
+        name: '',
+        isFree: true,
+        price: '',
+        seatType: 'NUMBERED',       // 'NUMBERED' | 'GENERAL_ADMISSION'
+        accessScope: 'FULL_EVENT',  // 'FULL_EVENT' | 'DAY_SPECIFIC'
+        // NUMBERED fields
+        rowPrefix: '',
+        rowCount: '10',
+        seatsPerRow: '10',
+        // GENERAL_ADMISSION fields
+        totalCapacity: '100',
+    });
     const [error, setError] = useState('');
 
     function field(key) { return (e) => setForm((f) => ({ ...f, [key]: e.target.value })); }
+    const isNumbered = form.seatType === 'NUMBERED';
 
     async function submit(e) {
         e.preventDefault();
-        if (!form.name.trim() || !form.rowPrefix.trim()) { setError('Name and row prefix are required'); return; }
-        const rc = parseInt(form.rowCount, 10);
-        const spr = parseInt(form.seatsPerRow, 10);
-        if (isNaN(rc) || rc < 1 || isNaN(spr) || spr < 1) { setError('Rows and seats per row must be at least 1'); return; }
+        if (!form.name.trim()) { setError('Name is required'); return; }
+
         const price = form.isFree ? 0 : parseFloat(form.price) || 0;
+        const payload = {
+            eventId,
+            name: form.name.trim(),
+            price,
+            seatType: form.seatType,
+            accessScope: form.accessScope,
+        };
+
+        if (isNumbered) {
+            if (!form.rowPrefix.trim()) { setError('Row prefix is required for numbered seats'); return; }
+            const rc = parseInt(form.rowCount, 10);
+            const spr = parseInt(form.seatsPerRow, 10);
+            if (isNaN(rc) || rc < 1 || isNaN(spr) || spr < 1) { setError('Rows and seats per row must be at least 1'); return; }
+            payload.rowPrefix = form.rowPrefix.trim();
+            payload.rowCount = rc;
+            payload.seatsPerRow = spr;
+        } else {
+            const cap = parseInt(form.totalCapacity, 10);
+            if (isNaN(cap) || cap < 1) { setError('Capacity must be at least 1'); return; }
+            payload.totalCapacity = cap;
+        }
+
         try {
-            await createTier({ eventId, name: form.name.trim(), price, rowPrefix: form.rowPrefix.trim(), rowCount: rc, seatsPerRow: spr }).unwrap();
+            await createTier(payload).unwrap();
             onDone();
         } catch (err) {
-            setError(err?.data?.message || 'Could not add tier.');
+            setError(err?.data?.message || err?.data?.errors?.join(', ') || 'Could not add tier.');
         }
     }
+
+    const chipStyle = (active) => ({
+        height: 30, padding: '0 12px', borderRadius: 6, cursor: 'pointer',
+        fontSize: 12, fontWeight: 500,
+        border: `1px solid ${active ? 'var(--mp-blue)' : 'var(--border)'}`,
+        background: active ? 'var(--mp-blue)' : 'white',
+        color: active ? 'white' : 'var(--text-2)',
+    });
 
     return (
         <form onSubmit={submit} style={{ margin: '0 16px 16px', padding: 16, background: 'var(--surface-subtle)', borderRadius: 10, display: 'flex', flexDirection: 'column', gap: 12, border: '1px dashed var(--border)' }}>
             <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-1)' }}>New tier</div>
-            <div className="mp-grid-stack" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                <div>
-                    <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--text-1)', marginBottom: 4 }}>Name</label>
-                    <input value={form.name} onChange={field('name')} placeholder="e.g. VIP" style={inputStyle} />
-                </div>
-                <div>
-                    <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--text-1)', marginBottom: 4 }}>Row prefix</label>
-                    <input value={form.rowPrefix} onChange={field('rowPrefix')} placeholder="e.g. V" style={inputStyle} />
-                </div>
-                <div>
-                    <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--text-1)', marginBottom: 4 }}>Rows</label>
-                    <input type="number" min="1" value={form.rowCount} onChange={field('rowCount')} style={inputStyle} />
-                </div>
-                <div>
-                    <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--text-1)', marginBottom: 4 }}>Seats / row</label>
-                    <input type="number" min="1" value={form.seatsPerRow} onChange={field('seatsPerRow')} style={inputStyle} />
+
+            {/* Name */}
+            <div>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--text-1)', marginBottom: 4 }}>Name</label>
+                <input value={form.name} onChange={field('name')} placeholder="e.g. VIP" style={inputStyle} />
+            </div>
+
+            {/* Seat type toggle */}
+            <div>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--text-1)', marginBottom: 6 }}>Seat type</label>
+                <div style={{ display: 'flex', gap: 8 }}>
+                    {[['NUMBERED', 'Numbered seats'], ['GENERAL_ADMISSION', 'General admission']].map(([val, label]) => (
+                        <button key={val} type="button"
+                            onClick={() => setForm((f) => ({ ...f, seatType: val }))}
+                            style={chipStyle(form.seatType === val)}>
+                            {label}
+                        </button>
+                    ))}
                 </div>
             </div>
-            <div style={{ display: 'flex', gap: 8, marginBottom: form.isFree ? 0 : 8 }}>
-                {['Free', 'Paid'].map((opt) => {
-                    const sel = opt === 'Free' ? form.isFree : !form.isFree;
-                    return (
-                        <button key={opt} type="button" onClick={() => setForm((f) => ({ ...f, isFree: opt === 'Free', price: '' }))}
-                            style={{
-                                height: 30, padding: '0 12px', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 500,
-                                border: `1px solid ${sel ? 'var(--mp-blue)' : 'var(--border)'}`,
-                                background: sel ? 'var(--mp-blue)' : 'white',
-                                color: sel ? 'white' : 'var(--text-2)',
-                            }}>{opt}</button>
-                    );
-                })}
+
+            {/* Numbered fields */}
+            {isNumbered && (
+                <div className="mp-grid-stack" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
+                    <div>
+                        <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--text-1)', marginBottom: 4 }}>Row prefix</label>
+                        <input value={form.rowPrefix} onChange={field('rowPrefix')} placeholder="e.g. V" style={inputStyle} />
+                    </div>
+                    <div>
+                        <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--text-1)', marginBottom: 4 }}>Rows</label>
+                        <input type="number" min="1" value={form.rowCount} onChange={field('rowCount')} style={inputStyle} />
+                    </div>
+                    <div>
+                        <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--text-1)', marginBottom: 4 }}>Seats / row</label>
+                        <input type="number" min="1" value={form.seatsPerRow} onChange={field('seatsPerRow')} style={inputStyle} />
+                    </div>
+                </div>
+            )}
+
+            {/* General admission capacity */}
+            {!isNumbered && (
+                <div>
+                    <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--text-1)', marginBottom: 4 }}>Total capacity</label>
+                    <input type="number" min="1" value={form.totalCapacity} onChange={field('totalCapacity')} style={inputStyle} />
+                </div>
+            )}
+
+            {/* Free / Paid toggle */}
+            <div>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--text-1)', marginBottom: 6 }}>Pricing</label>
+                <div style={{ display: 'flex', gap: 8 }}>
+                    {['Free', 'Paid'].map((opt) => {
+                        const sel = opt === 'Free' ? form.isFree : !form.isFree;
+                        return (
+                            <button key={opt} type="button"
+                                onClick={() => setForm((f) => ({ ...f, isFree: opt === 'Free', price: '' }))}
+                                style={chipStyle(sel)}>
+                                {opt}
+                            </button>
+                        );
+                    })}
+                </div>
             </div>
             {!form.isFree && (
                 <input type="number" min="0" placeholder="Price in ₦" value={form.price} onChange={field('price')} style={inputStyle} />
             )}
+
             {error && <p style={{ margin: 0, fontSize: 12, color: 'var(--error)' }}>{error}</p>}
             <div style={{ display: 'flex', gap: 8 }}>
                 <Button type="submit" size="sm" variant="primary" disabled={isLoading}>

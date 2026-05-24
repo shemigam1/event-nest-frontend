@@ -188,7 +188,7 @@ export default function SidebarPanel({ open, onClose }) {
                         </>
                     ) : (
                         <>
-                            <SidebarItem icon={<Icons.calendar size={18} />} onClick={() => go('/organiser')}>
+                            <SidebarItem icon={<Icons.calendar size={18} />} onClick={() => go('/my-events')}>
                                 My events
                             </SidebarItem>
                             <SidebarItem icon={<Icons.ticket size={18} />} onClick={() => go('/tickets')}>
