@@ -1,12 +1,8 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router';
+import { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router';
 import {
     useGetMyTicketsQuery,
     useTransferTicketMutation,
-    useGetIncomingTransfersQuery,
-    useGetOutgoingTransfersQuery,
-    useAcceptTransferMutation,
-    useDeclineTransferMutation,
     useGetMyPendingGiftsQuery,
     useClaimGiftByIdMutation,
 } from '../ticketsApi';
@@ -20,26 +16,60 @@ import { Icons } from '@/components/ui/Icon';
 import { downloadTicketPdf } from '../pdf';
 
 const TABS = [
-    { key: 'tickets',   label: 'My Tickets' },
-    { key: 'gifts',     label: 'Gifts' },
-    { key: 'transfer',  label: 'Transfer a Ticket' },
-    { key: 'transfers', label: 'Transfers' },
+    { key: 'tickets', label: 'My Tickets' },
+    { key: 'gifts',   label: 'Gifts' },
 ];
 
 export default function TicketsPage() {
+    const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+    const eventId = searchParams.get('eventId') || null;
+
     const [tab, setTab] = useState('tickets');
     const [activeQr, setActiveQr] = useState(null);
-    const incomingQuery  = useGetIncomingTransfersQuery();
     const pendingGiftsQuery = useGetMyPendingGiftsQuery();
-    const incomingCount  = incomingQuery.data?.length ?? 0;
-    const giftsCount     = pendingGiftsQuery.data?.length ?? 0;
+    const giftsCount = pendingGiftsQuery.data?.length ?? 0;
 
+    /* ── eventId-filtered mode: no tabs, back button ─────────────── */
+    if (eventId) {
+        return (
+            <div style={{ background: 'var(--surface-subtle)', minHeight: '100vh' }}>
+                <div style={{ maxWidth: 880, margin: '0 auto', padding: '32px 24px 80px' }}>
+                    <button
+                        type="button"
+                        onClick={() => navigate(`/events/${eventId}`)}
+                        style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 6,
+                            background: 'none', border: 0, padding: 0, cursor: 'pointer',
+                            fontSize: 13, color: 'var(--text-2)', marginBottom: 24,
+                            fontFamily: 'inherit',
+                        }}
+                    >
+                        <Icons.chevronL size={14} /> Back to event
+                    </button>
+
+                    <h1 className="mp-h1" style={{ margin: 0, color: 'var(--text-1)' }}>Your tickets</h1>
+                    <p className="body" style={{ margin: '8px 0 24px', color: 'var(--text-2)' }}>
+                        Tickets for this event.
+                    </p>
+
+                    <MyTicketsTab onShowQr={setActiveQr} eventId={eventId} />
+                </div>
+
+                <Modal open={!!activeQr} onClose={() => setActiveQr(null)} width={400} label="Ticket QR code">
+                    {activeQr && <QrModalContent ticket={activeQr} onClose={() => setActiveQr(null)} />}
+                </Modal>
+            </div>
+        );
+    }
+
+    /* ── Normal mode: tabs ────────────────────────────────────────── */
     return (
         <div style={{ background: 'var(--surface-subtle)', minHeight: '100vh' }}>
             <div style={{ maxWidth: 880, margin: '0 auto', padding: '32px 24px 80px' }}>
                 <h1 className="mp-h1" style={{ margin: 0, color: 'var(--text-1)' }}>Tickets</h1>
                 <p className="body" style={{ margin: '8px 0 24px', color: 'var(--text-2)' }}>
-                    View your tickets or transfer one to someone else.
+                    Your tickets and gifted tickets.
                 </p>
 
                 {/* Tab bar */}
@@ -73,15 +103,6 @@ export default function TicketsPage() {
                             }}
                         >
                             {t.label}
-                            {t.key === 'transfers' && incomingCount > 0 && (
-                                <span style={{
-                                    fontSize: 11, fontWeight: 700,
-                                    background: 'var(--mp-blue)', color: 'white',
-                                    borderRadius: 99, padding: '1px 6px', lineHeight: 1.6,
-                                }}>
-                                    {incomingCount}
-                                </span>
-                            )}
                             {t.key === 'gifts' && giftsCount > 0 && (
                                 <span style={{
                                     fontSize: 11, fontWeight: 700,
@@ -95,10 +116,8 @@ export default function TicketsPage() {
                     ))}
                 </div>
 
-                {tab === 'tickets'   && <MyTicketsTab onShowQr={setActiveQr} />}
-                {tab === 'gifts'     && <GiftsTab />}
-                {tab === 'transfer'  && <TransferTab />}
-                {tab === 'transfers' && <TransfersTab />}
+                {tab === 'tickets' && <MyTicketsTab onShowQr={setActiveQr} eventId={null} />}
+                {tab === 'gifts'   && <GiftsTab />}
             </div>
 
             <Modal open={!!activeQr} onClose={() => setActiveQr(null)} width={400} label="Ticket QR code">
@@ -108,32 +127,302 @@ export default function TicketsPage() {
     );
 }
 
-/* ── My Tickets tab ─────────────────────────────────────── */
+/* ── My Tickets tab ──────────────────────────────────────────── */
 
-function MyTicketsTab({ onShowQr }) {
+function MyTicketsTab({ onShowQr, eventId }) {
     const navigate = useNavigate();
-    const tickets = useGetMyTicketsQuery();
+    const [transferTarget, setTransferTarget] = useState(null);
 
-    if (tickets.isLoading) return <SkeletonList />;
+    const tickets = useGetMyTicketsQuery(eventId ? { eventId } : undefined);
+
+    if (tickets.isLoading || tickets.isFetching) return <SkeletonList />;
     if (tickets.isError)   return <ErrorState onRetry={tickets.refetch} />;
     if ((tickets.data?.length ?? 0) === 0) return <EmptyState onBrowse={() => navigate('/events')} />;
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            {tickets.data.map((t) => (
-                <TicketCard
-                    key={t.id}
-                    ticket={t}
-                    eventStartTime={t.eventStartTime}
-                    venue={t.eventVenue}
-                    onShowQr={onShowQr}
+        <>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                {tickets.data.map((t) => (
+                    <TicketCard
+                        key={t.id}
+                        ticket={t}
+                        eventStartTime={t.eventStartTime}
+                        venue={t.eventVenue}
+                        onShowQr={onShowQr}
+                        onTransfer={() => setTransferTarget(t)}
+                    />
+                ))}
+            </div>
+
+            {transferTarget && (
+                <TransferModal
+                    ticket={transferTarget}
+                    onClose={() => setTransferTarget(null)}
                 />
-            ))}
-        </div>
+            )}
+        </>
     );
 }
 
-/* ── Gifts tab ──────────────────────────────────────────── */
+/* ── Transfer modal ──────────────────────────────────────────── */
+
+function TransferModal({ ticket, onClose }) {
+    const [transferTicket, { isLoading: isTransferring }] = useTransferTicketMutation();
+    const [step, setStep]     = useState('form');
+    const [email, setEmail]   = useState('');
+    const [errorMsg, setErrorMsg] = useState('');
+
+    function handleReview(e) {
+        e.preventDefault();
+        if (!email.trim()) return;
+        setErrorMsg('');
+        setStep('confirm');
+    }
+
+    async function handleConfirm() {
+        setErrorMsg('');
+        try {
+            // Pass eventId so the API layer can also patch the per-event cache entry
+            await transferTicket({
+                ticketId: ticket.id,
+                recipientEmail: email.trim(),
+                eventId: ticket.eventId ?? null,
+            }).unwrap();
+            setStep('done');
+        } catch (err) {
+            setErrorMsg(err?.data?.message ?? err?.error ?? 'Transfer failed. Please try again.');
+        }
+    }
+
+    /* ── Done ── */
+    if (step === 'done') {
+        return <TransferDoneModal email={email} onClose={onClose} />;
+    }
+
+    /* ── Confirm ── */
+    if (step === 'confirm') {
+        return (
+            <Modal open onClose={onClose} width={480} label="Confirm transfer">
+                <div style={{ padding: 24 }}>
+                    <button
+                        type="button"
+                        onClick={() => setStep('form')}
+                        style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 6,
+                            background: 'none', border: 0, padding: 0, cursor: 'pointer',
+                            fontSize: 13, color: 'var(--text-2)', marginBottom: 20,
+                            fontFamily: 'inherit',
+                        }}
+                    >
+                        <Icons.chevronL size={14} /> Back
+                    </button>
+
+                    <h2 className="mp-h3" style={{ margin: '0 0 6px', color: 'var(--text-1)' }}>
+                        Confirm transfer
+                    </h2>
+                    <p style={{ margin: '0 0 20px', fontSize: 14, color: 'var(--text-2)' }}>
+                        Review the details below. This action cannot be undone.
+                    </p>
+
+                    {/* Summary card */}
+                    <div style={{
+                        border: '1px solid var(--border)', borderRadius: 10,
+                        overflow: 'hidden', marginBottom: 16,
+                    }}>
+                        <div style={{ padding: '14px 16px', display: 'flex', gap: 12, alignItems: 'center' }}>
+                            <div style={{
+                                width: 36, height: 36, borderRadius: 8,
+                                background: '#EAF1FE', display: 'flex',
+                                alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                            }}>
+                                <Icons.ticket size={16} style={{ color: 'var(--mp-blue)' }} />
+                            </div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-1)' }}>
+                                    {ticket.eventTitle}
+                                </div>
+                                <div style={{ fontSize: 12, color: 'var(--text-2)', marginTop: 2 }}>
+                                    {ticket.tierName}
+                                    {ticket.seatNumber ? ` · Seat ${ticket.seatNumber}` : ''}
+                                    {ticket.eventStartTime ? ` · ${formatEventDate(ticket.eventStartTime)}` : ''}
+                                </div>
+                            </div>
+                        </div>
+                        <div style={{
+                            borderTop: '1px solid var(--border)',
+                            padding: '10px 16px',
+                            display: 'flex', gap: 8, alignItems: 'center',
+                        }}>
+                            <Icons.mail size={13} style={{ color: 'var(--text-3)' }} />
+                            <div style={{ fontSize: 13, color: 'var(--text-1)', fontWeight: 500 }}>{email}</div>
+                        </div>
+                    </div>
+
+                    {/* Warning */}
+                    <div style={{
+                        background: '#FEF9EC', border: '1px solid #F5D97A',
+                        borderRadius: 10, padding: '12px 14px', marginBottom: 20,
+                        display: 'flex', gap: 8, alignItems: 'flex-start',
+                    }}>
+                        <Icons.alert size={14} style={{ color: '#B45309', flexShrink: 0, marginTop: 1 }} />
+                        <span style={{ fontSize: 13, color: '#92400E', lineHeight: 1.5 }}>
+                            Once confirmed, <strong>this cannot be reversed.</strong> The ticket will immediately
+                            move to the recipient and you will lose all access to it.
+                        </span>
+                    </div>
+
+                    {errorMsg && (
+                        <div style={{
+                            background: '#FBE9E9', border: '1px solid #FBB6B6',
+                            borderRadius: 10, padding: '10px 14px', marginBottom: 16,
+                            display: 'flex', gap: 8, alignItems: 'center',
+                        }}>
+                            <Icons.alert size={14} style={{ color: '#D62828', flexShrink: 0 }} />
+                            <span style={{ fontSize: 13, color: '#D62828' }}>{errorMsg}</span>
+                        </div>
+                    )}
+
+                    <div style={{ display: 'flex', gap: 10 }}>
+                        <Button
+                            variant="secondary"
+                            size="md"
+                            onClick={() => setStep('form')}
+                            disabled={isTransferring}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            variant="primary"
+                            size="md"
+                            onClick={handleConfirm}
+                            disabled={isTransferring}
+                            style={{ background: '#D62828', borderColor: '#D62828' }}
+                        >
+                            {isTransferring ? 'Transferring…' : 'Yes, transfer ticket'}
+                        </Button>
+                    </div>
+                </div>
+            </Modal>
+        );
+    }
+
+    /* ── Form ── */
+    return (
+        <Modal open onClose={onClose} width={480} label="Transfer ticket">
+            <div style={{ padding: 24 }}>
+                {/* Header */}
+                <div style={{
+                    paddingBottom: 16,
+                    borderBottom: '1px solid var(--border)',
+                    marginBottom: 20,
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
+                }}>
+                    <div>
+                        <div style={{
+                            fontSize: 11, fontWeight: 700, color: 'var(--text-3)',
+                            textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 4,
+                        }}>
+                            Transfer ticket
+                        </div>
+                        <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-1)' }}>
+                            {ticket.eventTitle}
+                        </div>
+                        <div style={{ fontSize: 12, color: 'var(--text-2)', marginTop: 2 }}>
+                            {ticket.tierName}{ticket.seatNumber ? ` · Seat ${ticket.seatNumber}` : ''}
+                        </div>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        aria-label="Close"
+                        style={{
+                            background: 'var(--surface-subtle)', border: 0,
+                            padding: 8, borderRadius: 8, color: 'var(--text-2)', cursor: 'pointer',
+                        }}
+                    >
+                        <Icons.x size={15} />
+                    </button>
+                </div>
+
+                {/* Info banner */}
+                <div style={{
+                    background: '#EAF1FE', border: '1px solid #C2D9F7',
+                    borderRadius: 10, padding: '12px 14px', marginBottom: 20,
+                    display: 'flex', gap: 10, alignItems: 'flex-start',
+                }}>
+                    <Icons.alert size={16} style={{ color: 'var(--mp-blue)', flexShrink: 0, marginTop: 1 }} />
+                    <div style={{ fontSize: 13, color: '#1e40af', lineHeight: 1.5 }}>
+                        The recipient gets the ticket PDF + calendar invite by email immediately.
+                        <strong> This action is permanent.</strong>
+                    </div>
+                </div>
+
+                <form onSubmit={handleReview} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                    <div>
+                        <label style={{
+                            display: 'block', fontSize: 13, fontWeight: 600,
+                            color: 'var(--text-1)', marginBottom: 8,
+                        }}>
+                            Recipient&apos;s email address
+                        </label>
+                        <Input
+                            type="email"
+                            placeholder="recipient@example.com"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            required
+                        />
+                        <p style={{ margin: '6px 0 0', fontSize: 12, color: 'var(--text-3)' }}>
+                            They don&apos;t need an EventNest account — we&apos;ll send the ticket directly.
+                        </p>
+                    </div>
+                    <Button
+                        type="submit"
+                        variant="primary"
+                        size="md"
+                        disabled={!email.trim()}
+                        style={{ alignSelf: 'flex-start' }}
+                    >
+                        Review transfer
+                    </Button>
+                </form>
+            </div>
+        </Modal>
+    );
+}
+
+/* ── Transfer done (auto-closes after 2.5 s) ─────────────────── */
+
+function TransferDoneModal({ email, onClose }) {
+    useEffect(() => {
+        const timer = setTimeout(onClose, 2500);
+        return () => clearTimeout(timer);
+    }, [onClose]);
+
+    return (
+        <Modal open onClose={onClose} width={480} label="Ticket transferred">
+            <div style={{ padding: 32, textAlign: 'center' }}>
+                <div style={{
+                    width: 56, height: 56, borderRadius: '50%',
+                    background: '#E6F4EA', display: 'flex',
+                    alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px',
+                }}>
+                    <Icons.check size={28} style={{ color: '#0F9D58' }} />
+                </div>
+                <h2 className="mp-h3" style={{ margin: 0, color: 'var(--text-1)' }}>
+                    Ticket transferred
+                </h2>
+                <p style={{ margin: '8px 0 24px', fontSize: 14, color: 'var(--text-2)' }}>
+                    The ticket has been sent to <strong>{email}</strong> — they&apos;ll receive it
+                    by email with a PDF and calendar invite. Your copy has been invalidated.
+                </p>
+                <Button variant="secondary" size="md" onClick={onClose}>Close</Button>
+            </div>
+        </Modal>
+    );
+}
+
+/* ── Gifts tab ───────────────────────────────────────────────── */
 
 function GiftsTab() {
     const navigate = useNavigate();
@@ -199,7 +488,11 @@ function GiftsTab() {
                                 Ticket for <strong>{gift.eventTitle}</strong> added to your account.{' '}
                                 <button
                                     onClick={() => navigate('/tickets')}
-                                    style={{ background: 'none', border: 0, padding: 0, cursor: 'pointer', fontSize: 13, color: '#0F7B3E', fontWeight: 600, textDecoration: 'underline', fontFamily: 'inherit' }}
+                                    style={{
+                                        background: 'none', border: 0, padding: 0,
+                                        cursor: 'pointer', fontSize: 13, color: '#0F7B3E',
+                                        fontWeight: 600, textDecoration: 'underline', fontFamily: 'inherit',
+                                    }}
                                 >
                                     View tickets
                                 </button>
@@ -245,7 +538,13 @@ function GiftsTab() {
                         </div>
 
                         {typeof outcome === 'string' && outcome !== 'claimed' && (
-                            <div style={{ margin: '0 18px 10px', background: '#FBE9E9', border: '1px solid #FBB6B6', borderRadius: 8, padding: '8px 12px', fontSize: 12, color: '#D62828', display: 'flex', gap: 6, alignItems: 'center' }}>
+                            <div style={{
+                                margin: '0 18px 10px',
+                                background: '#FBE9E9', border: '1px solid #FBB6B6',
+                                borderRadius: 8, padding: '8px 12px',
+                                fontSize: 12, color: '#D62828',
+                                display: 'flex', gap: 6, alignItems: 'center',
+                            }}>
                                 <Icons.alert size={13} style={{ flexShrink: 0 }} /> {outcome}
                             </div>
                         )}
@@ -268,593 +567,7 @@ function GiftsTab() {
     );
 }
 
-/* ── Transfer tab ───────────────────────────────────────── */
-
-function TransferTab() {
-    const tickets = useGetMyTicketsQuery();
-    const [transferTicket, { isLoading: isTransferring }] = useTransferTicketMutation();
-
-    // step: 'form' → 'confirm' → 'done'
-    const [step, setStep]         = useState('form');
-    const [selectedId, setSelectedId] = useState('');
-    const [email, setEmail]           = useState('');
-    const [errorMsg, setErrorMsg]     = useState('');
-
-    const transferable = (tickets.data ?? []).filter(
-        t => t.transfersEnabled
-          && t.status !== 'USED'
-          && t.status !== 'REFUNDED'
-          && t.status !== 'CANCELLED'
-    );
-
-    const selected = transferable.find(t => String(t.id) === selectedId);
-
-    function handleReview(e) {
-        e.preventDefault();
-        if (!selectedId || !email.trim()) return;
-        setErrorMsg('');
-        setStep('confirm');
-    }
-
-    async function handleConfirm() {
-        setErrorMsg('');
-        try {
-            await transferTicket({ ticketId: selectedId, recipientEmail: email.trim() }).unwrap();
-            setStep('done');
-        } catch (err) {
-            setErrorMsg(err?.data?.message ?? err?.error ?? 'Transfer failed. Please try again.');
-            setStep('confirm');
-        }
-    }
-
-    function handleReset() {
-        setStep('form');
-        setSelectedId('');
-        setEmail('');
-        setErrorMsg('');
-    }
-
-    if (tickets.isLoading) return <SkeletonList count={2} />;
-    if (tickets.isError)   return <ErrorState onRetry={tickets.refetch} />;
-
-    /* ── Done state ── */
-    if (step === 'done') {
-        return (
-            <div style={{ maxWidth: 560 }}>
-                <div style={{
-                    background: 'var(--surface-elevated)', border: '1px solid #A8D5B5',
-                    borderRadius: 16, padding: 40, textAlign: 'center',
-                }}>
-                    <div style={{
-                        width: 56, height: 56, borderRadius: '50%',
-                        background: '#E6F4EA', display: 'flex',
-                        alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px',
-                    }}>
-                        <Icons.check size={28} style={{ color: '#0F9D58' }} />
-                    </div>
-                    <h2 className="mp-h3" style={{ margin: 0, color: 'var(--text-1)' }}>
-                        Ticket transferred
-                    </h2>
-                    <p style={{ margin: '8px 0 0', fontSize: 14, color: 'var(--text-2)' }}>
-                        The ticket has been moved to <strong>{email}</strong>.
-                        It no longer appears in your account.
-                    </p>
-                    <Button variant="secondary" size="md" onClick={handleReset} style={{ marginTop: 24 }}>
-                        Transfer another ticket
-                    </Button>
-                </div>
-            </div>
-        );
-    }
-
-    /* ── Confirm step ── */
-    if (step === 'confirm') {
-        return (
-            <div style={{ maxWidth: 560 }}>
-                {/* Back link */}
-                <button
-                    type="button"
-                    onClick={() => setStep('form')}
-                    style={{
-                        display: 'inline-flex', alignItems: 'center', gap: 6,
-                        background: 'none', border: 0, padding: 0, cursor: 'pointer',
-                        fontSize: 13, color: 'var(--text-2)', marginBottom: 24,
-                        fontFamily: 'inherit',
-                    }}
-                >
-                    <Icons.chevronL size={14} /> Back
-                </button>
-
-                <h2 className="mp-h3" style={{ margin: '0 0 6px', color: 'var(--text-1)' }}>
-                    Confirm transfer
-                </h2>
-                <p style={{ margin: '0 0 24px', fontSize: 14, color: 'var(--text-2)' }}>
-                    Please review the details below. This action cannot be undone.
-                </p>
-
-                {/* Transfer summary card */}
-                <div style={{
-                    border: '1px solid var(--border)', borderRadius: 12,
-                    overflow: 'hidden', marginBottom: 20,
-                }}>
-                    <div style={{
-                        background: 'var(--surface-subtle)', padding: '12px 20px',
-                        fontSize: 11, fontWeight: 700, letterSpacing: '0.08em',
-                        color: 'var(--text-3)', textTransform: 'uppercase',
-                    }}>
-                        Ticket being transferred
-                    </div>
-                    <div style={{ padding: '16px 20px', display: 'flex', gap: 14, alignItems: 'center' }}>
-                        <div style={{
-                            width: 40, height: 40, borderRadius: 8,
-                            background: '#EAF1FE', display: 'flex',
-                            alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                        }}>
-                            <Icons.ticket size={18} style={{ color: 'var(--mp-blue)' }} />
-                        </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-1)' }}>
-                                {selected?.eventTitle}
-                            </div>
-                            <div style={{ fontSize: 13, color: 'var(--text-2)', marginTop: 3 }}>
-                                {selected?.tierName}
-                                {selected?.seatNumber ? ` · Seat ${selected.seatNumber}` : ''}
-                                {selected?.eventStartTime ? ` · ${formatEventDate(selected.eventStartTime)}` : ''}
-                            </div>
-                        </div>
-                    </div>
-
-                    <div style={{ borderTop: '1px solid var(--border)', padding: '14px 20px', display: 'flex', gap: 10, alignItems: 'center' }}>
-                        <Icons.users size={15} style={{ color: 'var(--text-3)', flexShrink: 0 }} />
-                        <div>
-                            <div style={{ fontSize: 11, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>
-                                Recipient
-                            </div>
-                            <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-1)', marginTop: 1 }}>
-                                {email}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Warning */}
-                <div style={{
-                    background: '#FEF9EC', border: '1px solid #F5D97A',
-                    borderRadius: 10, padding: '12px 16px', marginBottom: 24,
-                    display: 'flex', gap: 10, alignItems: 'flex-start',
-                }}>
-                    <Icons.alert size={16} style={{ color: '#B45309', flexShrink: 0, marginTop: 1 }} />
-                    <span style={{ fontSize: 13, color: '#92400E', lineHeight: 1.5 }}>
-                        Once confirmed, <strong>this cannot be reversed.</strong> The ticket will immediately
-                        move to the recipient's account and you will lose all access to it.
-                    </span>
-                </div>
-
-                {/* Error */}
-                {errorMsg && (
-                    <div style={{
-                        background: '#FBE9E9', border: '1px solid #FBB6B6',
-                        borderRadius: 10, padding: '12px 16px', marginBottom: 20,
-                        display: 'flex', gap: 10, alignItems: 'center',
-                    }}>
-                        <Icons.alert size={16} style={{ color: '#D62828', flexShrink: 0 }} />
-                        <span style={{ fontSize: 13, color: '#D62828' }}>{errorMsg}</span>
-                    </div>
-                )}
-
-                <div style={{ display: 'flex', gap: 12 }}>
-                    <Button
-                        variant="secondary"
-                        size="md"
-                        onClick={() => setStep('form')}
-                        disabled={isTransferring}
-                    >
-                        Cancel
-                    </Button>
-                    <Button
-                        variant="primary"
-                        size="md"
-                        onClick={handleConfirm}
-                        disabled={isTransferring}
-                        style={{ background: '#D62828', borderColor: '#D62828' }}
-                    >
-                        {isTransferring ? 'Transferring…' : 'Yes, transfer ticket'}
-                    </Button>
-                </div>
-            </div>
-        );
-    }
-
-    /* ── Form step ── */
-    return (
-        <div style={{ maxWidth: 560 }}>
-            {/* Info banner */}
-            <div style={{
-                background: '#EAF1FE', border: '1px solid #C2D9F7',
-                borderRadius: 10, padding: '14px 18px', marginBottom: 28,
-                display: 'flex', gap: 12, alignItems: 'flex-start',
-            }}>
-                <Icons.alert size={18} style={{ color: 'var(--mp-blue)', flexShrink: 0, marginTop: 1 }} />
-                <div style={{ fontSize: 13, color: 'var(--mp-blue)', lineHeight: 1.5 }}>
-                    <strong>Ticket transfers are permanent.</strong> Once transferred, the ticket moves to the
-                    recipient's account and your access to that ticket is revoked.
-                </div>
-            </div>
-
-            {transferable.length === 0 ? (
-                <TransferEmptyState tickets={tickets.data ?? []} />
-            ) : (
-                <form onSubmit={handleReview} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-
-                    {/* Ticket selector */}
-                    <div>
-                        <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: 'var(--text-1)', marginBottom: 8 }}>
-                            Select ticket to transfer
-                        </label>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                            {transferable.map(t => (
-                                <TicketOption
-                                    key={t.id}
-                                    ticket={t}
-                                    selected={String(t.id) === selectedId}
-                                    onSelect={() => setSelectedId(String(t.id))}
-                                />
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Preview of selected */}
-                    {selected && (
-                        <div style={{
-                            background: 'var(--surface-subtle)', borderRadius: 10,
-                            padding: '12px 16px', border: '1px solid var(--border)',
-                            display: 'flex', gap: 12, alignItems: 'center',
-                        }}>
-                            <Icons.ticket size={16} style={{ color: 'var(--mp-blue)', flexShrink: 0 }} />
-                            <div>
-                                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-1)' }}>
-                                    {selected.eventTitle}
-                                </div>
-                                <div style={{ fontSize: 12, color: 'var(--text-2)', marginTop: 2 }}>
-                                    {selected.tierName} · Seat {selected.seatNumber ?? '—'}
-                                    {selected.eventStartTime && ` · ${formatEventDate(selected.eventStartTime)}`}
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Recipient email */}
-                    <div>
-                        <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: 'var(--text-1)', marginBottom: 8 }}>
-                            Recipient's email address
-                        </label>
-                        <Input
-                            type="email"
-                            placeholder="recipient@example.com"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            required
-                        />
-                        <p style={{ margin: '6px 0 0', fontSize: 12, color: 'var(--text-3)' }}>
-                            The recipient must have an EventNest account with this email.
-                        </p>
-                    </div>
-
-                    <Button
-                        type="submit"
-                        variant="primary"
-                        size="md"
-                        disabled={!selectedId || !email.trim()}
-                        style={{ alignSelf: 'flex-start' }}
-                    >
-                        Review transfer
-                    </Button>
-                </form>
-            )}
-        </div>
-    );
-}
-
-/* ── Unified Transfers tab ───────────────────────────────── */
-
-function TransfersTab() {
-    const incomingQuery = useGetIncomingTransfersQuery();
-    const outgoingQuery = useGetOutgoingTransfersQuery();
-    const [acceptTransfer, { isLoading: isAccepting }] = useAcceptTransferMutation();
-    const [declineTransfer, { isLoading: isDeclining }] = useDeclineTransferMutation();
-    const [actionId, setActionId] = useState(null);
-    const [results, setResults]   = useState({});
-
-    async function handleAccept(id) {
-        setActionId(id);
-        try {
-            await acceptTransfer(id).unwrap();
-            setResults(r => ({ ...r, [id]: 'accepted' }));
-        } catch (err) {
-            setResults(r => ({ ...r, [id]: 'error' }));
-        } finally { setActionId(null); }
-    }
-
-    async function handleDecline(id) {
-        setActionId(id);
-        try {
-            await declineTransfer(id).unwrap();
-            setResults(r => ({ ...r, [id]: 'declined' }));
-        } catch (err) {
-            setResults(r => ({ ...r, [id]: 'error' }));
-        } finally { setActionId(null); }
-    }
-
-    const incoming = incomingQuery.data ?? [];
-    const outgoing = outgoingQuery.data ?? [];
-    const isLoading = incomingQuery.isLoading || outgoingQuery.isLoading;
-    const isError   = incomingQuery.isError   || outgoingQuery.isError;
-
-    if (isLoading) return <SkeletonList count={3} />;
-    if (isError)   return <ErrorState onRetry={() => { incomingQuery.refetch(); outgoingQuery.refetch(); }} />;
-
-    const hasAnything = incoming.length > 0 || outgoing.length > 0 || Object.keys(results).length > 0;
-
-    if (!hasAnything) {
-        return (
-            <div style={{
-                background: 'var(--surface-elevated)', border: '1px solid var(--border)',
-                borderRadius: 12, padding: 48, textAlign: 'center',
-            }}>
-                <Icons.send size={32} style={{ color: 'var(--text-3)' }} />
-                <p style={{ margin: '12px 0 4px', fontWeight: 600, fontSize: 16, color: 'var(--text-1)' }}>
-                    No transfers yet
-                </p>
-                <p style={{ margin: 0, fontSize: 14, color: 'var(--text-2)' }}>
-                    Tickets you send or receive will appear here.
-                </p>
-            </div>
-        );
-    }
-
-    return (
-        <div style={{ maxWidth: 640, display: 'flex', flexDirection: 'column', gap: 28 }}>
-
-            {/* ── Incoming (recipient) ── */}
-            {(incoming.length > 0 || Object.keys(results).length > 0) && (
-                <section>
-                    <SectionHeader label="Received" icon={<Icons.inbox size={14} />} />
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                        {incoming.map(t => {
-                            const outcome = results[t.id];
-                            if (outcome === 'accepted') return (
-                                <div key={t.id} style={{
-                                    background: '#E6F4EA', border: '1px solid #A8D5B5',
-                                    borderRadius: 12, padding: '14px 18px',
-                                    display: 'flex', gap: 10, alignItems: 'center',
-                                }}>
-                                    <Icons.check size={16} style={{ color: '#0F9D58', flexShrink: 0 }} />
-                                    <span style={{ fontSize: 13, color: '#0F7B3E', fontWeight: 500 }}>
-                                        Ticket for <strong>{t.eventTitle}</strong> added to your account.
-                                    </span>
-                                </div>
-                            );
-                            if (outcome === 'declined') return (
-                                <div key={t.id} style={{
-                                    background: 'var(--surface-subtle)', border: '1px solid var(--border)',
-                                    borderRadius: 12, padding: '14px 18px',
-                                    display: 'flex', gap: 10, alignItems: 'center',
-                                }}>
-                                    <Icons.x size={16} style={{ color: 'var(--text-3)', flexShrink: 0 }} />
-                                    <span style={{ fontSize: 13, color: 'var(--text-2)' }}>
-                                        Transfer for <strong>{t.eventTitle}</strong> declined.
-                                    </span>
-                                </div>
-                            );
-
-                            const busy = actionId === t.id;
-                            return (
-                                <div key={t.id} style={{
-                                    background: 'var(--surface-elevated)', border: '1px solid var(--border)',
-                                    borderRadius: 12, overflow: 'hidden', boxShadow: 'var(--shadow-card)',
-                                }}>
-                                    <div style={{ padding: '16px 18px', display: 'flex', gap: 14, alignItems: 'flex-start' }}>
-                                        <div style={{
-                                            width: 40, height: 40, borderRadius: 8,
-                                            background: '#EAF1FE', display: 'flex',
-                                            alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                                        }}>
-                                            <Icons.ticket size={18} style={{ color: 'var(--mp-blue)' }} />
-                                        </div>
-                                        <div style={{ flex: 1, minWidth: 0 }}>
-                                            <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-1)' }}>
-                                                {t.eventTitle}
-                                            </div>
-                                            <div style={{ fontSize: 12, color: 'var(--text-2)', marginTop: 3, display: 'flex', alignItems: 'center', gap: 6 }}>
-                                                <span style={{ filter: 'blur(4px)', userSelect: 'none', pointerEvents: 'none' }}>
-                                                    {t.tierName || 'Standard'}{t.seatLabel ? ` · Seat ${t.seatLabel}` : ''}
-                                                </span>
-                                                <span style={{ fontSize: 11, color: 'var(--text-3)', fontStyle: 'italic', filter: 'none' }}>
-                                                    — accept to reveal
-                                                </span>
-                                            </div>
-                                            <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 5, display: 'flex', gap: 5, alignItems: 'center' }}>
-                                                <Icons.users size={12} />
-                                                From <strong style={{ color: 'var(--text-2)' }}>{t.fromUserName}</strong>
-                                                {t.expiresAt && <> · Expires {formatEventDate(t.expiresAt)}</>}
-                                            </div>
-                                        </div>
-                                    </div>
-                                    {results[t.id] === 'error' && (
-                                        <div style={{ margin: '0 18px 10px', background: '#FBE9E9', border: '1px solid #FBB6B6', borderRadius: 8, padding: '8px 12px', fontSize: 12, color: '#D62828', display: 'flex', gap: 6, alignItems: 'center' }}>
-                                            <Icons.alert size={13} style={{ flexShrink: 0 }} /> Something went wrong. Please try again.
-                                        </div>
-                                    )}
-                                    <div style={{ padding: '12px 18px', borderTop: '1px solid var(--border)', display: 'flex', gap: 8 }}>
-                                        <Button variant="primary" size="sm" onClick={() => handleAccept(t.id)} disabled={busy}>
-                                            {busy && isAccepting ? 'Accepting…' : 'Accept ticket'}
-                                        </Button>
-                                        <Button variant="secondary" size="sm" onClick={() => handleDecline(t.id)} disabled={busy} style={{ color: 'var(--error)', borderColor: 'var(--error)' }}>
-                                            {busy && isDeclining ? 'Declining…' : 'Decline'}
-                                        </Button>
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
-                </section>
-            )}
-
-            {/* ── Outgoing (sender history) ── */}
-            {outgoing.length > 0 && (
-                <section>
-                    <SectionHeader label="Sent" icon={<Icons.send size={14} />} />
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                        {outgoing.map(t => (
-                            <div key={t.id} style={{
-                                background: 'var(--surface-elevated)', border: '1px solid var(--border)',
-                                borderRadius: 12, padding: '16px 18px',
-                                display: 'flex', gap: 14, alignItems: 'flex-start',
-                                boxShadow: 'var(--shadow-card)',
-                            }}>
-                                <div style={{
-                                    width: 40, height: 40, borderRadius: 8,
-                                    background: 'var(--surface-subtle)', display: 'flex',
-                                    alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                                }}>
-                                    <Icons.send size={16} style={{ color: 'var(--text-3)' }} />
-                                </div>
-                                <div style={{ flex: 1, minWidth: 0 }}>
-                                    <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-1)' }}>
-                                        {t.eventTitle}
-                                    </div>
-                                    <div style={{ fontSize: 12, color: 'var(--text-2)', marginTop: 3 }}>
-                                        {t.tierName}{t.seatLabel ? ` · Seat ${t.seatLabel}` : ''}
-                                    </div>
-                                    <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 5, display: 'flex', gap: 5, alignItems: 'center', flexWrap: 'wrap' }}>
-                                        <Icons.mail size={12} />
-                                        To&nbsp;
-                                        {/* Blur recipient email — privacy for screenshots */}
-                                        <span style={{ filter: 'blur(3.5px)', userSelect: 'none', pointerEvents: 'none', fontWeight: 600, color: 'var(--text-2)' }}>
-                                            {t.toEmail}
-                                        </span>
-                                        <span>·</span>
-                                        {t.createdAt && formatEventDate(t.createdAt)}
-                                    </div>
-                                </div>
-                                {/* Deliberately show "Transferred" — do not reveal acceptance status */}
-                                <span style={{
-                                    fontSize: 11, fontWeight: 700, letterSpacing: '0.05em',
-                                    textTransform: 'uppercase', flexShrink: 0,
-                                    color: '#0F7B3E', background: '#E6F4EA',
-                                    padding: '3px 10px', borderRadius: 99,
-                                }}>
-                                    Transferred
-                                </span>
-                            </div>
-                        ))}
-                    </div>
-                </section>
-            )}
-        </div>
-    );
-}
-
-function SectionHeader({ label, icon }) {
-    return (
-        <div style={{
-            display: 'flex', alignItems: 'center', gap: 6,
-            fontSize: 11, fontWeight: 700, letterSpacing: '0.07em',
-            textTransform: 'uppercase', color: 'var(--text-3)',
-            marginBottom: 10,
-        }}>
-            {icon}{label}
-        </div>
-    );
-}
-
-/* ── Transfer empty state ───────────────────────────────── */
-
-/**
- * Distinguishes between "you have tickets but transfers are disabled by the
- * organiser" vs "you simply have no eligible tickets left."
- */
-function TransferEmptyState({ tickets }) {
-    // Any active ticket where the organiser hasn't enabled transfers
-    const hasDisabled = tickets.some(
-        t => !t.transfersEnabled
-          && t.status !== 'USED'
-          && t.status !== 'REFUNDED'
-          && t.status !== 'CANCELLED'
-    );
-
-    return (
-        <div style={{
-            background: 'var(--surface-elevated)', border: '1px solid var(--border)',
-            borderRadius: 12, padding: 48, textAlign: 'center',
-        }}>
-            <Icons.ticket size={32} style={{ color: 'var(--text-3)' }} />
-            {hasDisabled ? (
-                <>
-                    <p style={{ margin: '12px 0 4px', fontWeight: 600, fontSize: 16, color: 'var(--text-1)' }}>
-                        Transfers not available
-                    </p>
-                    <p style={{ margin: 0, fontSize: 14, color: 'var(--text-2)' }}>
-                        The organiser has not enabled ticket transfers for this event.
-                    </p>
-                </>
-            ) : (
-                <>
-                    <p style={{ margin: '12px 0 4px', fontWeight: 600, fontSize: 16, color: 'var(--text-1)' }}>
-                        No transferable tickets
-                    </p>
-                    <p style={{ margin: 0, fontSize: 14, color: 'var(--text-2)' }}>
-                        Used, refunded, or cancelled tickets cannot be transferred.
-                    </p>
-                </>
-            )}
-        </div>
-    );
-}
-
-/* ── TicketOption — selectable row ─────────────────────── */
-
-function TicketOption({ ticket: t, selected, onSelect }) {
-    return (
-        <button
-            type="button"
-            onClick={onSelect}
-            style={{
-                display: 'flex', alignItems: 'center', gap: 14,
-                padding: '12px 16px', borderRadius: 10, cursor: 'pointer',
-                border: selected ? '2px solid var(--mp-blue)' : '1px solid var(--border)',
-                background: selected ? '#EAF1FE' : 'white',
-                textAlign: 'left', fontFamily: 'inherit', width: '100%',
-            }}
-        >
-            <div style={{
-                width: 18, height: 18, borderRadius: '50%', flexShrink: 0,
-                border: selected ? '5px solid var(--mp-blue)' : '2px solid var(--border)',
-                background: 'var(--surface-elevated)',
-            }} />
-            <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-1)' }}>
-                    {t.eventTitle}
-                </div>
-                <div style={{ fontSize: 12, color: 'var(--text-2)', marginTop: 2 }}>
-                    {t.tierName} · Seat {t.seatNumber ?? '—'}
-                    {t.eventStartTime && ` · ${formatEventDate(t.eventStartTime)}`}
-                </div>
-            </div>
-            <div style={{
-                fontSize: 11, fontWeight: 700, letterSpacing: '0.05em',
-                textTransform: 'uppercase',
-                color: t.status === 'ACTIVE' ? '#0F9D58' : 'var(--text-3)',
-                background: t.status === 'ACTIVE' ? '#E6F4EA' : 'var(--surface-subtle)',
-                padding: '3px 8px', borderRadius: 99, flexShrink: 0,
-            }}>
-                {t.status}
-            </div>
-        </button>
-    );
-}
-
-/* ── QR Modal ───────────────────────────────────────────── */
+/* ── QR Modal ─────────────────────────────────────────────────── */
 
 function QrModalContent({ ticket, onClose }) {
     const [downloading, setDownloading] = useState(false);
@@ -956,7 +669,7 @@ function QrModalContent({ ticket, onClose }) {
     );
 }
 
-/* ── Shared states ──────────────────────────────────────── */
+/* ── Shared states ─────────────────────────────────────────────── */
 
 function EmptyState({ onBrowse }) {
     return (

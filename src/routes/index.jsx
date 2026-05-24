@@ -29,6 +29,7 @@ import AdminEventDetailPage from '../features/admin/pages/AdminEventDetailPage';
 import AdminEscrowPage from '../features/admin/pages/AdminEscrowPage';
 import AdminVendorsPage from '../features/admin/pages/AdminVendorsPage';
 import AdminVendorDetailPage from '../features/admin/pages/AdminVendorDetailPage';
+import EventProgrammePage from '../features/events/pages/EventProgrammePage';
 import OrganizerConsolePage from '../features/organiser/pages/OrganizerConsolePage';
 import OrganizerEventPage from '../features/organiser/pages/OrganizerEventPage';
 import OrganizerContractsPage from '../features/organiser/pages/OrganizerContractsPage';
@@ -83,13 +84,14 @@ const router = createBrowserRouter([
             {
                 element: <PrivateRoute />,
                 children: [
-                    { path: '/events/new',        element: <CreateEventPage /> },
-                    { path: '/events/:id/edit',   element: <EditEventPage /> },
-                    { path: '/events/:id/book',   element: <BookingPage /> },
+                    { path: '/events/new',                       element: <CreateEventPage /> },
+                    { path: '/events/:id/edit',              element: <EditEventPage /> },
+                    { path: '/events/:id/book',              element: <BookingPage /> },
+                    { path: '/events/:identifier/programme', element: <EventProgrammePage /> },
                     { path: '/tickets',           element: <TicketsPage /> },
                     { path: '/my-events',         element: <MyEventsPage /> },
                     { path: '/dashboard',         element: <Navigate to="/my-events" replace /> },
-                    { path: '/organiser',             element: <OrganizerConsolePage /> },
+                    { path: '/organiser',             element: <Navigate to="/my-events" replace /> },
                     { path: '/organiser/events/:id', element: <OrganizerEventPage /> },
                     { path: '/organiser/contracts',  element: <OrganizerContractsPage /> },
                     { path: '/organiser/account',    element: <OrganizerAccountPage /> },

@@ -75,7 +75,7 @@ export default function OrganizerEventPage() {
                         Event not found
                     </p>
                     <Button variant="secondary" size="md"
-                        onClick={() => navigate('/organiser')}
+                        onClick={() => navigate('/my-events')}
                         style={{ marginTop: 16 }}>
                         Back to my events
                     </Button>
@@ -197,7 +197,7 @@ function Shell({ children }) {
 function BackLink() {
     return (
         <Link
-            to="/organiser"
+            to="/my-events"
             style={{
                 display: 'inline-flex', alignItems: 'center', gap: 6,
                 color: 'var(--text-2)', fontSize: 14, textDecoration: 'none',
@@ -882,7 +882,7 @@ function SettingsTab({ event, eventId, navigate }) {
         setActionError('');
         try {
             await deleteEvent(eventId).unwrap();
-            navigate('/organiser');
+            navigate('/my-events');
         } catch (err) {
             setActionError(err?.data?.message || 'Could not delete. Please try again.');
             setShowDeleteDialog(false);
