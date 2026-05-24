@@ -904,7 +904,7 @@ function Shell({ children }) {
     return (
         <div style={{ background: 'var(--surface-subtle)', minHeight: '100vh' }}>
             {!isAuthenticated && <TopNav />}
-            <div style={{ maxWidth: 1100, margin: '0 auto', padding: '24px 24px 80px' }}>
+            <div className="mp-page-wrap" style={{ maxWidth: 1100, margin: '0 auto', padding: '24px 24px 80px' }}>
                 {children}
             </div>
         </div>

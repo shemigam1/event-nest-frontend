@@ -35,7 +35,7 @@ export default function VendorOpportunitiesPage() {
 
     return (
         <div style={{ background: 'var(--surface-subtle)', minHeight: '100vh' }}>
-            <div style={{ maxWidth: 1200, margin: '0 auto', padding: '32px 24px 80px' }}>
+            <div className="mp-page-wrap" style={{ maxWidth: 1200, margin: '0 auto', padding: '32px 24px 80px' }}>
                 {/* Header */}
                 <div style={{ marginBottom: 24 }}>
                     <h1 className="mp-h1" style={{ margin: 0, color: 'var(--text-1)' }}>
@@ -48,7 +48,7 @@ export default function VendorOpportunitiesPage() {
                 </div>
 
                 {/* Hero hint */}
-                <div style={{
+                <div className="mp-grid-stack" style={{
                     background: 'var(--mp-navy)',
                     color: 'white',
                     borderRadius: 12,
