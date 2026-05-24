@@ -16,6 +16,13 @@ COPY . .
 ARG VITE_API_BASE_URL=/api/v1
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 
+# Public Vite vars supplied by CI (GitHub Actions secrets → --build-arg).
+# These end up baked into the bundle and are publicly visible at runtime —
+# only ship keys that are safe to expose AND restricted by HTTP referrer
+# in the provider's console (Google Cloud Console for Maps).
+ARG VITE_GOOGLE_MAPS_API_KEY=""
+ENV VITE_GOOGLE_MAPS_API_KEY=$VITE_GOOGLE_MAPS_API_KEY
+
 RUN npm run build
 
 # ── Stage 2: serve ─────────────────────────────────────────────────────────────
