@@ -599,13 +599,9 @@ select:focus-visible {
   .mp-container { padding-left: 24px; padding-right: 24px; }
 }
 
-/* Visibility utilities */
-.mp-hide-mobile { display: none; }
-@media (min-width: 1024px) { .mp-hide-mobile { display: revert; } }
-
-.mp-hide-desktop { display: revert; }
-@media (min-width: 1024px) { .mp-hide-desktop { display: none !important; } }
-
+/* Visibility utilities — `.mp-hide-mobile` and `.mp-hide-desktop` are
+   defined earlier in this file (768/769 breakpoint). We add only the
+   tablet-up variant here for completeness. */
 .mp-hide-tablet-up { display: revert; }
 @media (min-width: 768px)  { .mp-hide-tablet-up { display: none !important; } }
 

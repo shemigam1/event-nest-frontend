@@ -144,7 +144,7 @@ export default function EventDetailPage() {
                 />
             )}
 
-            <div style={{ maxWidth: 1200, margin: '-80px auto 0', padding: '0 24px 64px', position: 'relative' }}>
+            <div className="mp-page-wrap" style={{ maxWidth: 1200, margin: '-80px auto 0', padding: '0 24px 64px', position: 'relative' }}>
                 <div className="mp-detail-grid" style={{
                     background: 'var(--surface-elevated)',
                     border: '1px solid var(--border)',
@@ -206,7 +206,7 @@ export default function EventDetailPage() {
 
                         {/* "View your tickets" CTA — shown to authenticated attendees */}
                         {isAuthenticated && !isOwnEvent && hasMyTickets && (
-                            <div style={{
+                            <div className="mp-stack-mobile" style={{
                                 marginTop: 24,
                                 background: 'linear-gradient(135deg, #EAF1FE 0%, #F0F7FF 100%)',
                                 border: '1px solid #C2D9F7',
@@ -511,7 +511,7 @@ function DetailSkeleton() {
     return (
         <div>
             <div className="mp-placeholder" style={{ height: 320 }} />
-            <div style={{ maxWidth: 1200, margin: '-80px auto 0', padding: '0 24px 64px' }}>
+            <div className="mp-page-wrap" style={{ maxWidth: 1200, margin: '-80px auto 0', padding: '0 24px 64px' }}>
                 <div style={{
                     background: 'var(--surface-elevated)',
                     borderRadius: 16,
