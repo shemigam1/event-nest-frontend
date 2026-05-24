@@ -384,14 +384,14 @@ function DashboardTab({
             )}
             {isRejected && <RejectionBanner reason={event.rejectionReason} />}
 
-            <div className="mp-dashboard-grid" style={{
+            <div className="mp-grid-stack" style={{
                 display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 360px',
                 gap: 20, alignItems: 'flex-start',
             }}>
                 {/* Main column */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 20, minWidth: 0 }}>
                     {/* Top tiles */}
-                    <div style={{
+                    <div className="mp-stat-grid" style={{
                         display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16,
                     }}>
                         <Tile
