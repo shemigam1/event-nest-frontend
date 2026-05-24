@@ -31,7 +31,7 @@ export default function TopNav({ variant = 'light', showBrowse = true }) {
         : { color: 'var(--text-2)' };
 
     return (
-        <nav data-testid="topnav" style={{
+        <nav data-testid="topnav" className="mp-topnav" style={{
             position: 'sticky',
             top: 0,
             zIndex: 50,
@@ -61,6 +61,8 @@ export default function TopNav({ variant = 'light', showBrowse = true }) {
                         fontWeight: 500,
                         cursor: 'pointer',
                         padding: '8px 0',
+                        whiteSpace: 'nowrap',
+                        flexShrink: 0,
                         ...browseStyle,
                     }}
                 >
@@ -69,7 +71,7 @@ export default function TopNav({ variant = 'light', showBrowse = true }) {
             )}
 
             {!isAuthenticated && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
                     <button
                         onClick={() => navigate('/login')}
                         style={{
@@ -83,6 +85,8 @@ export default function TopNav({ variant = 'light', showBrowse = true }) {
                             height: 38,
                             color: onDark ? 'rgba(255,255,255,0.88)' : 'var(--text-1)',
                             transition: 'all var(--motion-fast)',
+                            whiteSpace: 'nowrap',
+                            flexShrink: 0,
                         }}
                     >
                         Log in
@@ -100,6 +104,8 @@ export default function TopNav({ variant = 'light', showBrowse = true }) {
                             height: 38,
                             color: '#fff',
                             transition: 'all var(--motion-fast)',
+                            whiteSpace: 'nowrap',
+                            flexShrink: 0,
                         }}
                     >
                         Sign up
