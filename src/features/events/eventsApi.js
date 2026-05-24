@@ -3,7 +3,14 @@ import { baseApi } from '@/services/baseApi';
 export const eventsApi = baseApi.injectEndpoints({
     endpoints: (builder) => ({
         getPublishedEvents: builder.query({
-            query: () => '/events',
+            query: (params) => {
+                const qs = new URLSearchParams();
+                if (params?.sort) qs.set('sort', params.sort);
+                if (params?.neighbourhood) qs.set('neighbourhood', params.neighbourhood);
+                if (params?.category) qs.set('category', params.category);
+                const tail = qs.toString();
+                return tail ? `/events?${tail}` : '/events';
+            },
             providesTags: ['Event'],
             transformResponse: (response) => {
                 const d = response.data ?? response;

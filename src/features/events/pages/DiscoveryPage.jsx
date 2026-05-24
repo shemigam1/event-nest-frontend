@@ -152,6 +152,7 @@ export default function DiscoveryPage() {
     const [filter, setFilter] = useState('all');
 
     const { data: rawEvents, isLoading, isError, refetch } = useGetPublishedEventsQuery();
+    const { data: rawTrending } = useGetPublishedEventsQuery({ sort: 'trending' });
 
     const events = useMemo(
         () => (rawEvents ?? []).map(adaptEvent),
@@ -163,17 +164,12 @@ export default function DiscoveryPage() {
         [events, filter, query]
     );
 
-    // Top selling-fast events for the hero strip — independent of the
-    // user's active filter. Only show when there's no search query.
-    const sellingFast = useMemo(() => {
+    // Backend ranks by featured-first then view count. We surface the top 3
+    // when the user isn't searching or sub-filtering.
+    const trending = useMemo(() => {
         if (query) return [];
-        return [...events]
-            .map((e) => ({ event: e, score: hotnessScore(e) }))
-            .filter((x) => x.score >= 0.4) // a bit looser than the filter — anything moving
-            .sort((a, b) => b.score - a.score)
-            .slice(0, 4)
-            .map((x) => x.event);
-    }, [events, query]);
+        return (rawTrending ?? []).slice(0, 3).map(adaptEvent);
+    }, [rawTrending, query]);
 
     return (
         <div style={{ background: 'var(--surface-subtle)', minHeight: '100vh' }}>
@@ -234,16 +230,16 @@ export default function DiscoveryPage() {
 
             {/* ── Main content ── */}
             <div style={{ maxWidth: 1280, margin: '0 auto', padding: '32px 24px 64px' }}>
-                {/* Selling fast strip — only when not searching and we have hot events */}
-                {!isError && !isLoading && sellingFast.length > 0 && filter === 'all' && (
-                    <SellingFastStrip
-                        events={sellingFast}
+                {/* Trending strip — only when not searching and we have results */}
+                {!isError && !isLoading && trending.length > 0 && filter === 'all' && (
+                    <TrendingStrip
+                        events={trending}
                         onClick={(e) => navigate(`/events/${e.slug ?? e.id}`)}
                     />
                 )}
 
-                {/* Main grid heading — only shown when selling-fast appears above */}
-                {sellingFast.length > 0 && filter === 'all' && !isLoading && !isError && (
+                {/* Main grid heading — only shown when trending appears above */}
+                {trending.length > 0 && filter === 'all' && !isLoading && !isError && (
                     <h2 className="mp-h3" style={{
                         margin: '0 0 16px',
                         color: 'var(--text-1)',
@@ -284,10 +280,12 @@ export default function DiscoveryPage() {
     );
 }
 
-/* ── Selling fast strip — small section above the main grid ───────────────
-   Up to 4 cards, no horizontal scroll, with a flame icon header.
-   ─────────────────────────────────────────────────────────────────────────── */
-function SellingFastStrip({ events, onClick }) {
+/* ── Trending strip — horizontal-scroll row above the main grid ──────────
+   Backend ranks by featured-first then view count. Up to 3 cards visible
+   on desktop; on narrower viewports the row scrolls horizontally so all
+   trending events stay reachable.
+   ───────────────────────────────────────────────────────────────────────── */
+function TrendingStrip({ events, onClick }) {
     return (
         <section style={{ marginBottom: 32 }}>
             <div style={{
@@ -307,7 +305,7 @@ function SellingFastStrip({ events, onClick }) {
                     <Icons.spark size={16} />
                 </span>
                 <h2 className="mp-h3" style={{ margin: 0, color: 'var(--text-1)' }}>
-                    Selling fast
+                    Trending now
                 </h2>
                 <span style={{
                     fontSize: 12,
@@ -315,21 +313,26 @@ function SellingFastStrip({ events, onClick }) {
                     color: 'var(--text-3)',
                     marginLeft: 4,
                 }}>
-                    Don&apos;t miss out
+                    What everyone&apos;s booking
                 </span>
             </div>
 
-            <div className="mp-events-grid" style={{
-                display: 'grid',
-                gridTemplateColumns: `repeat(${Math.min(events.length, 4)}, minmax(0, 1fr))`,
-                gap: 16,
-            }}>
+            <div
+                className="mp-tab-scroll"
+                style={{
+                    display: 'grid',
+                    gridAutoFlow: 'column',
+                    gridAutoColumns: 'minmax(280px, 1fr)',
+                    gap: 16,
+                    overflowX: 'auto',
+                    scrollSnapType: 'x mandatory',
+                    paddingBottom: 4,
+                }}
+            >
                 {events.map((event) => (
-                    <EventCard
-                        key={event.id}
-                        event={event}
-                        onClick={() => onClick(event)}
-                    />
+                    <div key={event.id} style={{ scrollSnapAlign: 'start', minWidth: 0 }}>
+                        <EventCard event={event} onClick={() => onClick(event)} />
+                    </div>
                 ))}
             </div>
         </section>
