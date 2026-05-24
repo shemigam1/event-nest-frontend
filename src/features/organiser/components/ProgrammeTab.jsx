@@ -304,6 +304,7 @@ function ProgrammeItemModal({ eventId, item, eventStartTime, eventEndTime, onDis
         >
             <div
                 onClick={(e) => e.stopPropagation()}
+                className="mp-card-pad"
                 style={{
                     width: '100%', maxWidth: 520, background: 'var(--surface-elevated)',
                     borderRadius: 16, padding: 28, boxShadow: 'var(--shadow-modal)',
@@ -317,7 +318,7 @@ function ProgrammeItemModal({ eventId, item, eventStartTime, eventEndTime, onDis
                     <FieldGroup label="Title *">
                         <TextInput value={form.title} onChange={set('title')} placeholder="e.g. Opening keynote" required />
                     </FieldGroup>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                    <div className="mp-grid-stack" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                         <FieldGroup label="Start time">
                             <TextInput type="datetime-local" value={form.startTime} onChange={set('startTime')} min={inputMin} max={inputMax} />
                         </FieldGroup>
