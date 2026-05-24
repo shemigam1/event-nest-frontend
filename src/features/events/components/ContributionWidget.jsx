@@ -5,7 +5,7 @@ import {
     useContributeMutation,
 } from '@/features/organiser/contributionsApi';
 import { selectIsAuthenticated } from '@/features/auth/authSlice';
-import { formatNaira } from '@/utils/currency';
+import { formatNaira, formatNairaDirect, nairaToKobo } from '@/utils/currency';
 import Button from '@/components/ui/Button';
 import { Icons } from '@/components/ui/Icon';
 
@@ -14,10 +14,10 @@ import { Icons } from '@/components/ui/Icon';
  * and contribute to the event's crowd-funded pool.
  *
  * Visibility rules (enforced by both backend and this component):
- *  - pool.isPublic = true  → shown to everyone, including anonymous visitors
- *  - pool.isPublic = false → backend returns 404 for anonymous callers, so the
+ *  - pool.public = true  → shown to everyone, including anonymous visitors
+ *  - pool.public = false → backend returns 404 for anonymous callers, so the
  *    widget silently renders nothing; authenticated users see it normally
- *  - pool.isActive = false → summary shown but form is replaced with a
+ *  - pool.active = false → summary shown but form is replaced with a
  *    "Contributions are closed" notice
  *  - No pool at all (404)  → renders nothing
  */
@@ -58,11 +58,12 @@ export default function ContributionWidget({ eventId }) {
         try {
             await contribute({
                 eventId,
-                amount: num,
+                amount: nairaToKobo(num),   // user enters naira; backend stores kobo
                 message: message.trim() || null,
                 isAnonymous: isAuthenticated ? anonymous : true,
             }).unwrap();
-            setSuccess({ amount: num, msg: message.trim() });
+            // Keep naira value for the success banner (formatNairaDirect, not formatNaira)
+            setSuccess({ naira: num, msg: message.trim() });
             setFormOpen(false);
             setAmount('');
             setMessage('');
@@ -168,7 +169,7 @@ export default function ContributionWidget({ eventId }) {
                 }}>
                     <Icons.check size={16} style={{ color: 'var(--success)', flexShrink: 0 }} />
                     <div style={{ fontSize: 13, color: 'var(--success)', fontWeight: 600 }}>
-                        Thanks for contributing {formatNaira(success.amount)}!
+                        Thanks for contributing {formatNairaDirect(success.naira)}!
                         {success.msg && (
                             <span style={{ fontWeight: 400 }}> Your message has been recorded.</span>
                         )}
@@ -178,7 +179,7 @@ export default function ContributionWidget({ eventId }) {
 
             {/* CTA or inline form */}
             <div style={{ padding: '0 24px 20px' }}>
-                {!pool.isActive ? (
+                {!pool.active ? (
                     <div style={{
                         padding: '12px 16px',
                         background: 'var(--surface-subtle)',
@@ -252,7 +253,7 @@ export default function ContributionWidget({ eventId }) {
                                     }}
                                 />
                             </div>
-                            {/* Quick-pick chips */}
+                            {/* Quick-pick chips — values are in naira (matching the input field) */}
                             <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
                                 {[1000, 2500, 5000, 10000].map((v) => (
                                     <button
@@ -270,7 +271,7 @@ export default function ContributionWidget({ eventId }) {
                                             transition: 'background 0.15s, color 0.15s',
                                         }}
                                     >
-                                        {formatNaira(v)}
+                                        {formatNairaDirect(v)}
                                     </button>
                                 ))}
                             </div>

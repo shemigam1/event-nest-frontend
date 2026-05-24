@@ -59,10 +59,14 @@ export default function BudgetTab({ eventId }) {
         );
     }
 
-    const spendPercent = summary.spendPercent ?? pct(Number(summary.totalActualSpend ?? 0), Number(summary.totalBudget ?? 0));
+    const spendPercent = summary.spendPercent ?? pct(Number(summary.totalPaid ?? 0), Number(summary.totalBudget ?? 0));
+    const remaining = summary.totalBudget != null
+        ? Number(summary.totalBudget) - Number(summary.totalExpenses ?? 0)
+        : null;
     const lineItems = summary.lineItems ?? [];
-    const planned = lineItems.filter((i) => i.status === 'PLANNED');
-    const paid = lineItems.filter((i) => i.status === 'PAID');
+    const planned   = lineItems.filter((i) => i.status === 'PLANNED');
+    const committed = lineItems.filter((i) => i.status === 'COMMITTED');
+    const paid      = lineItems.filter((i) => i.status === 'PAID');
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -98,10 +102,10 @@ export default function BudgetTab({ eventId }) {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 16, marginBottom: 20 }}>
                     <Stat label="Total budget" value={ngn(summary.totalBudget)} />
                     <Stat label="Planned spend" value={ngn(summary.totalPlanned)} />
-                    <Stat label="Actual spend" value={ngn(summary.totalActualSpend)} accent={spendPercent > 80 ? 'error' : undefined} />
-                    <Stat label="Remaining" value={ngn(summary.remainingBudget)} accent={Number(summary.remainingBudget ?? 0) < 0 ? 'error' : 'success'} />
-                    <Stat label="Revenue" value={ngn(summary.totalRevenue)} accent="success" />
-                    <Stat label="Net P&L" value={ngn(summary.netProfit)} accent={Number(summary.netProfit ?? 0) >= 0 ? 'success' : 'error'} />
+                    <Stat label="Actual spend" value={ngn(summary.totalPaid)} accent={spendPercent > 80 ? 'error' : undefined} />
+                    <Stat label="Remaining" value={remaining != null ? ngn(remaining) : '—'} accent={remaining != null && remaining < 0 ? 'error' : 'success'} />
+                    <Stat label="Revenue" value={ngn(summary.totalIncome)} accent="success" />
+                    <Stat label="Net P&L" value={ngn(summary.net)} accent={Number(summary.net ?? 0) >= 0 ? 'success' : 'error'} />
                 </div>
 
                 {/* Spend bar */}
@@ -141,6 +145,14 @@ export default function BudgetTab({ eventId }) {
                 canPay
                 canDelete
             />
+
+            {committed.length > 0 && (
+                <LineItemsCard
+                    title="Committed (escrow funded)"
+                    items={committed}
+                    eventId={eventId}
+                />
+            )}
 
             {paid.length > 0 && (
                 <LineItemsCard
