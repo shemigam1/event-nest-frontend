@@ -172,7 +172,7 @@ export default function GuestsTab({ eventId }) {
                     message="No guests yet"
                     sub="Add guests and track RSVPs. Guests will receive an invite link by email."
                     action={
-                        <div style={{ display: 'inline-flex', gap: 10 }}>
+                        <div className="mp-actions-row" style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
                             <Button variant="secondary" size="md" onClick={handleOpenImport}>
                                 Import from file
                             </Button>
