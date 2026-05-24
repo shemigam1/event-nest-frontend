@@ -831,7 +831,7 @@ function AddTierForm({ eventId, onDone }) {
 function Shell({ children }) {
     return (
         <div style={{ background: 'var(--surface-subtle)', minHeight: '100vh' }}>
-            <div style={{ maxWidth: 800, margin: '0 auto', padding: '32px 24px 80px' }}>
+            <div className="mp-page-wrap" style={{ maxWidth: 800, margin: '0 auto', padding: '32px 24px 80px' }}>
                 {children}
             </div>
         </div>

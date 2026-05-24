@@ -48,11 +48,13 @@ jobs:
       - name: Build and push frontend image
         env:
           ECR_REGISTRY: ${{ steps.ecr-login.outputs.registry }}
+          VITE_GOOGLE_MAPS_API_KEY: ${{ secrets.VITE_GOOGLE_MAPS_API_KEY }}
         run: |
           IMAGE_URI=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           docker build \
             --platform linux/amd64 \
             -f Dockerfile.frontend \
+            --build-arg VITE_GOOGLE_MAPS_API_KEY="$VITE_GOOGLE_MAPS_API_KEY" \
             -t $IMAGE_URI \
             .
           docker push $IMAGE_URI

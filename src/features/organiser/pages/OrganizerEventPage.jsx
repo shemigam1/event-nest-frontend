@@ -113,7 +113,7 @@ export default function OrganizerEventPage() {
                 unseenComments={unseenComments}
             />
 
-            <div style={{ maxWidth: 1280, margin: '0 auto', padding: '24px 24px 80px' }}>
+            <div className="mp-page-wrap" style={{ maxWidth: 1280, margin: '0 auto', padding: '24px 24px 80px' }}>
                 {tab === 'dashboard' && (
                     <DashboardTab
                         eventId={eventId}
@@ -193,7 +193,7 @@ function Shell({ children }) {
     // Used by the error/skeleton states only.
     return (
         <div style={{ background: 'var(--surface-subtle)', minHeight: '100vh' }}>
-            <div style={{ maxWidth: 1280, margin: '0 auto', padding: '24px 24px 80px' }}>
+            <div className="mp-page-wrap" style={{ maxWidth: 1280, margin: '0 auto', padding: '24px 24px 80px' }}>
                 {children}
             </div>
         </div>
@@ -236,10 +236,10 @@ function Header({ event, totalSold, totalCapacity, checkedIn, checkInRate, tab, 
 
     return (
         <div style={{ background: 'var(--surface-elevated)', borderBottom: '1px solid var(--border)' }}>
-            <div style={{ maxWidth: 1280, margin: '0 auto', padding: '24px 24px 0' }}>
+            <div className="mp-page-wrap" style={{ maxWidth: 1280, margin: '0 auto', padding: '24px 24px 0' }}>
                 <BackLink />
 
-                <div style={{
+                <div className="mp-grid-stack" style={{
                     display: 'grid', gridTemplateColumns: '1fr auto',
                     gap: 24, alignItems: 'center',
                 }}>
@@ -281,7 +281,7 @@ function Header({ event, totalSold, totalCapacity, checkedIn, checkInRate, tab, 
                 </div>
 
                 {/* Tabs */}
-                <div style={{ display: 'flex', gap: 0, marginTop: 24, overflowX: 'auto' }}>
+                <div className="mp-tab-scroll" style={{ display: 'flex', gap: 0, marginTop: 24, overflowX: 'auto' }}>
                     {tabs.map(t => {
                         const active = tab === t.id;
                         const isDisabled = !isLive && t.id === 'attendees';

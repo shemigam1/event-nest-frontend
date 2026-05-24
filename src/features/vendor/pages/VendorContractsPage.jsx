@@ -90,7 +90,7 @@ export default function VendorContractsPage() {
         .reduce((s, c) => s + Number(c.outstandingBalance ?? 0), 0);
 
     return (
-        <div style={{ padding: '32px 40px', maxWidth: 900, margin: '0 auto' }}>
+        <div className="mp-page-wrap" style={{ padding: '32px 40px', maxWidth: 900, margin: '0 auto' }}>
             {/* Header */}
             <div style={{ marginBottom: 28 }}>
                 <h1 style={{ margin: '0 0 4px', fontSize: 24, fontWeight: 700, color: 'var(--text-1)' }}>

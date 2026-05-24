@@ -124,7 +124,7 @@ export default function VendorDashboardPage() {
 
     return (
         <div style={{ background: 'var(--surface-subtle)', minHeight: '100vh' }}>
-            <div style={{ maxWidth: 1200, margin: '0 auto', padding: '32px 24px 80px' }}>
+            <div className="mp-page-wrap" style={{ maxWidth: 1200, margin: '0 auto', padding: '32px 24px 80px' }}>
 
                 {/* SANDBOXED → "you're locked to one event, verify to unlock the marketplace". */}
                 <SandboxBanner />
@@ -180,7 +180,7 @@ export default function VendorDashboardPage() {
                 )}
 
                 {/* Tiles */}
-                <div style={{
+                <div className="mp-stat-grid" style={{
                     display: 'grid',
                     gridTemplateColumns: 'repeat(4, 1fr)',
                     gap: 16,
@@ -230,7 +230,7 @@ export default function VendorDashboardPage() {
                 </div>
 
                 {/* Two-column body */}
-                <div style={{
+                <div className="mp-grid-stack" style={{
                     display: 'grid',
                     gridTemplateColumns: 'minmax(0, 1fr) 320px',
                     gap: 20,
