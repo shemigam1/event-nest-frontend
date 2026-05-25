@@ -221,7 +221,7 @@ function ContractCard({ contract, eventId }) {
   const s = STATUS_STYLE[contract.status] ?? STATUS_STYLE.DRAFT;
   const isDone =
     contract.status === "COMPLETED" || contract.status === "CANCELLED";
-  const hasEscrow = ["ACTIVE", "COMPLETED", "CANCELLED"].includes(
+  const hasEscrow = ["SIGNED", "ACTIVE", "COMPLETED", "CANCELLED"].includes(
     contract.status,
   );
 
@@ -500,7 +500,7 @@ function EscrowPanel({ contractId, contractStatus }) {
   const [err, setErr] = useState("");
 
   const escrow = escrowQ.data;
-  const canAddMilestone = ["FUNDED", "ACTIVE"].includes(contractStatus);
+  const canAddMilestone = contractStatus === 'SIGNED';
   const canRelease = contractStatus === "ACTIVE";
 
   async function handleApprove(milestoneId) {
@@ -548,6 +548,31 @@ function EscrowPanel({ contractId, contractStatus }) {
   }
 
   if (escrowQ.isError || !escrow) {
+    // SIGNED contract — escrow doesn't exist yet (created lazily on first addMilestone).
+    // Show the add-milestone prompt instead of an error.
+    if (contractStatus === 'SIGNED') {
+      return (
+        <div style={{ marginTop: 20, borderTop: "1px solid var(--border)", paddingTop: 20 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+            <h4 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: "var(--text-1)" }}>
+              Escrow account
+            </h4>
+            <Button variant="secondary" size="sm" onClick={() => setShowAddMilestone(true)}>
+              + Add milestone
+            </Button>
+          </div>
+          <p style={{ fontSize: 13, color: "var(--text-3)", margin: 0 }}>
+            No milestones yet. Add milestones to set up escrow before funding.
+          </p>
+          {showAddMilestone && (
+            <AddMilestoneModal
+              contractId={contractId}
+              onDismiss={() => setShowAddMilestone(false)}
+            />
+          )}
+        </div>
+      );
+    }
     return (
       <div
         style={{

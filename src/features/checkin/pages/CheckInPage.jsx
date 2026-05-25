@@ -1,11 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router';
-import { useScanTicketMutation } from '../checkInApi';
+import { useScanTicketMutation } from '../checkinApi';       // lowercase 'i' — matches filename (Linux is case-sensitive)
 import { useGetEventByIdQuery } from '@/features/events/eventsApi';
 import { Icons } from '@/components/ui/Icon';
 import Button from '@/components/ui/Button';
 import Brand from '@/components/ui/Brand';
-import { formatEventDate } from '@/utils/dateFormat';
 
 /* ── Setup screen ────────────────────────────────── */
 function SetupScreen({ onStart, prefillEventId = '', prefillToken = '' }) {
@@ -147,14 +146,17 @@ function ResultCard({ result }) {
                 {isSuccess ? (
                     <>
                         <div style={{ fontWeight: 700, fontSize: 18, color: 'var(--success)', marginBottom: 4 }}>
-                            Check-in successful
+                            {d.firstScan ? 'Check-in successful' : 'Already checked in today'}
                         </div>
                         <div style={{ fontWeight: 600, fontSize: 16, color: 'var(--text-1)' }}>
-                            {d.attendeeFirstName} {d.attendeeLastName}
+                            {d.holderName}
                         </div>
                         <div style={{ fontSize: 14, color: 'var(--text-2)', marginTop: 4, display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-                            <span className="mp-num">{d.seatNumber}</span>
+                            {d.seatLabel && <span className="mp-num">{d.seatLabel}</span>}
                             <span>{d.tierName}</span>
+                            {d.eventDayLabel && (
+                                <span style={{ color: 'var(--text-3)' }}>{d.eventDayLabel}</span>
+                            )}
                         </div>
                     </>
                 ) : (
@@ -193,10 +195,12 @@ function HistoryRow({ entry, isLast }) {
                 <div>
                     {isSuccess ? (
                         <span style={{ fontSize: 14, color: 'var(--text-1)', fontWeight: 500 }}>
-                            {entry.data.attendeeFirstName} {entry.data.attendeeLastName}
-                            <span className="mp-num" style={{ color: 'var(--text-3)', fontWeight: 400, marginLeft: 8 }}>
-                                {entry.data.seatNumber}
-                            </span>
+                            {entry.data.holderName}
+                            {entry.data.seatLabel && (
+                                <span className="mp-num" style={{ color: 'var(--text-3)', fontWeight: 400, marginLeft: 8 }}>
+                                    {entry.data.seatLabel}
+                                </span>
+                            )}
                         </span>
                     ) : (
                         <span style={{ fontSize: 14, color: 'var(--error)' }}>{entry.message}</span>
@@ -208,38 +212,91 @@ function HistoryRow({ entry, isLast }) {
     );
 }
 
+/* ── Day selector banner (shown above scanner for multi-day events) ── */
+function DayBanner({ days, selectedDayId, onSelect }) {
+    if (!days || days.length <= 1) return null;
+
+    return (
+        <div style={{
+            background: 'var(--surface-elevated)', borderBottom: '1px solid var(--border)',
+            padding: '10px 24px', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
+        }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-2)', flexShrink: 0 }}>
+                Scanning for:
+            </span>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {days.map((d) => {
+                    const isSelected = d.id === selectedDayId;
+                    const dateStr = new Date(d.dayDate).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+                    return (
+                        <button
+                            key={d.id}
+                            onClick={() => onSelect(d.id)}
+                            style={{
+                                padding: '5px 14px',
+                                borderRadius: 99,
+                                border: `1.5px solid ${isSelected ? 'var(--mp-blue)' : 'var(--border)'}`,
+                                background: isSelected ? 'var(--mp-blue-50)' : 'transparent',
+                                color: isSelected ? 'var(--mp-blue)' : 'var(--text-2)',
+                                fontSize: 13,
+                                fontWeight: isSelected ? 600 : 400,
+                                cursor: 'pointer',
+                                transition: 'all 0.15s',
+                            }}
+                        >
+                            {d.label || dateStr}
+                        </button>
+                    );
+                })}
+            </div>
+        </div>
+    );
+}
+
 /* ── Active session ──────────────────────────────── */
-function ActiveSession({ credentials, onEnd }) {
+function ActiveSession({ credentials, eventDays, selectedDayId: initialDayId, onEnd }) {
     const [checkIn, { isLoading }] = useScanTicketMutation();
     const [qrInput, setQrInput] = useState('');
     const [result, setResult] = useState(null);
     const [history, setHistory] = useState([]);
+    const [selectedDayId, setSelectedDayId] = useState(initialDayId);
     const inputRef = useRef(null);
+
+    const isMultiDay = eventDays && eventDays.length > 1;
 
     useEffect(() => {
         inputRef.current?.focus();
     }, [result]);
 
-    const successCount = history.filter((h) => h.type === 'success').length;
+    // Only count first scans as successes — repeated scans of the same ticket
+    // come back as success:true with firstScan:false and shouldn't double-count.
+    const successCount = history.filter((h) => h.type === 'success' && h.data?.firstScan).length;
 
     async function handleScan(e) {
         e.preventDefault();
-        const qrCode = qrInput.trim();
-        if (!qrCode) return;
+        const ticketCode = qrInput.trim();
+        if (!ticketCode) return;
+
+        // Guard: for multi-day events a day must be selected
+        if (isMultiDay && !selectedDayId) {
+            setResult({ type: 'error', message: 'Please select which day you are scanning for.' });
+            return;
+        }
 
         setQrInput('');
         try {
             const data = await checkIn({
-                eventId: credentials.eventId,
-                staffToken: credentials.staffToken,
-                qrCode,
+                eventId:     credentials.eventId,
+                staffToken:  credentials.staffToken,
+                ticketCode,
+                ...(selectedDayId ? { eventDayId: selectedDayId } : {}),
             }).unwrap();
 
-            const entry = { type: 'success', data, checkedInAt: data.checkedInAt ?? new Date().toISOString() };
+            const entry = { type: 'success', data, checkedInAt: data.scannedAt ?? new Date().toISOString() };
             setResult(entry);
             setHistory((h) => [entry, ...h.slice(0, 49)]);
         } catch (err) {
-            const message = err?.data?.message || 'Could not process this ticket. Please try again.';
+            const message = err?.data?.message || err?.data?.errors?.[0] || 'Could not process this ticket. Please try again.';
             const entry = { type: 'error', message, checkedInAt: new Date().toISOString() };
             setResult(entry);
             setHistory((h) => [entry, ...h.slice(0, 49)]);
@@ -289,8 +346,24 @@ function ActiveSession({ credentials, onEnd }) {
                 </div>
             </div>
 
+            {/* Day selector for multi-day events */}
+            <DayBanner days={eventDays} selectedDayId={selectedDayId} onSelect={setSelectedDayId} />
+
             {/* Scan area */}
             <div style={{ maxWidth: 640, width: '100%', margin: '0 auto', padding: '32px 24px', flex: 1 }}>
+                {/* Warning when no day is selected for a multi-day event */}
+                {isMultiDay && !selectedDayId && (
+                    <div style={{
+                        marginBottom: 20, padding: '12px 16px', borderRadius: 10,
+                        background: '#FFF8E1', border: '1px solid #FDE68A',
+                        fontSize: 13, color: '#92400E',
+                        display: 'flex', alignItems: 'center', gap: 8,
+                    }}>
+                        <Icons.alert size={15} />
+                        Select a day above before scanning.
+                    </div>
+                )}
+
                 <form onSubmit={handleScan}>
                     <label style={{ display: 'block', fontSize: 14, fontWeight: 600, color: 'var(--text-1)', marginBottom: 8 }}>
                         Scan or enter QR code
@@ -321,7 +394,7 @@ function ActiveSession({ credentials, onEnd }) {
                             type="submit"
                             variant="primary"
                             size="lg"
-                            disabled={!qrInput.trim() || isLoading}
+                            disabled={!qrInput.trim() || isLoading || (isMultiDay && !selectedDayId)}
                             style={{ height: 52, paddingInline: 24 }}
                         >
                             {isLoading ? '…' : 'Check in'}
@@ -426,9 +499,28 @@ function EventInfoScreen({ credentials, onProceed, onBack }) {
         return () => clearInterval(t);
     }, []);
 
-    const checkInStart = event?.checkInStartTime ? new Date(event.checkInStartTime) : null;
-    const eventStart   = event?.startTime        ? new Date(event.startTime)        : null;
+    const days = event?.eventDays ?? [];
+    const isMultiDay = days.length > 1;
+
+    // Auto-select today's day if it exists; otherwise null (user picks manually for multi-day)
+    const todayIso = new Date().toISOString().slice(0, 10);
+    const todayDay = days.find((d) => d.dayDate === todayIso);
+    const [selectedDayId, setSelectedDayId] = useState(null);
+    // Sync once after event loads
+    useEffect(() => {
+        if (days.length > 0 && selectedDayId === null) {
+            setSelectedDayId(todayDay?.id ?? (days.length === 1 ? days[0].id : null));
+        }
+    }, [days.length]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // For the check-in window, use the selected day's times if set, else fall back to event-level
+    const selectedDay = days.find((d) => d.id === selectedDayId);
+    const checkInStart = selectedDay?.checkInStartTime
+        ? new Date(selectedDay.checkInStartTime)
+        : event?.checkInStartTime ? new Date(event.checkInStartTime) : null;
+    const eventStart   = event?.startTime ? new Date(event.startTime) : null;
     const isOpen       = checkInStart ? now >= checkInStart : false;
+    const canProceed   = isOpen && (!isMultiDay || !!selectedDayId);
 
     const fmtTime = (d) => d ? d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '—';
     const fmtDate = (d) => d ? d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) : '—';
@@ -476,7 +568,7 @@ function EventInfoScreen({ credentials, onProceed, onBack }) {
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 14, color: 'var(--text-2)' }}>
                                     <Icons.pin size={15} style={{ color: 'var(--text-3)', flexShrink: 0 }} />
-                                    {event.venue}
+                                    {event.venueName || event.venue}
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 14, color: 'var(--text-2)' }}>
                                     <Icons.calendar size={15} style={{ color: 'var(--text-3)', flexShrink: 0 }} />
@@ -484,6 +576,49 @@ function EventInfoScreen({ credentials, onProceed, onBack }) {
                                 </div>
                             </div>
                         </div>
+
+                        {/* Day selector for multi-day events */}
+                        {isMultiDay && (
+                            <div style={{ padding: '16px 28px', borderBottom: '1px solid var(--border)' }}>
+                                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-2)', marginBottom: 10 }}>
+                                    Which day are you scanning for?
+                                </div>
+                                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                                    {days.map((d) => {
+                                        const isSelected = d.id === selectedDayId;
+                                        const dateStr = new Date(d.dayDate).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+                                        const isToday = d.dayDate === todayIso;
+                                        return (
+                                            <button
+                                                key={d.id}
+                                                onClick={() => setSelectedDayId(d.id)}
+                                                style={{
+                                                    padding: '7px 16px',
+                                                    borderRadius: 99,
+                                                    border: `1.5px solid ${isSelected ? 'var(--mp-blue)' : 'var(--border)'}`,
+                                                    background: isSelected ? 'var(--mp-blue-50)' : 'transparent',
+                                                    color: isSelected ? 'var(--mp-blue)' : 'var(--text-2)',
+                                                    fontSize: 13,
+                                                    fontWeight: isSelected ? 600 : 400,
+                                                    cursor: 'pointer',
+                                                    transition: 'all 0.15s',
+                                                }}
+                                            >
+                                                {d.label || dateStr}
+                                                {isToday && (
+                                                    <span style={{ marginLeft: 6, fontSize: 11, opacity: 0.7 }}>(today)</span>
+                                                )}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                                {!selectedDayId && (
+                                    <p style={{ margin: '8px 0 0', fontSize: 12, color: 'var(--error)' }}>
+                                        Select a day to continue.
+                                    </p>
+                                )}
+                            </div>
+                        )}
 
                         {/* Check-in window */}
                         <div style={{
@@ -516,8 +651,8 @@ function EventInfoScreen({ credentials, onProceed, onBack }) {
                             <Button
                                 variant="primary"
                                 size="lg"
-                                onClick={onProceed}
-                                disabled={!isOpen}
+                                onClick={() => onProceed({ eventDays: days, selectedDayId })}
+                                disabled={!canProceed}
                                 icon={<Icons.scan size={16} />}
                                 style={{ width: '100%' }}
                             >
@@ -544,6 +679,7 @@ export default function CheckInPage() {
     const [searchParams] = useSearchParams();
     const [step, setStep] = useState('setup');           // 'setup' | 'info' | 'active'
     const [credentials, setCredentials] = useState(null);
+    const [sessionMeta, setSessionMeta] = useState({ eventDays: [], selectedDayId: null });
 
     // Deep-link from the staff-invite lands here as e.g.
     // /checkin?eventId=evt_001&token=… or /checkin?eventCode=TECH-AB12&token=…
@@ -580,7 +716,10 @@ export default function CheckInPage() {
         return (
             <EventInfoScreen
                 credentials={credentials}
-                onProceed={() => setStep('active')}
+                onProceed={({ eventDays, selectedDayId }) => {
+                    setSessionMeta({ eventDays, selectedDayId });
+                    setStep('active');
+                }}
                 onBack={() => { setCredentials(null); setStep('setup'); }}
             />
         );
@@ -589,7 +728,13 @@ export default function CheckInPage() {
     return (
         <ActiveSession
             credentials={credentials}
-            onEnd={() => { setCredentials(null); setStep('setup'); }}
+            eventDays={sessionMeta.eventDays}
+            selectedDayId={sessionMeta.selectedDayId}
+            onEnd={() => {
+                setCredentials(null);
+                setSessionMeta({ eventDays: [], selectedDayId: null });
+                setStep('setup');
+            }}
         />
     );
 }
