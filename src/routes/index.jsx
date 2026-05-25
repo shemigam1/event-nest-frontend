@@ -43,6 +43,7 @@ import VendorApplyPage from '../features/vendor/pages/VendorApplyPage';
 import VendorEventPage from '../features/vendor/pages/VendorEventPage';
 import VendorDashboardPage from '../features/vendor/pages/VendorDashboardPage';
 import CheckInPage from '../features/checkin/pages/CheckInPage';
+import CheckInScannerPage from '../features/checkin/pages/CheckInScannerPage';
 import PaymentResultPage from '../features/bookings/pages/PaymentResultPage';
 import VendorMarketplacePage from '../features/vendor/pages/VendorMarketplacePage';
 import VendorDetailPage from '../features/vendor/pages/VendorDetailPage';
@@ -53,6 +54,7 @@ import MessagesPage from '../features/messages/pages/MessagesPage';
 import SettingsPage from '../features/settings/pages/SettingsPage';
 import PrivateRoute from './PrivateRoute';
 import AdminRoute from './AdminRoute';
+import DashboardRedirect from './DashboardRedirect';
 import ErrorPage from '../components/ui/ErrorPage';
 
 const router = createBrowserRouter([
@@ -69,7 +71,8 @@ const router = createBrowserRouter([
             { path: '/reset-password',   element: <ResetPasswordPage /> },
             { path: '/terms',            element: <TermsPage /> },
             { path: '/privacy',          element: <PrivacyPage /> },
-            { path: '/checkin',        element: <CheckInPage /> },
+            { path: '/checkin',                   element: <CheckInPage /> },
+            { path: '/checkin/:eventId',          element: <CheckInScannerPage /> },
             { path: '/vendors',        element: <VendorMarketplacePage /> },
             { path: '/vendors/:id',    element: <VendorDetailPage /> },
             { path: '/payment-result', element: <PaymentResultPage /> },
@@ -90,7 +93,7 @@ const router = createBrowserRouter([
                     { path: '/events/:identifier/programme', element: <EventProgrammePage /> },
                     { path: '/tickets',           element: <TicketsPage /> },
                     { path: '/my-events',         element: <MyEventsPage /> },
-                    { path: '/dashboard',         element: <Navigate to="/my-events" replace /> },
+                    { path: '/dashboard',         element: <DashboardRedirect /> },
                     { path: '/organiser',             element: <Navigate to="/my-events" replace /> },
                     { path: '/organiser/events/:id', element: <OrganizerEventPage /> },
                     { path: '/organiser/contracts',  element: <OrganizerContractsPage /> },
