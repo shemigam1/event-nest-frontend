@@ -32,6 +32,51 @@ function pct(num, denom) {
     return Math.min(100, Math.round((num / denom) * 100));
 }
 
+// ── Info tooltip ─────────────────────────────────────────────────────────────
+function InfoTip({ text }) {
+    const [show, setShow] = useState(false);
+    return (
+        <span style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+            <span
+                onMouseEnter={() => setShow(true)}
+                onMouseLeave={() => setShow(false)}
+                style={{
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                    width: 14, height: 14, borderRadius: '50%',
+                    border: '1.5px solid var(--text-3)',
+                    color: 'var(--text-3)', fontSize: 9, fontWeight: 700,
+                    cursor: 'help', userSelect: 'none', lineHeight: 1,
+                    marginLeft: 4, flexShrink: 0,
+                }}
+            >
+                i
+            </span>
+            {show && (
+                <span style={{
+                    position: 'absolute', bottom: 'calc(100% + 6px)', left: '50%',
+                    transform: 'translateX(-50%)',
+                    background: '#1a1a2e', color: '#e8eaf6',
+                    fontSize: 12, padding: '8px 12px', borderRadius: 8,
+                    width: 220, zIndex: 200, lineHeight: 1.5, fontWeight: 400,
+                    boxShadow: '0 6px 20px rgba(0,0,0,0.35)',
+                    pointerEvents: 'none',
+                }}>
+                    {text}
+                    {/* Arrow */}
+                    <span style={{
+                        position: 'absolute', top: '100%', left: '50%',
+                        transform: 'translateX(-50%)',
+                        width: 0, height: 0,
+                        borderLeft: '6px solid transparent',
+                        borderRight: '6px solid transparent',
+                        borderTop: '6px solid #1a1a2e',
+                    }} />
+                </span>
+            )}
+        </span>
+    );
+}
+
 export default function BudgetTab({ eventId }) {
     const { data: summary, isLoading, isError, refetch } = useGetBudgetSummaryQuery(eventId);
     const [showCreate, setShowCreate] = useState(false);
@@ -59,6 +104,7 @@ export default function BudgetTab({ eventId }) {
         );
     }
 
+    const threshold = summary.alertThresholdPercent ?? 80;
     const spendPercent = summary.spendPercent ?? pct(Number(summary.totalPaid ?? 0), Number(summary.totalBudget ?? 0));
     const remaining = summary.totalBudget != null
         ? Number(summary.totalBudget) - Number(summary.totalExpenses ?? 0)
@@ -67,6 +113,9 @@ export default function BudgetTab({ eventId }) {
     const planned   = lineItems.filter((i) => i.status === 'PLANNED');
     const committed = lineItems.filter((i) => i.status === 'COMMITTED');
     const paid      = lineItems.filter((i) => i.status === 'PAID');
+
+    const isOverBudget = summary.alerts?.overBudget;
+    const isNearCap    = summary.alerts?.nearPaidCap;
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -81,11 +130,9 @@ export default function BudgetTab({ eventId }) {
                 }}>
                     <div>
                         <h2 className="mp-h2" style={{ margin: 0, color: 'var(--text-1)' }}>Budget</h2>
-                        {summary.notes && (
-                            <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--text-2)' }}>
-                                {summary.notes}
-                            </p>
-                        )}
+                        <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--text-2)' }}>
+                            Track planned, committed, and actual spend against your budget ceiling.
+                        </p>
                     </div>
                     <div style={{ display: 'flex', gap: 8 }}>
                         <Button variant="secondary" size="md" onClick={() => setShowEdit(true)}>
@@ -99,19 +146,55 @@ export default function BudgetTab({ eventId }) {
                 </div>
 
                 {/* Stat grid */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 16, marginBottom: 20 }}>
-                    <Stat label="Total budget" value={ngn(summary.totalBudget)} />
-                    <Stat label="Planned spend" value={ngn(summary.totalPlanned)} />
-                    <Stat label="Actual spend" value={ngn(summary.totalPaid)} accent={spendPercent > 80 ? 'error' : undefined} />
-                    <Stat label="Remaining" value={remaining != null ? ngn(remaining) : '—'} accent={remaining != null && remaining < 0 ? 'error' : 'success'} />
-                    <Stat label="Revenue" value={ngn(summary.totalIncome)} accent="success" />
-                    <Stat label="Net P&L" value={ngn(summary.net)} accent={Number(summary.net ?? 0) >= 0 ? 'success' : 'error'} />
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 16, marginBottom: 20 }}>
+                    <Stat
+                        label="Total budget"
+                        value={summary.totalBudget != null ? ngn(summary.totalBudget) : '—'}
+                        tip="The spending ceiling you set for this event. All expense categories are tracked against this number. Set via 'Edit budget'."
+                    />
+                    <Stat
+                        label="Planned"
+                        value={ngn(summary.totalPlanned)}
+                        tip="Sum of expenses you've logged but not yet committed to a vendor. These come from draft or unsigned contracts — money you intend to spend but haven't locked in yet."
+                    />
+                    <Stat
+                        label="Committed"
+                        value={ngn(summary.totalCommitted)}
+                        tip="Sum of active vendor contracts with funded escrow. This money is reserved and locked in a contract — not yet paid out, but no longer free to reallocate."
+                    />
+                    <Stat
+                        label="Actual spend"
+                        value={ngn(summary.totalPaid)}
+                        accent={spendPercent > threshold ? 'error' : undefined}
+                        tip={`Total paid out to vendors from completed/released contracts. Turns red when actual spend exceeds ${threshold}% of your total budget.`}
+                    />
+                    <Stat
+                        label="Remaining"
+                        value={remaining != null ? ngn(remaining) : '—'}
+                        accent={remaining != null && remaining < 0 ? 'error' : 'success'}
+                        tip="Total budget minus all expenses (planned + committed + paid). Goes red when negative — you've exceeded your budget ceiling."
+                    />
+                    <Stat
+                        label="Revenue"
+                        value={ngn(summary.totalIncome)}
+                        accent="success"
+                        tip="Total income for this event: ticket sales revenue plus any crowd-funded contribution pools. Ticket prices are converted from kobo to naira."
+                    />
+                    <Stat
+                        label="Net P&L"
+                        value={ngn(summary.net)}
+                        accent={Number(summary.net ?? 0) >= 0 ? 'success' : 'error'}
+                        tip="Revenue minus all expenses (planned + committed + paid). Positive = surplus, negative = loss. Use this to see whether the event is on track to be profitable."
+                    />
                 </div>
 
                 {/* Spend bar */}
                 <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--text-3)', marginBottom: 6 }}>
-                        <span>Budget utilisation</span>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                            Budget utilisation
+                            <InfoTip text={`Actual paid spend as a percentage of your total budget. Alert fires when this crosses ${threshold}%.`} />
+                        </span>
                         <span className="mp-num">{spendPercent}%</span>
                     </div>
                     <div style={{
@@ -120,20 +203,65 @@ export default function BudgetTab({ eventId }) {
                         <div style={{
                             height: '100%',
                             width: `${spendPercent}%`,
-                            background: spendPercent > 80 ? 'var(--error)' : 'var(--mp-blue)',
+                            background: spendPercent > threshold ? 'var(--error)' : 'var(--mp-blue)',
                             borderRadius: 99,
                             transition: 'width 0.3s',
                         }} />
                     </div>
-                    {summary.thresholdAlertTriggered && (
+
+                    {/* Alert banners */}
+                    {isOverBudget && (
                         <div style={{
-                            marginTop: 8, fontSize: 13, color: '#B8770A',
-                            display: 'flex', alignItems: 'center', gap: 6,
+                            marginTop: 10, padding: '10px 14px', borderRadius: 8,
+                            background: 'var(--error-bg)', border: '1px solid var(--error)',
+                            display: 'flex', alignItems: 'center', gap: 8, fontSize: 13,
                         }}>
-                            <Icons.alert size={14} style={{ color: '#F59E0B' }} />
-                            Budget alert: 80% threshold crossed
+                            <Icons.alert size={14} style={{ color: 'var(--error)', flexShrink: 0 }} />
+                            <span style={{ color: 'var(--error)', fontWeight: 600 }}>
+                                Over budget — committed + paid spend exceeds your ₦{ngn(summary.totalBudget)} ceiling.
+                            </span>
                         </div>
                     )}
+                    {!isOverBudget && isNearCap && (
+                        <div style={{
+                            marginTop: 10, padding: '10px 14px', borderRadius: 8,
+                            background: '#FEF9C3', border: '1px solid #F59E0B',
+                            display: 'flex', alignItems: 'center', gap: 8, fontSize: 13,
+                        }}>
+                            <Icons.alert size={14} style={{ color: '#B45309', flexShrink: 0 }} />
+                            <span style={{ color: '#92400E', fontWeight: 600 }}>
+                                Alert — actual spend has crossed your {threshold}% threshold
+                                ({ngn(summary.totalPaid)} of {ngn(summary.totalBudget)}).
+                            </span>
+                        </div>
+                    )}
+
+                    {/* Alert info footer */}
+                    <div style={{
+                        marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        flexWrap: 'wrap', gap: 8,
+                    }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-3)' }}>
+                            <Icons.bell size={12} />
+                            <span>
+                                Alert threshold: <strong style={{ color: 'var(--text-2)' }}>{threshold}%</strong>
+                            </span>
+                            <InfoTip text={`A daily alert is sent to the event organiser and all active managers when actual paid spend crosses ${threshold}% of the total budget, or when committed + paid spend exceeds the ceiling. Adjust the threshold via 'Edit budget'.`} />
+                            <span style={{ marginLeft: 4 }}>
+                                · Recipients: <strong style={{ color: 'var(--text-2)' }}>Organiser + Managers</strong>
+                            </span>
+                        </div>
+                        <button
+                            onClick={() => setShowEdit(true)}
+                            style={{
+                                background: 'none', border: 'none', cursor: 'pointer',
+                                fontSize: 12, color: 'var(--mp-blue)', fontWeight: 600, padding: 0,
+                            }}
+                        >
+                            Change threshold
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -144,6 +272,7 @@ export default function BudgetTab({ eventId }) {
                 eventId={eventId}
                 canPay
                 canDelete
+                emptyHint="No unsigned/draft contract expenses yet. Expenses appear here when a contract is signed but escrow hasn't been funded."
             />
 
             {committed.length > 0 && (
@@ -151,6 +280,7 @@ export default function BudgetTab({ eventId }) {
                     title="Committed (escrow funded)"
                     items={committed}
                     eventId={eventId}
+                    emptyHint=""
                 />
             )}
 
@@ -199,11 +329,17 @@ function NoBudgetCard({ onCreate }) {
     );
 }
 
-function Stat({ label, value, accent }) {
+function Stat({ label, value, accent, tip }) {
     const color = accent === 'success' ? '#0F9D58' : accent === 'error' ? 'var(--error)' : 'var(--text-1)';
     return (
         <div>
-            <div style={{ fontSize: 12, color: 'var(--text-3)', fontWeight: 500 }}>{label}</div>
+            <div style={{
+                fontSize: 12, color: 'var(--text-3)', fontWeight: 500,
+                display: 'flex', alignItems: 'center',
+            }}>
+                {label}
+                {tip && <InfoTip text={tip} />}
+            </div>
             <div className="mp-num" style={{ fontSize: 22, fontWeight: 700, color, marginTop: 4 }}>
                 {value}
             </div>
@@ -211,7 +347,7 @@ function Stat({ label, value, accent }) {
     );
 }
 
-function LineItemsCard({ title, items, eventId, canPay, canDelete }) {
+function LineItemsCard({ title, items, eventId, canPay, canDelete, emptyHint }) {
     const [markPaid, paidState] = useMarkLineItemPaidMutation();
     const [deleteItem, deleteState] = useDeleteLineItemMutation();
     const [payingId, setPayingId] = useState(null);
@@ -251,7 +387,7 @@ function LineItemsCard({ title, items, eventId, canPay, canDelete }) {
 
             {items.length === 0 ? (
                 <div style={{ padding: '32px 20px', textAlign: 'center', color: 'var(--text-3)', fontSize: 14 }}>
-                    No items yet.
+                    {emptyHint || 'No items yet.'}
                 </div>
             ) : items.map((item, i) => (
                 <div key={item.id} style={{
@@ -347,7 +483,7 @@ function BudgetFormModal({ eventId, existing, onDismiss }) {
     const [updateBudget, updateState] = useUpdateBudgetMutation();
     const [form, setForm] = useState({
         totalBudget: existing?.totalBudget ? String(existing.totalBudget) : '',
-        notes: existing?.notes ?? '',
+        alertThresholdPercent: existing?.alertThresholdPercent ?? 80,
     });
     const [err, setErr] = useState('');
     const busy = createState.isLoading || updateState.isLoading;
@@ -357,8 +493,8 @@ function BudgetFormModal({ eventId, existing, onDismiss }) {
         e.preventDefault();
         setErr('');
         const body = {
-            totalBudget: Number(form.totalBudget),
-            notes: form.notes.trim() || undefined,
+            totalBudget: form.totalBudget ? Number(form.totalBudget) : undefined,
+            alertThresholdPercent: Number(form.alertThresholdPercent),
         };
         try {
             if (isEdit) { await updateBudget({ eventId, ...body }).unwrap(); }
@@ -375,27 +511,45 @@ function BudgetFormModal({ eventId, existing, onDismiss }) {
                 {isEdit ? 'Edit budget' : 'Set up budget'}
             </h3>
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                <Field label="Total budget (₦) *">
-                    <Input type="number" min="1" step="0.01" value={form.totalBudget}
-                        onChange={set('totalBudget')} placeholder="0.00" required />
-                </Field>
-                <Field label="Notes">
-                    <textarea
-                        value={form.notes} onChange={set('notes')}
-                        placeholder="Optional notes or context…" rows={3}
-                        style={{
-                            width: '100%', padding: '9px 12px', fontSize: 14,
-                            border: '1px solid var(--border)', borderRadius: 8,
-                            resize: 'vertical', fontFamily: 'inherit',
-                            boxSizing: 'border-box', color: 'var(--text-1)', background: 'var(--surface-elevated)',
-                        }}
+                <Field label="Total budget (₦)">
+                    <Input
+                        type="number" min="1" step="0.01"
+                        value={form.totalBudget}
+                        onChange={set('totalBudget')}
+                        placeholder="Leave blank for no ceiling"
                     />
+                    <p style={{ margin: '4px 0 0', fontSize: 12, color: 'var(--text-3)' }}>
+                        Optional spending ceiling. Planned + committed + paid items are tracked against this.
+                    </p>
                 </Field>
+
+                <Field label={`Alert threshold — ${form.alertThresholdPercent}%`}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <input
+                            type="range"
+                            min="50" max="95" step="5"
+                            value={form.alertThresholdPercent}
+                            onChange={(e) => setForm((f) => ({ ...f, alertThresholdPercent: Number(e.target.value) }))}
+                            style={{ flex: 1, accentColor: 'var(--mp-blue)', cursor: 'pointer' }}
+                        />
+                        <span className="mp-num" style={{
+                            minWidth: 40, fontSize: 15, fontWeight: 700,
+                            color: 'var(--mp-blue)', textAlign: 'right',
+                        }}>
+                            {form.alertThresholdPercent}%
+                        </span>
+                    </div>
+                    <p style={{ margin: '6px 0 0', fontSize: 12, color: 'var(--text-3)' }}>
+                        A daily alert is sent to the <strong>organiser and all active managers</strong> when
+                        actual paid spend crosses this percentage of the total budget.
+                        Also fires if committed + paid spend exceeds the ceiling entirely.
+                    </p>
+                </Field>
+
                 {err && <p style={{ fontSize: 13, color: 'var(--error)', margin: 0 }}>{err}</p>}
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 4 }}>
                     <Button type="button" variant="secondary" size="md" onClick={onDismiss}>Cancel</Button>
-                    <Button type="submit" variant="primary" size="md"
-                        disabled={!form.totalBudget || busy}>
+                    <Button type="submit" variant="primary" size="md" disabled={busy}>
                         {busy ? 'Saving…' : (isEdit ? 'Save changes' : 'Create budget')}
                     </Button>
                 </div>

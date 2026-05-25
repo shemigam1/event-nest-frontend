@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router';
 import { useSelector } from 'react-redux';
 import { useGetPublishedEventsQuery } from '../eventsApi';
@@ -9,6 +9,58 @@ import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
 import TopNav from '@/components/ui/TopNav';
 import { Icons } from '@/components/ui/Icon';
+
+/* ── Haversine distance (km) between two lat/lon pairs ── */
+function distanceKm(lat1, lon1, lat2, lon2) {
+    const R = 6371;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a =
+        Math.sin(dLat / 2) ** 2 +
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+        Math.sin(dLon / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+/* ── Near Me button ── */
+// status: 'idle' | 'loading' | 'active' | 'denied' | 'error'
+function NearMeButton({ status, onClick }) {
+    const isActive  = status === 'active';
+    const isLoading = status === 'loading';
+    const isDenied  = status === 'denied' || status === 'error';
+
+    const label = isLoading ? 'Locating…'
+        : isActive          ? 'Near me ✕'
+        : isDenied          ? 'Location denied'
+        : 'Near me';
+
+    return (
+        <button
+            onClick={onClick}
+            disabled={isLoading || isDenied}
+            title={isDenied ? 'Location access was denied. Enable it in your browser settings and try again.' : undefined}
+            style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                height: 38, padding: '0 14px',
+                borderRadius: 99,
+                border: `1.5px solid ${isActive ? 'var(--mp-blue)' : isDenied ? 'var(--error)' : 'var(--border)'}`,
+                background: isActive ? 'var(--mp-blue-50)' : isDenied ? 'var(--error-bg)' : 'var(--surface-elevated)',
+                color: isActive ? 'var(--mp-blue)' : isDenied ? 'var(--error)' : 'var(--text-2)',
+                fontSize: 13, fontWeight: isActive ? 600 : 500,
+                cursor: isLoading || isDenied ? 'not-allowed' : 'pointer',
+                opacity: isDenied ? 0.7 : 1,
+                transition: 'all var(--motion-fast)',
+                whiteSpace: 'nowrap',
+            }}
+        >
+            {isLoading
+                ? <span style={{ display: 'inline-block', width: 14, height: 14, border: '2px solid var(--mp-blue)', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+                : <Icons.pin size={14} />
+            }
+            {label}
+        </button>
+    );
+}
 
 /* ── Filter tab strip ── */
 const FILTERS = [
@@ -151,6 +203,38 @@ export default function DiscoveryPage() {
     const [query,  setQuery]  = useState('');
     const [filter, setFilter] = useState('all');
 
+    // ── Near me sort ──────────────────────────────────────────────────────────
+    const [geoStatus,  setGeoStatus]  = useState('idle');   // 'idle'|'loading'|'active'|'denied'|'error'
+    const [userCoords, setUserCoords] = useState(null);     // { lat, lon } once acquired
+
+    const handleNearMe = useCallback(() => {
+        // Toggle off if already active
+        if (geoStatus === 'active') {
+            setGeoStatus('idle');
+            return;
+        }
+        // Re-use cached coords if we already have them
+        if (userCoords) {
+            setGeoStatus('active');
+            return;
+        }
+        if (!navigator.geolocation) {
+            setGeoStatus('error');
+            return;
+        }
+        setGeoStatus('loading');
+        navigator.geolocation.getCurrentPosition(
+            (pos) => {
+                setUserCoords({ lat: pos.coords.latitude, lon: pos.coords.longitude });
+                setGeoStatus('active');
+            },
+            (err) => {
+                setGeoStatus(err.code === err.PERMISSION_DENIED ? 'denied' : 'error');
+            },
+            { timeout: 8000, maximumAge: 5 * 60 * 1000 }   // 5-min cache
+        );
+    }, [geoStatus, userCoords]);
+
     const { data: rawEvents, isLoading, isError, refetch } = useGetPublishedEventsQuery();
     const { data: rawTrending } = useGetPublishedEventsQuery({ sort: 'trending' });
 
@@ -159,10 +243,22 @@ export default function DiscoveryPage() {
         [rawEvents]
     );
 
-    const filtered = useMemo(
-        () => events.filter(e => applyFilter(e, filter, query)),
-        [events, filter, query]
-    );
+    const filtered = useMemo(() => {
+        const base = events.filter(e => applyFilter(e, filter, query));
+
+        if (geoStatus !== 'active' || !userCoords) return base;
+
+        // Split into events with coords (sortable) and those without (appended last)
+        const withCoords    = base.filter(e => e.latitude  != null && e.longitude != null);
+        const withoutCoords = base.filter(e => e.latitude  == null || e.longitude == null);
+
+        withCoords.sort((a, b) =>
+            distanceKm(userCoords.lat, userCoords.lon, a.latitude, a.longitude) -
+            distanceKm(userCoords.lat, userCoords.lon, b.latitude, b.longitude)
+        );
+
+        return [...withCoords, ...withoutCoords];
+    }, [events, filter, query, geoStatus, userCoords]);
 
     // Backend ranks by featured-first then view count. We surface the top 3
     // when the user isn't searching or sub-filtering.
@@ -192,6 +288,8 @@ export default function DiscoveryPage() {
                             <p className="body" style={{ margin: '8px 0 0', color: 'var(--text-2)' }}>
                                 {isLoading
                                     ? 'Loading events…'
+                                    : geoStatus === 'active'
+                                    ? `${filtered.length} event${filtered.length !== 1 ? 's' : ''} sorted by distance from you`
                                     : `${filtered.length} event${filtered.length !== 1 ? 's' : ''} available · capacity updates in real time`}
                             </p>
                         </div>
@@ -224,7 +322,11 @@ export default function DiscoveryPage() {
                             />
                         </div>
                         <FilterTabs active={filter} onChange={setFilter} />
+                        <NearMeButton status={geoStatus} onClick={handleNearMe} />
                     </div>
+
+                    {/* Spin keyframe — injected inline once, scoped to this page */}
+                    <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
                 </div>
             </div>
 

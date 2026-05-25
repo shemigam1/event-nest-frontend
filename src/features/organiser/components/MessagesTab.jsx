@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router';
 import { useGetConversationsQuery } from '@/features/messages/messagesApi';
+import { useGetMeQuery } from '@/features/auth/authApi';
 import Button from '@/components/ui/Button';
 import { Icons } from '@/components/ui/Icon';
 
@@ -24,6 +25,7 @@ function initials(name) {
 /* ── Main component ──────────────────────────────── */
 export default function MessagesTab() {
     const navigate = useNavigate();
+    const { data: me } = useGetMeQuery();
     const { data: conversations = [], isLoading, isError, refetch } = useGetConversationsQuery();
 
     if (isLoading) return <ConvSkeleton />;
@@ -45,7 +47,7 @@ export default function MessagesTab() {
         );
     }
 
-    const totalUnread = conversations.reduce((s, c) => s + (c.unreadCount ?? 0), 0);
+    const totalUnread = conversations.reduce((s, c) => s + (c.myUnreadCount ?? c.unreadCount ?? 0), 0);
 
     return (
         <div>
@@ -121,6 +123,7 @@ export default function MessagesTab() {
                         <ConversationRow
                             key={conv.id}
                             conv={conv}
+                            myId={me?.id}
                             isLast={i === conversations.length - 1}
                             onClick={() => navigate(`/messages?c=${conv.id}`)}
                         />
@@ -144,15 +147,13 @@ export default function MessagesTab() {
 }
 
 /* ── Conversation row ────────────────────────────── */
-function ConversationRow({ conv, isLast, onClick }) {
-    const otherName = conv.otherParticipantName
-        ?? conv.otherParticipant?.name
-        ?? conv.otherParticipant?.firstName
-        ?? 'Unknown';
-    const lastMsg = conv.lastMessage?.body ?? conv.lastMessagePreview ?? '';
-    const time    = conv.lastActivity ?? conv.lastMessage?.createdAt ?? conv.updatedAt;
-    const unread  = conv.unreadCount ?? 0;
-    const context = conv.referenceName ?? conv.eventTitle ?? '';
+function ConversationRow({ conv, myId, isLast, onClick }) {
+    const other     = conv.participants?.find(p => p.userId !== myId);
+    const otherName = other?.name ?? 'Unknown';
+    const lastMsg   = conv.lastMessage?.body ?? conv.lastMessagePreview ?? '';
+    const time      = conv.lastActivity ?? conv.lastMessage?.createdAt ?? conv.updatedAt;
+    const unread    = conv.myUnreadCount ?? conv.unreadCount ?? 0;
+    const context   = conv.referenceName ?? conv.eventTitle ?? '';
 
     return (
         <div
