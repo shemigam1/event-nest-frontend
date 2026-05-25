@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router';
+import { useNavigate, Navigate } from 'react-router';
+import { useSelector } from 'react-redux';
+import { selectIsAdmin } from '@/features/auth/authSlice';
 import { useGetMyBookingsQuery } from '@/features/bookings/bookingsApi';
 import { useGetOrganizerEventsQuery } from '@/features/organiser/organizerApi';
 import { useGetPublishedEventsQuery } from '../eventsApi';
@@ -187,6 +189,11 @@ function SkeletonCard() {
    role: attendees → /tickets, organisers → /organiser/events/:id.
    ─────────────────────────────────────────────────────────── */
 export default function MyEventsPage() {
+    const isAdmin = useSelector(selectIsAdmin);
+
+    // Admins have no personal events workspace — send them straight to their dashboard.
+    if (isAdmin) return <Navigate to="/admin/moderation" replace />;
+
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState('my-events');
     const [timeTab, setTimeTab]     = useState('upcoming');
@@ -254,8 +261,12 @@ export default function MyEventsPage() {
             if (roleChip !== 'all' && role !== roleChip) return false;
             // Draft organiser events live exclusively in the Drafts tab
             if (role === 'ORGANISER' && event.status === 'DRAFT') return false;
-            // Time filter
-            const t = event.startTime ? new Date(event.startTime).getTime() : null;
+            // Time filter — use endTime so in-progress events stay in "Upcoming"
+            // until the event has fully finished. Fall back to startTime if endTime
+            // is absent (shouldn't happen for published events, but be safe).
+            const endMs   = event.endTime   ? new Date(event.endTime).getTime()   : null;
+            const startMs = event.startTime ? new Date(event.startTime).getTime() : null;
+            const t = endMs ?? startMs;
             const isPast = t != null && t < now;
             if (timeTab === 'upcoming' && isPast) return false;
             if (timeTab === 'past' && !isPast) return false;

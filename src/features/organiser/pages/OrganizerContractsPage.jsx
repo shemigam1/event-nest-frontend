@@ -269,7 +269,7 @@ function ContractCard({ contract }) {
     const busy = fundState.isLoading || rescindState.isLoading || cancelState.isLoading;
     const s    = STATUS_STYLE[contract.status] ?? STATUS_STYLE.DRAFT;
     const isDone    = contract.status === 'COMPLETED' || contract.status === 'CANCELLED';
-    const hasEscrow = ['ACTIVE', 'COMPLETED', 'CANCELLED'].includes(contract.status);
+    const hasEscrow = ['SIGNED', 'ACTIVE', 'COMPLETED', 'CANCELLED'].includes(contract.status);
 
     async function run(action, label) {
         setErr('');
@@ -402,7 +402,7 @@ function EscrowPanel({ contractId, contractStatus }) {
     const [err, setErr] = useState('');
 
     const escrow     = escrowQ.data;
-    const canAddMilestone = ['FUNDED', 'ACTIVE'].includes(contractStatus);
+    const canAddMilestone = contractStatus === 'SIGNED';
     const canRelease      = contractStatus === 'ACTIVE';
 
     async function act(fn, label) {
@@ -416,10 +416,25 @@ function EscrowPanel({ contractId, contractStatus }) {
             height: 60, background: 'var(--surface-subtle)', borderRadius: 8,
             animation: 'pulse 1.4s ease-in-out infinite' }} />
     );
-    if (escrowQ.isError || !escrow) return (
-        <div style={{ marginTop: 20, borderTop: '1px solid var(--border)', paddingTop: 16,
-            fontSize: 13, color: 'var(--text-2)' }}>Escrow data unavailable.</div>
-    );
+    if (escrowQ.isError || !escrow) {
+        // SIGNED contract — escrow doesn't exist yet (created lazily on first addMilestone).
+        if (contractStatus === 'SIGNED') return (
+            <div style={{ marginTop: 20, borderTop: '1px solid var(--border)', paddingTop: 20 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+                    <h4 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: 'var(--text-1)' }}>Escrow account</h4>
+                    <Button variant="secondary" size="sm" onClick={() => setShowAdd(true)}>+ Add milestone</Button>
+                </div>
+                <p style={{ fontSize: 13, color: 'var(--text-3)', margin: 0 }}>
+                    No milestones yet. Add milestones to set up escrow before funding.
+                </p>
+                {showAdd && <AddMilestoneModal contractId={contractId} onDismiss={() => setShowAdd(false)} />}
+            </div>
+        );
+        return (
+            <div style={{ marginTop: 20, borderTop: '1px solid var(--border)', paddingTop: 16,
+                fontSize: 13, color: 'var(--text-2)' }}>Escrow data unavailable.</div>
+        );
+    }
 
     const milestones = escrow.milestones ?? [];
     const busy = approveState.isLoading || releaseState.isLoading || disputeState.isLoading;
