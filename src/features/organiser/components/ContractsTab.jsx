@@ -4,6 +4,7 @@ import {
   useGetEventContractsQuery,
   useCreateContractMutation,
   useUpdateContractMutation,
+  useSignContractMutation,
   useRescindContractMutation,
   useCancelContractMutation,
   useFundEscrowMutation,
@@ -215,11 +216,13 @@ function ContractCard({ contract, eventId }) {
   const [editing, setEditing] = useState(false);
   const [err, setErr] = useState("");
 
+  const [signContract, signState] = useSignContractMutation();
   const [fundEscrow, fundState] = useFundEscrowMutation();
   const [rescind, rescindState] = useRescindContractMutation();
   const [cancel, cancelState] = useCancelContractMutation();
 
   const busy =
+    signState.isLoading ||
     fundState.isLoading ||
     rescindState.isLoading ||
     cancelState.isLoading;
@@ -406,6 +409,21 @@ function ContractCard({ contract, eventId }) {
                   Edit
                 </Button>
               )}
+              {/* Sign — visible whenever the organiser hasn't personally signed yet.
+                  Symmetric with the vendor side. */}
+              {(contract.status === "DRAFT" || contract.status === "COUNTERSIGNED")
+                && !contract.signedByOrganiserAt && (
+                <Button
+                  variant="primary"
+                  size="sm"
+                  disabled={busy}
+                  onClick={() =>
+                    run(() => signContract({ contractId: contract.id }), "sign contract")
+                  }
+                >
+                  {signState.isLoading ? "Signing…" : "Sign contract"}
+                </Button>
+              )}
               {contract.status === "SIGNED" && (
                 <>
                   <Button
@@ -512,7 +530,11 @@ function EscrowPanel({ contractId, contractStatus }) {
   // Milestones can be added any time before the contract is ACTIVE (i.e. before
   // the organiser funds the escrow). That covers DRAFT, COUNTERSIGNED and SIGNED.
   const canAddMilestone = ['DRAFT', 'COUNTERSIGNED', 'SIGNED'].includes(contractStatus);
-  const canRelease = contractStatus === "ACTIVE";
+  // Approve / Release / Raise-dispute all require the escrow to be activated
+  // (which corresponds to contract status ACTIVE). Before that the milestone
+  // is just a plan, not actionable.
+  const escrowActive = contractStatus === "ACTIVE";
+  const canRelease = escrowActive;
 
   async function handleApprove(milestoneId) {
     setErr("");
@@ -659,6 +681,8 @@ function EscrowPanel({ contractId, contractStatus }) {
         )}
       </div>
 
+      <PayoutInstructionsCard payout={escrow.payoutInstructions} />
+
       {/* milestones */}
       {milestones.length === 0 ? (
         <p style={{ fontSize: 13, color: "var(--text-3)", margin: 0 }}>
@@ -670,6 +694,7 @@ function EscrowPanel({ contractId, contractStatus }) {
             <MilestoneRow
               key={m.id}
               milestone={m}
+              escrowActive={escrowActive}
               canRelease={canRelease}
               busy={approveState.isLoading || releaseState.isLoading || disputeState.isLoading}
               onApprove={() => handleApprove(m.id)}
@@ -715,10 +740,40 @@ function EscrowStat({ label, value, accent }) {
   );
 }
 
+/**
+ * Vendor's bank-transfer destination. Backend only populates this for the
+ * organiser on SIGNED+ contracts, so we just render whatever we got — no
+ * extra gating on the client.
+ */
+function PayoutInstructionsCard({ payout }) {
+  if (!payout) return null;
+  return (
+    <div style={{
+      marginBottom: 16, padding: 12,
+      background: "var(--surface-subtle)",
+      border: "1px solid var(--border)", borderRadius: 8,
+    }}>
+      <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-3)", marginBottom: 6, letterSpacing: "0.04em" }}>
+        VENDOR PAYOUT ACCOUNT
+      </div>
+      <div style={{ fontSize: 13, color: "var(--text-1)", display: "flex", flexDirection: "column", gap: 2 }}>
+        {payout.bankName && <div><strong>{payout.bankName}</strong></div>}
+        {payout.accountNumber && <div className="mp-num">{payout.accountNumber}</div>}
+        {payout.accountName && <div>{payout.accountName}</div>}
+      </div>
+      <p style={{ margin: "8px 0 0", fontSize: 11, color: "var(--text-3)" }}>
+        Transfer milestone amounts directly to this account. Include the per-milestone
+        payment reference shown on each row.
+      </p>
+    </div>
+  );
+}
+
 /* ─── MilestoneRow ───────────────────────────────────── */
 
 function MilestoneRow({
   milestone: m,
+  escrowActive,
   canRelease,
   busy,
   onApprove,
@@ -764,7 +819,7 @@ function MilestoneRow({
         {ngn(m.amount)}
       </div>
       <Badge style={ms} label={ms.label} />
-      {m.status === "PENDING" && (
+      {m.status === "PENDING" && escrowActive && (
         <>
           <Button
             variant="secondary"
@@ -783,6 +838,11 @@ function MilestoneRow({
             Raise dispute
           </Button>
         </>
+      )}
+      {m.status === "PENDING" && !escrowActive && (
+        <span style={{ fontSize: 12, color: "var(--text-3)", fontStyle: "italic" }}>
+          Activate escrow to approve
+        </span>
       )}
       {m.status === "APPROVED" && canRelease && (
         <Button variant="primary" size="sm" disabled={busy} onClick={onRelease}>
@@ -940,7 +1000,10 @@ export function ContractModal({ eventId, contract, vendorProfile, onDismiss }) {
           title: m.title.trim(),
           description: m.description.trim() || undefined,
           amount: Number(m.amount),
-          ...(m.dueDate ? { dueDate: m.dueDate } : {}),
+          // The <input type="date"> gives us YYYY-MM-DD, but the backend
+          // AddMilestoneRequest.dueDate is a LocalDateTime — anchor to start
+          // of day so Jackson can parse it.
+          ...(m.dueDate ? { dueDate: `${m.dueDate}T00:00:00` } : {}),
         }).unwrap();
       } catch (e) {
         setMilestoneErrorIndex(milestoneDrafts.indexOf(m));
