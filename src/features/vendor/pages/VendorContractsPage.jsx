@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
-import { useGetVendorContractsQuery } from '@/features/organiser/contractsApi';
+import { useGetVendorContractsQuery, useSignContractMutation } from '@/features/organiser/contractsApi';
 import Button from '@/components/ui/Button';
 import { Icons } from '@/components/ui/Icon';
 
@@ -192,9 +192,24 @@ function StatCard({ label, value, accent }) {
 function ContractCard({ contract: c }) {
     const navigate = useNavigate();
     const [expanded, setExpanded] = useState(false);
+    const [signContract, signResult] = useSignContractMutation();
+    const [signError, setSignError] = useState(null);
+
     const s  = STATUS_STYLE[c.status] ?? STATUS_STYLE.DRAFT;
     const ds = c.depositStatus ? (DEPOSIT_STYLE[c.depositStatus] ?? DEPOSIT_STYLE.UNFUNDED) : null;
     const milestones = c.milestones ?? [];
+
+    // Vendor can sign when the contract is awaiting one or both signatures.
+    const canSign = c.status === 'DRAFT' || c.status === 'COUNTERSIGNED';
+
+    async function handleSign() {
+        setSignError(null);
+        try {
+            await signContract({ contractId: c.id ?? c.contractId }).unwrap();
+        } catch (err) {
+            setSignError(err?.data?.message ?? 'Failed to sign contract. Please try again.');
+        }
+    }
 
     return (
         <div style={{ background: 'var(--surface-elevated)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
@@ -267,10 +282,27 @@ function ContractCard({ contract: c }) {
                     )}
 
                     {/* actions */}
-                    <div style={{ marginTop: 16, display: 'flex', gap: 8 }}>
-                        <Button variant="secondary" size="sm" onClick={() => navigate('/messages')}>
-                            Message organiser
-                        </Button>
+                    <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                        {signError && (
+                            <div style={{ fontSize: 13, color: '#D62828', background: '#FBE9E9', borderRadius: 8, padding: '8px 12px' }}>
+                                {signError}
+                            </div>
+                        )}
+                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                            {canSign && (
+                                <Button
+                                    variant="primary"
+                                    size="sm"
+                                    onClick={handleSign}
+                                    disabled={signResult.isLoading}
+                                >
+                                    {signResult.isLoading ? 'Signing…' : 'Sign contract'}
+                                </Button>
+                            )}
+                            <Button variant="secondary" size="sm" onClick={() => navigate('/messages')}>
+                                Message organiser
+                            </Button>
+                        </div>
                     </div>
                 </div>
             )}

@@ -1,7 +1,7 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router';
 import { useGetMyVendorApplicationsQuery } from '@/features/organiser/vendorsApi';
-import { useGetVendorContractsQuery } from '@/features/organiser/contractsApi';
+import { useGetVendorContractsQuery, useSignContractMutation } from '@/features/organiser/contractsApi';
 import { useGetEventByIdQuery, useGetEventBySlugQuery } from '@/features/events/eventsApi';
 import { formatEventDate } from '@/utils/dateFormat';
 import Button from '@/components/ui/Button';
@@ -280,6 +280,18 @@ function ApplicationCard({ application: a }) {
 }
 
 function ContractCard({ contract, loading }) {
+    const [signContract, signResult] = useSignContractMutation();
+    const [signError, setSignError]  = useState(null);
+
+    async function handleSign() {
+        setSignError(null);
+        try {
+            await signContract({ contractId: contract.id ?? contract.contractId }).unwrap();
+        } catch (err) {
+            setSignError(err?.data?.message ?? 'Failed to sign contract. Please try again.');
+        }
+    }
+
     if (loading) {
         return (
             <section style={cardStyle}>
@@ -304,7 +316,8 @@ function ContractCard({ contract, loading }) {
         );
     }
 
-    const status = CONTRACT_STATUS[contract.status] ?? CONTRACT_STATUS.DRAFT;
+    const canSign  = contract.status === 'DRAFT' || contract.status === 'COUNTERSIGNED';
+    const status   = CONTRACT_STATUS[contract.status] ?? CONTRACT_STATUS.DRAFT;
     const milestones = contract.milestones ?? [];
     const amount = ngn(contract.amount ?? contract.totalValue);
     const released = ngn(contract.releasedAmount);
@@ -400,6 +413,35 @@ function ContractCard({ contract, loading }) {
                                     </div>
                                 );
                             })}
+                        </div>
+                    </div>
+                )}
+
+                {/* Sign action — shown when the vendor's signature is still needed */}
+                {canSign && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        {signError && (
+                            <div style={{
+                                fontSize: 13, color: '#D62828',
+                                background: '#FBE9E9', borderRadius: 8, padding: '8px 12px',
+                            }}>
+                                {signError}
+                            </div>
+                        )}
+                        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                            <Button
+                                variant="primary"
+                                size="md"
+                                onClick={handleSign}
+                                disabled={signResult.isLoading}
+                            >
+                                {signResult.isLoading ? 'Signing…' : 'Sign contract'}
+                            </Button>
+                            <span style={{ fontSize: 13, color: 'var(--text-3)' }}>
+                                {contract.status === 'COUNTERSIGNED'
+                                    ? 'The other party has signed — your countersignature is needed.'
+                                    : 'Your signature is required to activate this contract.'}
+                            </span>
                         </div>
                     </div>
                 )}

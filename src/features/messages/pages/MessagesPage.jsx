@@ -47,29 +47,46 @@ export default function MessagesPage() {
         setMyServerId(s);
     }, []);
 
-    // Check whether a senderId belongs to the current user.
-    // Primary source: me.id (NanoID from /me endpoint — matches senderUserId exactly).
-    // Fallbacks for edge-cases where /me hasn't resolved yet.
-    const isMyMessage = useCallback((senderId) => {
+    const { data: conversations = [], isLoading: loadingConvs } = useGetConversationsQuery();
+
+    // Authoritative "me" identifier within a given conversation.
+    // The backend stamps ConversationResponse.myUserId from the JWT-resolved viewer —
+    // this is the only source guaranteed to match senderUserId on messages.
+    // Falls back to /me and Redux for the transient window before conversations load.
+    const myIdInConv = useCallback((conv) => {
+        return conv?.myUserId
+            ?? me?.id
+            ?? myServerId
+            ?? currentUser?.id
+            ?? null;
+    }, [me, myServerId, currentUser]);
+
+    // Check whether a senderId belongs to the current user *within a given conversation*.
+    // The conversation's own myUserId is preferred — it's the JWT-resolved viewer id
+    // and always matches the senderUserId stamped on messages in that conversation.
+    const isMyMessage = useCallback((senderId, conv) => {
         const id = String(senderId ?? '');
         if (!id) return false;
+        const meId = myIdInConv(conv);
+        if (meId && id === String(meId)) return true;
+        // Soft fallbacks for the case where conv hasn't loaded yet.
         if (me?.id && id === me.id) return true;
         if (myServerId !== null && id === myServerId) return true;
         if (currentUser?.id && id === String(currentUser.id)) return true;
         if (myId && id === String(myId)) return true;
         return false;
-    }, [me, myId, currentUser, myServerId]);
-
-    const { data: conversations = [], isLoading: loadingConvs } = useGetConversationsQuery();
+    }, [me, myId, currentUser, myServerId, myIdInConv]);
 
     // Seed unread counts from backend when conversations first load.
+    // Backend ConversationResponse exposes the viewer's count as `myUnreadCount`;
+    // we accept either name so a future rename of either side doesn't break things.
     useEffect(() => {
         if (!conversations.length) return;
         setUnreadCounts(prev => {
             const next = { ...prev };
             for (const conv of conversations) {
                 if (conv.id in next) continue; // already tracking — don't overwrite live counts
-                next[conv.id] = conv.unreadCount ?? 0;
+                next[conv.id] = conv.myUnreadCount ?? conv.unreadCount ?? 0;
             }
             return next;
         });
@@ -102,6 +119,7 @@ export default function MessagesPage() {
                 if (cancelled) return;
                 setConnected(true);
                 setConnError('');
+                setSendError('');   // clear any stale "not connected" banner on reconnect
                 // Invalidate cached message history so RTK Query refetches —
                 // picks up any messages that arrived while STOMP was connecting.
                 dispatch(messagesApi.util.invalidateTags(['ConversationMessages']));
@@ -131,9 +149,16 @@ export default function MessagesPage() {
     // the __temp__ bubble and the echo is appended as a duplicate.
     useEffect(() => {
         if (!history) return;
-        const msgs = Array.isArray(history)
+        // The backend returns the page in DESC order (newest first). Reverse to
+        // ASC for rendering so the oldest of the loaded page sits at the top
+        // and the newest at the bottom (where the scroll-to-bottom effect
+        // lands). Without this reversal, after a refresh the newest messages
+        // appear at the *top* of the thread, off-screen above the scroll
+        // target — which looks exactly like "messages disappeared after refresh."
+        const raw = Array.isArray(history)
             ? history
             : history.content ?? history.messages ?? [];
+        const msgs = [...raw].reverse(); // DESC (server) → ASC (display)
         setMessages(prev => {
             const pending = prev.filter(m => String(m.id ?? '').startsWith(TEMP_PREFIX));
             return [...msgs, ...pending];
@@ -171,8 +196,9 @@ export default function MessagesPage() {
             .filter(conv => conv.id !== selectedId)
             .map(conv =>
                 stompSubscribe(`/topic/conversation.${conv.id}`, (msg) => {
-                    // Only count messages from others, not our own echoes
-                    if (isMyMessage(msg.senderUserId)) return;
+                    // Only count messages from others, not our own echoes.
+                    // Pass conv so isMyMessage uses that conversation's own myUserId.
+                    if (isMyMessage(msg.senderUserId, conv)) return;
                     setUnreadCounts(prev => ({
                         ...prev,
                         [conv.id]: (prev[conv.id] ?? 0) + 1,
@@ -211,7 +237,7 @@ export default function MessagesPage() {
         const optimistic = {
             id: `${TEMP_PREFIX}${Date.now()}`,
             body: content,
-            senderUserId: me?.id ?? myServerId ?? String(currentUser?.id ?? myId),
+            senderUserId: myIdInConv(selectedConv) ?? me?.id ?? myServerId ?? String(currentUser?.id ?? myId),
             sentAt: new Date().toISOString(),
         };
         setMessages(prev => [...prev, optimistic]);
@@ -236,16 +262,16 @@ export default function MessagesPage() {
         const participants = conv?.participants ?? conv?.members ?? [];
         // Participants only have { userId (NanoID), name } — no email field.
         // Use me.id as the primary way to identify and exclude the current user.
-        const myNanoId = me?.id ?? myServerId ?? currentUser?.id;
+        const myNanoId = myIdInConv(conv);
         const others = myNanoId
-            ? participants.filter(p => p.userId !== myNanoId)
+            ? participants.filter(p => String(p.userId) !== String(myNanoId))
             : participants; // me not loaded yet — show all (brief flash only)
         if (others.length === 0) return conv?.title ?? 'Direct message';
         if (others.length === 1) return others[0].name ?? conv?.title ?? 'Direct message';
         const names = others.map(p => p.name ?? 'Unknown');
         if (names.length <= 3) return names.join(', ');
         return `${names.slice(0, 2).join(', ')} +${names.length - 2} more`;
-    }, [me, myServerId, currentUser]);
+    }, [myIdInConv]);
 
     // On mobile: sidebar hidden when viewing thread, thread hidden when viewing list
     const sidebarClass = `mp-msg-panel mp-msg-sidebar${mobileView === 'thread' ? ' mp-msg-hide-mobile' : ''}`;
@@ -394,7 +420,7 @@ export default function MessagesPage() {
                                         <MessageBubble
                                             key={msg.id ?? i}
                                             msg={msg}
-                                            mine={isMyMessage(msg.senderUserId)}
+                                            mine={isMyMessage(msg.senderUserId, selectedConv)}
                                         />
                                     ))
                                 )}
@@ -432,10 +458,11 @@ export default function MessagesPage() {
                                     onKeyDown={e => {
                                         if (e.key === 'Enter' && !e.shiftKey) {
                                             e.preventDefault();
-                                            handleSend();
+                                            if (connected) handleSend();
                                         }
                                     }}
-                                    placeholder="Type a message… (Enter to send)"
+                                    placeholder={connected ? 'Type a message… (Enter to send)' : 'Connecting to chat…'}
+                                    disabled={!connected}
                                     rows={1}
                                     style={{
                                         flex: 1,
@@ -449,6 +476,8 @@ export default function MessagesPage() {
                                         outline: 'none',
                                         background: 'var(--surface-subtle, #F8F9FA)',
                                         lineHeight: 1.5,
+                                        opacity: connected ? 1 : 0.5,
+                                        cursor: connected ? 'text' : 'not-allowed',
                                     }}
                                     onFocus={e => { e.target.style.borderColor = 'var(--mp-blue)'; }}
                                     onBlur={e => { e.target.style.borderColor = 'var(--border)'; }}
@@ -456,7 +485,7 @@ export default function MessagesPage() {
                                 <button
                                     type="button"
                                     onClick={handleSend}
-                                    disabled={!draft.trim()}
+                                    disabled={!draft.trim() || !connected}
                                     style={{
                                         width: 40,
                                         height: 40,
