@@ -134,6 +134,7 @@ export const contractsApi = baseApi.injectEndpoints({
             query: (contractId) => ({
                 url: `/contracts/${contractId}/escrow/fund`,
                 method: 'POST',
+                body: {},   // FundEscrowRequest has no required fields but @RequestBody is non-optional
             }),
             invalidatesTags: (result, error, contractId) => [
                 { type: 'Escrow', id: contractId },

@@ -21,7 +21,7 @@ export default function PaymentResultPage() {
     const [verifyPayment] = useVerifyPaymentMutation();
     const [status, setStatus] = useState('verifying');
     const [pollCount, setPollCount] = useState(0);
-    const [eventInfo, setEventInfo] = useState(null); // { title, startTime, venue }
+    const [eventInfo, setEventInfo] = useState(null); // { title, startTime, venue, eventId }
     const timerRef = useRef(null);
 
     useEffect(() => {
@@ -60,7 +60,8 @@ export default function PaymentResultPage() {
                 const startTime = result.eventStartTime ?? result.booking?.eventStartTime ?? null;
                 const venue     = result.eventVenue     ?? result.venue
                                 ?? result.booking?.eventVenue ?? null;
-                if (title && startTime) setEventInfo({ title, startTime, venue });
+                const evtId     = result.eventId        ?? result.booking?.eventId        ?? null;
+                if (title && startTime) setEventInfo({ title, startTime, venue, eventId: evtId });
                 setStatus('paid');
             } else if (payStatus === 'FAILED') {
                 setStatus('failed');
@@ -99,7 +100,7 @@ export default function PaymentResultPage() {
                     }}
                 >
                     {status === 'verifying' && <VerifyingView pollCount={pollCount} />}
-                    {status === 'paid' && <PaidView eventInfo={eventInfo} onTickets={() => navigate('/tickets')} onMore={() => navigate('/events')} />}
+                    {status === 'paid' && <PaidView eventInfo={eventInfo} onTickets={() => navigate(eventInfo?.eventId ? `/events/${eventInfo.eventId}` : '/tickets')} onMore={() => navigate('/events')} />}
                     {status === 'failed' && <FailedView onRetry={() => navigate(-2)} onBrowse={() => navigate('/events')} />}
                     {status === 'pending_timeout' && <PendingTimeoutView onTickets={() => navigate('/tickets')} />}
                     {status === 'error' && <ErrorView onBrowse={() => navigate('/events')} />}

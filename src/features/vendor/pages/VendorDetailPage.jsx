@@ -360,7 +360,7 @@ export default function VendorDetailPage() {
         </Shell>
         {inquiryOpen && (
             <InquiryModal
-                vendorId={v.userId || v.id || id}
+                vendorId={v.id || id}
                 onDismiss={() => setInquiryOpen(false)}
             />
         )}

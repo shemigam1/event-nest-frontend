@@ -174,7 +174,7 @@ export default function BookingPage() {
                         eventStartTime={event.data.startTime}
                         venue={event.data.venueName ?? event.data.venue}
                         booking={booking}
-                        onTickets={() => navigate('/tickets')}
+                        onTickets={() => navigate(`/events/${eventId}`)}
                         onMore={() => navigate('/events')}
                     />
                 )}
