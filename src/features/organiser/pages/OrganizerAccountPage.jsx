@@ -498,8 +498,14 @@ function EscrowPanel({ contractId, contractStatus }) {
     const [err, setErr] = useState('');
 
     const escrow     = escrowQ.data;
-    const canAddMilestone = ['FUNDED', 'ACTIVE'].includes(contractStatus);
-    const canRelease      = contractStatus === 'ACTIVE';
+    // Milestones can be added any time before activation (DRAFT/COUNTERSIGNED/SIGNED).
+    // Previously this read ['FUNDED', 'ACTIVE'] which mixed EscrowStatus and
+    // ContractStatus values and never matched, so the button never appeared.
+    const canAddMilestone = ['DRAFT', 'COUNTERSIGNED', 'SIGNED'].includes(contractStatus);
+    // Approve / Release / Raise-dispute all require the escrow to be activated
+    // (contract status ACTIVE). Before that the milestone is just a plan.
+    const escrowActive    = contractStatus === 'ACTIVE';
+    const canRelease      = escrowActive;
 
     async function act(fn, label) {
         setErr('');
@@ -530,12 +536,14 @@ function EscrowPanel({ contractId, contractStatus }) {
                 )}
             </div>
 
+            <PayoutInstructionsCard payout={escrow.payoutInstructions} />
+
             {milestones.length === 0 ? (
                 <p style={{ fontSize: 13, color: 'var(--text-3)', margin: 0 }}>No milestones added yet.</p>
             ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                     {milestones.map((m) => (
-                        <MilestoneRow key={m.id} milestone={m} canRelease={canRelease} busy={busy}
+                        <MilestoneRow key={m.id} milestone={m} escrowActive={escrowActive} canRelease={canRelease} busy={busy}
                             onApprove={() => act(() => approve({ contractId, milestoneId: m.id }), 'approve milestone')}
                             onRelease={() => act(() => release({ contractId, milestoneId: m.id }), 'release milestone')}
                             onDispute={() => setDisputing(m)}
@@ -575,9 +583,38 @@ function EscrowStat({ label, value, accent }) {
     );
 }
 
+/**
+ * Vendor's bank-transfer destination. Backend only populates this for the
+ * organiser on SIGNED+ contracts, so we render whatever we got — no extra
+ * client-side gating.
+ */
+function PayoutInstructionsCard({ payout }) {
+    if (!payout) return null;
+    return (
+        <div style={{
+            marginBottom: 16, padding: 12,
+            background: 'var(--surface-subtle)',
+            border: '1px solid var(--border)', borderRadius: 8,
+        }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', marginBottom: 6, letterSpacing: '0.04em' }}>
+                VENDOR PAYOUT ACCOUNT
+            </div>
+            <div style={{ fontSize: 13, color: 'var(--text-1)', display: 'flex', flexDirection: 'column', gap: 2 }}>
+                {payout.bankName && <div><strong>{payout.bankName}</strong></div>}
+                {payout.accountNumber && <div className="mp-num">{payout.accountNumber}</div>}
+                {payout.accountName && <div>{payout.accountName}</div>}
+            </div>
+            <p style={{ margin: '8px 0 0', fontSize: 11, color: 'var(--text-3)' }}>
+                Transfer milestone amounts directly to this account. Include the per-milestone
+                payment reference shown on each row.
+            </p>
+        </div>
+    );
+}
+
 /* ─── MilestoneRow ────────────────────────────────────── */
 
-function MilestoneRow({ milestone: m, canRelease, busy, onApprove, onRelease, onDispute }) {
+function MilestoneRow({ milestone: m, escrowActive, canRelease, busy, onApprove, onRelease, onDispute }) {
     const ms = MILESTONE_STYLE[m.status] ?? MILESTONE_STYLE.PENDING;
     const ngn2 = (v) => {
         const n = Number(v ?? 0);
@@ -595,11 +632,16 @@ function MilestoneRow({ milestone: m, canRelease, busy, onApprove, onRelease, on
             </div>
             <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-1)', whiteSpace: 'nowrap' }}>{ngn2(m.amount)}</div>
             <Badge style={ms} label={ms.label} />
-            {m.status === 'PENDING' && (
+            {m.status === 'PENDING' && escrowActive && (
                 <>
                     <Button variant="secondary" size="sm" disabled={busy} onClick={onApprove}>Approve</Button>
                     <Button variant="destructive" size="sm" disabled={busy} onClick={onDispute}>Raise dispute</Button>
                 </>
+            )}
+            {m.status === 'PENDING' && !escrowActive && (
+                <span style={{ fontSize: 12, color: 'var(--text-3)', fontStyle: 'italic' }}>
+                    Activate escrow to approve
+                </span>
             )}
             {m.status === 'APPROVED' && canRelease && (
                 <Button variant="primary" size="sm" disabled={busy} onClick={onRelease}>Release</Button>

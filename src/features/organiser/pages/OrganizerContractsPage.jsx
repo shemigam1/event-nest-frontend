@@ -1,7 +1,8 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router';
+import { useEffect, useRef, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router';
 import {
     useGetMyContractsQuery,
+    useSignContractMutation,
     useRescindContractMutation,
     useCancelContractMutation,
     useFundEscrowMutation,
@@ -15,6 +16,7 @@ import Button from '@/components/ui/Button';
 import Modal from '@/components/ui/Modal';
 import Input from '@/components/ui/Input';
 import { Icons } from '@/components/ui/Icon';
+import CancelContractModal from '../components/CancelContractModal';
 
 /* ─── helpers ─────────────────────────────────────────── */
 
@@ -71,6 +73,10 @@ function Badge({ style, label }) {
 
 export default function OrganizerContractsPage() {
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+    // The Escrow tab (and any other deep-link) can navigate here with
+    // ?focus=<contractId> to auto-expand and scroll to a specific contract.
+    const focusId = searchParams.get('focus') ?? null;
     const [activeFilter, setActiveFilter] = useState('ALL');
     const [search, setSearch] = useState('');
     const contractsQ = useGetMyContractsQuery();
@@ -227,7 +233,11 @@ export default function OrganizerContractsPage() {
             {!contractsQ.isLoading && filtered.length > 0 && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                     {filtered.map((c) => (
-                        <ContractCard key={c.id} contract={c} />
+                        <ContractCard
+                            key={c.id}
+                            contract={c}
+                            focused={c.id === focusId}
+                        />
                     ))}
                 </div>
             )}
@@ -256,20 +266,40 @@ function StatCard({ label, value, accent }) {
 
 /* ─── ContractCard ────────────────────────────────────── */
 
-function ContractCard({ contract }) {
+function ContractCard({ contract, focused = false }) {
     const navigate = useNavigate();
-    const [expanded, setExpanded] = useState(false);
+    // Open by default when this card is the deep-link target (?focus=<id>).
+    const [expanded, setExpanded] = useState(focused);
     const [editing, setEditing] = useState(false);
     const [err, setErr] = useState('');
+    const [showCancel, setShowCancel] = useState(false);
+    const rootRef = useRef(null);
 
+    // When linked to via ?focus=, scroll into view + briefly highlight so the
+    // user sees which card was opened.
+    useEffect(() => {
+        if (!focused || !rootRef.current) return;
+        // Defer a tick so the layout has settled.
+        const t = setTimeout(() => {
+            rootRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 50);
+        return () => clearTimeout(t);
+    }, [focused]);
+
+    const [signContract, signState] = useSignContractMutation();
     const [fundEscrow, fundState]   = useFundEscrowMutation();
     const [rescind, rescindState]   = useRescindContractMutation();
-    const [cancel, cancelState]     = useCancelContractMutation();
+    // We keep useCancelContractMutation imported so the mutation registers and
+    // its cache invalidation runs — but the actual call happens inside the modal.
+    const [, cancelState]           = useCancelContractMutation();
 
-    const busy = fundState.isLoading || rescindState.isLoading || cancelState.isLoading;
+    const busy = signState.isLoading || fundState.isLoading || rescindState.isLoading || cancelState.isLoading;
     const s    = STATUS_STYLE[contract.status] ?? STATUS_STYLE.DRAFT;
     const isDone    = contract.status === 'COMPLETED' || contract.status === 'CANCELLED';
-    const hasEscrow = ['SIGNED', 'ACTIVE', 'COMPLETED', 'CANCELLED'].includes(contract.status);
+    // Show the escrow panel for every status so the organiser can add milestones
+    // at any pre-fund point (DRAFT/COUNTERSIGNED/SIGNED) and see the breakdown
+    // through to COMPLETED.
+    const hasEscrow = ['DRAFT', 'COUNTERSIGNED', 'SIGNED', 'ACTIVE', 'COMPLETED', 'CANCELLED'].includes(contract.status);
 
     async function run(action, label) {
         setErr('');
@@ -278,7 +308,14 @@ function ContractCard({ contract }) {
     }
 
     return (
-        <div style={{ background: 'var(--surface-elevated)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
+        <div ref={rootRef} style={{
+            background: 'var(--surface-elevated)',
+            border: `1px solid ${focused ? 'var(--mp-blue)' : 'var(--border)'}`,
+            boxShadow: focused ? '0 0 0 3px var(--mp-blue-50, rgba(37,99,235,0.18))' : 'none',
+            borderRadius: 12,
+            overflow: 'hidden',
+            transition: 'box-shadow 0.2s, border-color 0.2s',
+        }}>
             {/* header */}
             <div
                 role="button" tabIndex={0}
@@ -342,6 +379,16 @@ function ContractCard({ contract }) {
                     {/* actions */}
                     {!isDone && (
                         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: err ? 8 : 0 }}>
+                            {/* Sign — visible whenever the organiser hasn't personally signed yet.
+                                Symmetric with the vendor side: covers both DRAFT (sign first) and
+                                COUNTERSIGNED (sign second, after vendor). */}
+                            {(contract.status === 'DRAFT' || contract.status === 'COUNTERSIGNED')
+                                && !contract.signedByOrganiserAt && (
+                                <Button variant="primary" size="sm" disabled={busy}
+                                    onClick={() => run(() => signContract({ contractId: contract.id }), 'sign contract')}>
+                                    {signState.isLoading ? 'Signing…' : 'Sign contract'}
+                                </Button>
+                            )}
                             {contract.status === 'SIGNED' && (
                                 <>
                                     <Button variant="primary" size="sm" disabled={busy}
@@ -361,7 +408,7 @@ function ContractCard({ contract }) {
                                 </Button>
                             )}
                             <Button variant="destructive" size="sm" disabled={busy}
-                                onClick={() => run(() => cancel(contract.id), 'cancel')}>
+                                onClick={() => setShowCancel(true)}>
                                 {cancelState.isLoading ? 'Cancelling…' : 'Cancel'}
                             </Button>
                         </div>
@@ -377,6 +424,14 @@ function ContractCard({ contract }) {
                     {/* escrow */}
                     {hasEscrow && <EscrowPanel contractId={contract.id} contractStatus={contract.status} />}
                 </div>
+            )}
+
+            {showCancel && (
+                <CancelContractModal
+                    contractId={contract.id}
+                    contractTitle={contract.title}
+                    onDismiss={() => setShowCancel(false)}
+                />
             )}
         </div>
     );
@@ -402,8 +457,14 @@ function EscrowPanel({ contractId, contractStatus }) {
     const [err, setErr] = useState('');
 
     const escrow     = escrowQ.data;
-    const canAddMilestone = contractStatus === 'SIGNED';
-    const canRelease      = contractStatus === 'ACTIVE';
+    // Milestones can be added any time before activation (DRAFT/COUNTERSIGNED/SIGNED).
+    const canAddMilestone = ['DRAFT', 'COUNTERSIGNED', 'SIGNED'].includes(contractStatus);
+    // Approve / Release / Raise-dispute on a milestone all require the escrow
+    // to be activated (which corresponds to contract status ACTIVE). Before
+    // that point the milestone is just a plan, not something the organiser
+    // can act on — clicking Approve was hitting a 400 from the backend.
+    const escrowActive    = contractStatus === 'ACTIVE';
+    const canRelease      = escrowActive;
 
     async function act(fn, label) {
         setErr('');
@@ -417,8 +478,10 @@ function EscrowPanel({ contractId, contractStatus }) {
             animation: 'pulse 1.4s ease-in-out infinite' }} />
     );
     if (escrowQ.isError || !escrow) {
-        // SIGNED contract — escrow doesn't exist yet (created lazily on first addMilestone).
-        if (contractStatus === 'SIGNED') return (
+        // Pre-fund contract (DRAFT/COUNTERSIGNED/SIGNED) — escrow doesn't exist yet,
+        // it's created lazily on the first addMilestone call. Show the add prompt
+        // instead of an error.
+        if (canAddMilestone) return (
             <div style={{ marginTop: 20, borderTop: '1px solid var(--border)', paddingTop: 20 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
                     <h4 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: 'var(--text-1)' }}>Escrow account</h4>
@@ -454,12 +517,14 @@ function EscrowPanel({ contractId, contractStatus }) {
                 <EscrowStat label="Pending"  value={ngn(escrow.pendingAmount)} />
             </div>
 
+            <PayoutInstructionsCard payout={escrow.payoutInstructions} />
+
             {milestones.length === 0 ? (
                 <p style={{ fontSize: 13, color: 'var(--text-3)', margin: 0 }}>No milestones added yet.</p>
             ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                     {milestones.map((m) => (
-                        <MilestoneRow key={m.id} milestone={m} canRelease={canRelease} busy={busy}
+                        <MilestoneRow key={m.id} milestone={m} escrowActive={escrowActive} canRelease={canRelease} busy={busy}
                             onApprove={() => act(() => approve({ contractId, milestoneId: m.id }), 'approve milestone')}
                             onRelease={() => act(() => release({ contractId, milestoneId: m.id }), 'release milestone')}
                             onDispute={() => setDisputing(m)}
@@ -499,9 +564,38 @@ function EscrowStat({ label, value, accent }) {
     );
 }
 
+/**
+ * Vendor's bank-transfer destination. The backend only populates this once
+ * both parties have signed (status SIGNED+) AND the viewer is the organiser,
+ * so we just render whatever the escrow query gave us — no extra gating.
+ */
+function PayoutInstructionsCard({ payout }) {
+    if (!payout) return null;
+    return (
+        <div style={{
+            marginBottom: 16, padding: 12,
+            background: 'var(--surface-subtle)',
+            border: '1px solid var(--border)', borderRadius: 8,
+        }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', marginBottom: 6, letterSpacing: '0.04em' }}>
+                VENDOR PAYOUT ACCOUNT
+            </div>
+            <div style={{ fontSize: 13, color: 'var(--text-1)', display: 'flex', flexDirection: 'column', gap: 2 }}>
+                {payout.bankName && <div><strong>{payout.bankName}</strong></div>}
+                {payout.accountNumber && <div className="mp-num">{payout.accountNumber}</div>}
+                {payout.accountName && <div>{payout.accountName}</div>}
+            </div>
+            <p style={{ margin: '8px 0 0', fontSize: 11, color: 'var(--text-3)' }}>
+                Transfer milestone amounts directly to this account. Include the per-milestone
+                payment reference shown on each row.
+            </p>
+        </div>
+    );
+}
+
 /* ─── MilestoneRow ────────────────────────────────────── */
 
-function MilestoneRow({ milestone: m, canRelease, busy, onApprove, onRelease, onDispute }) {
+function MilestoneRow({ milestone: m, escrowActive, canRelease, busy, onApprove, onRelease, onDispute }) {
     const ms = MILESTONE_STYLE[m.status] ?? MILESTONE_STYLE.PENDING;
     return (
         <div style={{
@@ -515,11 +609,16 @@ function MilestoneRow({ milestone: m, canRelease, busy, onApprove, onRelease, on
             </div>
             <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-1)', whiteSpace: 'nowrap' }}>{ngn(m.amount)}</div>
             <Badge style={ms} label={ms.label} />
-            {m.status === 'PENDING' && (
+            {m.status === 'PENDING' && escrowActive && (
                 <>
                     <Button variant="secondary" size="sm" disabled={busy} onClick={onApprove}>Approve</Button>
                     <Button variant="destructive" size="sm" disabled={busy} onClick={onDispute}>Raise dispute</Button>
                 </>
+            )}
+            {m.status === 'PENDING' && !escrowActive && (
+                <span style={{ fontSize: 12, color: 'var(--text-3)', fontStyle: 'italic' }}>
+                    Activate escrow to approve
+                </span>
             )}
             {m.status === 'APPROVED' && canRelease && (
                 <Button variant="primary" size="sm" disabled={busy} onClick={onRelease}>Release</Button>

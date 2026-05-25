@@ -334,6 +334,7 @@ export default function MessagesPage() {
                                     key={conv.id}
                                     conv={conv}
                                     displayName={convDisplayName(conv)}
+                                    contextLabel={conv.contextLabel}
                                     selected={selectedId === conv.id}
                                     unreadCount={unreadCounts[conv.id] ?? 0}
                                     onSelect={() => handleSelect(conv.id)}
@@ -384,8 +385,15 @@ export default function MessagesPage() {
                                 }}>
                                     {(convDisplayName(selectedConv) ?? 'D')[0].toUpperCase()}
                                 </div>
-                                <div style={{ flex: 1, fontWeight: 600, fontSize: 15, color: 'var(--text-1)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                    {convDisplayName(selectedConv)}
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div style={{ fontWeight: 600, fontSize: 15, color: 'var(--text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                        {convDisplayName(selectedConv)}
+                                    </div>
+                                    {selectedConv?.contextLabel && (
+                                        <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                            {selectedConv.contextLabel}
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* Live connection dot */}
@@ -556,7 +564,7 @@ function EmptyThread({ connError }) {
     );
 }
 
-function ConvItem({ conv, displayName, selected, unreadCount, onSelect }) {
+function ConvItem({ conv, displayName, contextLabel, selected, unreadCount, onSelect }) {
     const hasUnread = unreadCount > 0;
     return (
         <button
@@ -587,14 +595,23 @@ function ConvItem({ conv, displayName, selected, unreadCount, onSelect }) {
                 {(displayName ?? 'D')[0].toUpperCase()}
             </span>
             <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{
-                    flex: 1, minWidth: 0,
-                    fontSize: 14, fontWeight: hasUnread ? 700 : 600,
-                    color: 'var(--text-1)',
-                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                }}>
-                    {displayName}
-                </span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{
+                        fontSize: 14, fontWeight: hasUnread ? 700 : 600,
+                        color: 'var(--text-1)',
+                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                    }}>
+                        {displayName}
+                    </div>
+                    {contextLabel && (
+                        <div style={{
+                            fontSize: 12, color: 'var(--text-3)', marginTop: 2,
+                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                        }}>
+                            {contextLabel}
+                        </div>
+                    )}
+                </div>
                 {hasUnread && (
                     <span style={{
                         minWidth: 18, height: 18,

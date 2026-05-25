@@ -4,6 +4,7 @@ import {
   useGetEventContractsQuery,
   useCreateContractMutation,
   useUpdateContractMutation,
+  useSignContractMutation,
   useRescindContractMutation,
   useCancelContractMutation,
   useFundEscrowMutation,
@@ -41,6 +42,12 @@ function ngn(v) {
   const n = Number(v ?? 0);
   if (!Number.isFinite(n)) return "—";
   return `₦${n.toLocaleString("en-NG", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+/** Lightweight unique id for local-only draft rows (no server round-trip). */
+function cryptoId() {
+  if (typeof crypto !== "undefined" && crypto.randomUUID) return crypto.randomUUID();
+  return `tmp_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
 function fmtDate(iso) {
@@ -209,11 +216,13 @@ function ContractCard({ contract, eventId }) {
   const [editing, setEditing] = useState(false);
   const [err, setErr] = useState("");
 
+  const [signContract, signState] = useSignContractMutation();
   const [fundEscrow, fundState] = useFundEscrowMutation();
   const [rescind, rescindState] = useRescindContractMutation();
   const [cancel, cancelState] = useCancelContractMutation();
 
   const busy =
+    signState.isLoading ||
     fundState.isLoading ||
     rescindState.isLoading ||
     cancelState.isLoading;
@@ -221,9 +230,12 @@ function ContractCard({ contract, eventId }) {
   const s = STATUS_STYLE[contract.status] ?? STATUS_STYLE.DRAFT;
   const isDone =
     contract.status === "COMPLETED" || contract.status === "CANCELLED";
-  const hasEscrow = ["SIGNED", "ACTIVE", "COMPLETED", "CANCELLED"].includes(
-    contract.status,
-  );
+  // Show the escrow panel for every non-terminal-without-signature state.
+  // Including DRAFT/COUNTERSIGNED so the organiser can add milestones at any
+  // pre-fund point — the backend permits it and the UI used to hide it.
+  const hasEscrow = [
+    "DRAFT", "COUNTERSIGNED", "SIGNED", "ACTIVE", "COMPLETED", "CANCELLED",
+  ].includes(contract.status);
 
   async function run(action, label) {
     setErr("");
@@ -397,6 +409,21 @@ function ContractCard({ contract, eventId }) {
                   Edit
                 </Button>
               )}
+              {/* Sign — visible whenever the organiser hasn't personally signed yet.
+                  Symmetric with the vendor side. */}
+              {(contract.status === "DRAFT" || contract.status === "COUNTERSIGNED")
+                && !contract.signedByOrganiserAt && (
+                <Button
+                  variant="primary"
+                  size="sm"
+                  disabled={busy}
+                  onClick={() =>
+                    run(() => signContract({ contractId: contract.id }), "sign contract")
+                  }
+                >
+                  {signState.isLoading ? "Signing…" : "Sign contract"}
+                </Button>
+              )}
               {contract.status === "SIGNED" && (
                 <>
                   <Button
@@ -500,8 +527,14 @@ function EscrowPanel({ contractId, contractStatus }) {
   const [err, setErr] = useState("");
 
   const escrow = escrowQ.data;
-  const canAddMilestone = contractStatus === 'SIGNED';
-  const canRelease = contractStatus === "ACTIVE";
+  // Milestones can be added any time before the contract is ACTIVE (i.e. before
+  // the organiser funds the escrow). That covers DRAFT, COUNTERSIGNED and SIGNED.
+  const canAddMilestone = ['DRAFT', 'COUNTERSIGNED', 'SIGNED'].includes(contractStatus);
+  // Approve / Release / Raise-dispute all require the escrow to be activated
+  // (which corresponds to contract status ACTIVE). Before that the milestone
+  // is just a plan, not actionable.
+  const escrowActive = contractStatus === "ACTIVE";
+  const canRelease = escrowActive;
 
   async function handleApprove(milestoneId) {
     setErr("");
@@ -548,9 +581,10 @@ function EscrowPanel({ contractId, contractStatus }) {
   }
 
   if (escrowQ.isError || !escrow) {
-    // SIGNED contract — escrow doesn't exist yet (created lazily on first addMilestone).
-    // Show the add-milestone prompt instead of an error.
-    if (contractStatus === 'SIGNED') {
+    // Pre-fund contract (DRAFT/COUNTERSIGNED/SIGNED) — escrow doesn't exist yet,
+    // it's created lazily on the first addMilestone call. Show the add-milestone
+    // prompt instead of an error.
+    if (canAddMilestone) {
       return (
         <div style={{ marginTop: 20, borderTop: "1px solid var(--border)", paddingTop: 20 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
@@ -647,6 +681,8 @@ function EscrowPanel({ contractId, contractStatus }) {
         )}
       </div>
 
+      <PayoutInstructionsCard payout={escrow.payoutInstructions} />
+
       {/* milestones */}
       {milestones.length === 0 ? (
         <p style={{ fontSize: 13, color: "var(--text-3)", margin: 0 }}>
@@ -658,6 +694,7 @@ function EscrowPanel({ contractId, contractStatus }) {
             <MilestoneRow
               key={m.id}
               milestone={m}
+              escrowActive={escrowActive}
               canRelease={canRelease}
               busy={approveState.isLoading || releaseState.isLoading || disputeState.isLoading}
               onApprove={() => handleApprove(m.id)}
@@ -703,10 +740,40 @@ function EscrowStat({ label, value, accent }) {
   );
 }
 
+/**
+ * Vendor's bank-transfer destination. Backend only populates this for the
+ * organiser on SIGNED+ contracts, so we just render whatever we got — no
+ * extra gating on the client.
+ */
+function PayoutInstructionsCard({ payout }) {
+  if (!payout) return null;
+  return (
+    <div style={{
+      marginBottom: 16, padding: 12,
+      background: "var(--surface-subtle)",
+      border: "1px solid var(--border)", borderRadius: 8,
+    }}>
+      <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-3)", marginBottom: 6, letterSpacing: "0.04em" }}>
+        VENDOR PAYOUT ACCOUNT
+      </div>
+      <div style={{ fontSize: 13, color: "var(--text-1)", display: "flex", flexDirection: "column", gap: 2 }}>
+        {payout.bankName && <div><strong>{payout.bankName}</strong></div>}
+        {payout.accountNumber && <div className="mp-num">{payout.accountNumber}</div>}
+        {payout.accountName && <div>{payout.accountName}</div>}
+      </div>
+      <p style={{ margin: "8px 0 0", fontSize: 11, color: "var(--text-3)" }}>
+        Transfer milestone amounts directly to this account. Include the per-milestone
+        payment reference shown on each row.
+      </p>
+    </div>
+  );
+}
+
 /* ─── MilestoneRow ───────────────────────────────────── */
 
 function MilestoneRow({
   milestone: m,
+  escrowActive,
   canRelease,
   busy,
   onApprove,
@@ -752,7 +819,7 @@ function MilestoneRow({
         {ngn(m.amount)}
       </div>
       <Badge style={ms} label={ms.label} />
-      {m.status === "PENDING" && (
+      {m.status === "PENDING" && escrowActive && (
         <>
           <Button
             variant="secondary"
@@ -771,6 +838,11 @@ function MilestoneRow({
             Raise dispute
           </Button>
         </>
+      )}
+      {m.status === "PENDING" && !escrowActive && (
+        <span style={{ fontSize: 12, color: "var(--text-3)", fontStyle: "italic" }}>
+          Activate escrow to approve
+        </span>
       )}
       {m.status === "APPROVED" && canRelease && (
         <Button variant="primary" size="sm" disabled={busy} onClick={onRelease}>
@@ -805,6 +877,16 @@ export function ContractModal({ eventId, contract, vendorProfile, onDismiss }) {
 
   const [createContract, createState] = useCreateContractMutation();
   const [updateContract, updateState] = useUpdateContractMutation();
+  const [addMilestone, addMilestoneState] = useAddMilestoneMutation();
+
+  // Wizard step: 'details' (current form) → 'milestones' (optional, create-mode only).
+  // After a successful create we capture the new contract id and advance.
+  const [step, setStep] = useState("details");
+  const [createdContractId, setCreatedContractId] = useState(null);
+  const [milestoneDrafts, setMilestoneDrafts] = useState([
+    { tempId: cryptoId(), title: "", amount: "", dueDate: "", description: "" },
+  ]);
+  const [milestoneErrorIndex, setMilestoneErrorIndex] = useState(null);
 
   const [form, setForm] = useState({
     vendorAppId: "",
@@ -816,6 +898,7 @@ export function ContractModal({ eventId, contract, vendorProfile, onDismiss }) {
   const [err, setErr] = useState("");
 
   const busy = createState.isLoading || updateState.isLoading;
+  const milestoneBusy = addMilestoneState.isLoading;
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
   const selectedApp = acceptedApps.find((a) => a.id === form.vendorAppId);
@@ -835,28 +918,103 @@ export function ContractModal({ eventId, contract, vendorProfile, onDismiss }) {
         if (form.terms.trim()) body.terms = form.terms.trim();
         if (form.amount) body.totalValue = Number(form.amount);
         await updateContract({ contractId: contract.id, ...body }).unwrap();
-      } else {
-        // Direct mode uses the vendor profile passed in by the caller;
-        // application mode uses the vendor associated with the selected application.
-        const vendorId = isDirect
-          ? vendorProfile.id
-          : selectedApp.vendorProfileId;
-        await createContract({
-          eventId,
-          title: form.title.trim(),
-          scope: form.description.trim() || undefined,
-          terms: form.terms.trim() || undefined,
-          totalValue: Number(form.amount),
-          vendorId,
-        }).unwrap();
+        onDismiss();
+        return;
       }
-      onDismiss();
+
+      // Create mode: persist the contract, then advance to the optional
+      // milestones step so the organiser can attach milestones without
+      // re-opening the contract.
+      const vendorId = isDirect
+        ? vendorProfile.id
+        : selectedApp.vendorProfileId;
+      const created = await createContract({
+        eventId,
+        title: form.title.trim(),
+        scope: form.description.trim() || undefined,
+        terms: form.terms.trim() || undefined,
+        totalValue: Number(form.amount),
+        vendorId,
+      }).unwrap();
+      setCreatedContractId(created?.id);
+      setStep("milestones");
     } catch (e) {
       setErr(
         e?.data?.message ??
           (isEdit ? "Failed to update contract" : "Failed to create contract"),
       );
     }
+  }
+
+  /* Milestone-step helpers */
+  function updateDraft(tempId, patch) {
+    setMilestoneDrafts((drafts) =>
+      drafts.map((d) => (d.tempId === tempId ? { ...d, ...patch } : d)),
+    );
+  }
+  function addDraftRow() {
+    setMilestoneDrafts((drafts) => [
+      ...drafts,
+      { tempId: cryptoId(), title: "", amount: "", dueDate: "", description: "" },
+    ]);
+  }
+  function removeDraftRow(tempId) {
+    setMilestoneDrafts((drafts) => drafts.filter((d) => d.tempId !== tempId));
+  }
+
+  // A draft is "fillable" if it has at least a title typed — empty rows are
+  // silently skipped on save (so an organiser can add 4 rows and only fill 2).
+  function isDraftFilled(d) {
+    return d.title.trim().length > 0 || String(d.amount).trim().length > 0;
+  }
+  function isDraftValid(d) {
+    return d.title.trim().length > 0 && Number(d.amount) >= 1;
+  }
+
+  async function handleSaveMilestones() {
+    setErr("");
+    setMilestoneErrorIndex(null);
+
+    const toSave = milestoneDrafts.filter(isDraftFilled);
+
+    // Validate every filled row before firing any request.
+    for (let i = 0; i < toSave.length; i++) {
+      if (!isDraftValid(toSave[i])) {
+        setMilestoneErrorIndex(milestoneDrafts.indexOf(toSave[i]));
+        setErr("Each milestone needs a title and an amount of at least ₦1.");
+        return;
+      }
+    }
+
+    if (toSave.length === 0) {
+      onDismiss();
+      return;
+    }
+
+    // Sequential to keep error attribution unambiguous if one fails midway.
+    for (let i = 0; i < toSave.length; i++) {
+      const m = toSave[i];
+      try {
+        await addMilestone({
+          contractId: createdContractId,
+          title: m.title.trim(),
+          description: m.description.trim() || undefined,
+          amount: Number(m.amount),
+          // The <input type="date"> gives us YYYY-MM-DD, but the backend
+          // AddMilestoneRequest.dueDate is a LocalDateTime — anchor to start
+          // of day so Jackson can parse it.
+          ...(m.dueDate ? { dueDate: `${m.dueDate}T00:00:00` } : {}),
+        }).unwrap();
+      } catch (e) {
+        setMilestoneErrorIndex(milestoneDrafts.indexOf(m));
+        setErr(
+          e?.data?.message ??
+            `Failed to add milestone "${m.title.trim() || "row " + (i + 1)}". Earlier milestones (if any) were saved — you can add the rest later from the contract page.`,
+        );
+        return;
+      }
+    }
+    onDismiss();
   }
 
   return (
@@ -869,10 +1027,52 @@ export function ContractModal({ eventId, contract, vendorProfile, onDismiss }) {
       <div style={{ padding: 24 }}>
         <h3
           className="mp-h3"
-          style={{ margin: "0 0 20px", color: "var(--text-1)" }}
+          style={{ margin: "0 0 6px", color: "var(--text-1)" }}
         >
-          {isEdit ? "Edit contract" : "New contract"}
+          {isEdit
+            ? "Edit contract"
+            : step === "details"
+              ? "New contract"
+              : "Add milestones (optional)"}
         </h3>
+
+        {/* Step indicator — create mode only */}
+        {!isEdit && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              marginBottom: 20,
+              fontSize: 12,
+              color: "var(--text-3)",
+            }}
+          >
+            <StepDot active={step === "details"} done={step === "milestones"} label="1" />
+            <span>Details</span>
+            <span style={{ flex: "0 0 24px", height: 1, background: "var(--border)" }} />
+            <StepDot active={step === "milestones"} label="2" />
+            <span>Milestones</span>
+          </div>
+        )}
+
+        {/* Step 2 — milestone editor (create mode only) */}
+        {!isEdit && step === "milestones" && (
+          <MilestoneStep
+            drafts={milestoneDrafts}
+            updateDraft={updateDraft}
+            addDraftRow={addDraftRow}
+            removeDraftRow={removeDraftRow}
+            errorIndex={milestoneErrorIndex}
+            err={err}
+            busy={milestoneBusy}
+            onSkip={onDismiss}
+            onSave={handleSaveMilestones}
+          />
+        )}
+
+        {/* Step 1 — details form (also the edit form) */}
+        {(isEdit || step === "details") && (
         <form
           onSubmit={handleSubmit}
           style={{ display: "flex", flexDirection: "column", gap: 16 }}
@@ -1113,12 +1313,207 @@ export function ContractModal({ eventId, contract, vendorProfile, onDismiss }) {
                   : "Creating…"
                 : isEdit
                   ? "Save changes"
-                  : "Create contract"}
+                  : "Next: milestones"}
             </Button>
           </div>
         </form>
+        )}
       </div>
     </Modal>
+  );
+}
+
+/* ─── Step indicator dot (used by the contract wizard) ── */
+function StepDot({ active, done, label }) {
+  const bg = done
+    ? "#0F9D58"
+    : active
+      ? "var(--mp-blue)"
+      : "var(--surface-subtle)";
+  const fg = done || active ? "white" : "var(--text-3)";
+  return (
+    <span
+      style={{
+        width: 20,
+        height: 20,
+        borderRadius: 99,
+        background: bg,
+        color: fg,
+        fontSize: 11,
+        fontWeight: 700,
+        display: "inline-grid",
+        placeItems: "center",
+        flexShrink: 0,
+      }}
+    >
+      {done ? "✓" : label}
+    </span>
+  );
+}
+
+/* ─── MilestoneStep (Step 2 of the contract wizard) ───── */
+function MilestoneStep({
+  drafts,
+  updateDraft,
+  addDraftRow,
+  removeDraftRow,
+  errorIndex,
+  err,
+  busy,
+  onSkip,
+  onSave,
+}) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      <p style={{ fontSize: 13, color: "var(--text-2)", margin: 0 }}>
+        Break the contract value into milestones the vendor needs to deliver.
+        You can skip this and add milestones later from the contract page.
+      </p>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        {drafts.map((d, i) => {
+          const hasError = errorIndex === i;
+          return (
+            <div
+              key={d.tempId}
+              style={{
+                border: `1px solid ${hasError ? "var(--error)" : "var(--border)"}`,
+                borderRadius: 10,
+                padding: 12,
+                background: "var(--surface-subtle)",
+                display: "flex",
+                flexDirection: "column",
+                gap: 8,
+              }}
+            >
+              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <span
+                  style={{
+                    fontSize: 12,
+                    fontWeight: 600,
+                    color: "var(--text-3)",
+                    minWidth: 24,
+                  }}
+                >
+                  #{i + 1}
+                </span>
+                <Input
+                  value={d.title}
+                  onChange={(e) => updateDraft(d.tempId, { title: e.target.value })}
+                  placeholder="Milestone title (e.g. Pre-event setup)"
+                />
+                {drafts.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => removeDraftRow(d.tempId)}
+                    aria-label="Remove milestone"
+                    style={{
+                      background: "none",
+                      border: 0,
+                      cursor: "pointer",
+                      color: "var(--text-3)",
+                      padding: 4,
+                    }}
+                  >
+                    <Icons.x size={16} />
+                  </button>
+                )}
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <div style={{ flex: 1 }}>
+                  <Input
+                    type="number"
+                    min="1"
+                    step="0.01"
+                    value={d.amount}
+                    onChange={(e) => updateDraft(d.tempId, { amount: e.target.value })}
+                    placeholder="Amount (₦)"
+                  />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <Input
+                    type="date"
+                    value={d.dueDate}
+                    onChange={(e) => updateDraft(d.tempId, { dueDate: e.target.value })}
+                    placeholder="Due date"
+                  />
+                </div>
+              </div>
+              <textarea
+                value={d.description}
+                onChange={(e) =>
+                  updateDraft(d.tempId, { description: e.target.value })
+                }
+                placeholder="Description (optional)"
+                rows={2}
+                style={{
+                  width: "100%",
+                  padding: "8px 10px",
+                  fontSize: 13,
+                  border: "1px solid var(--border)",
+                  borderRadius: 8,
+                  resize: "vertical",
+                  fontFamily: "inherit",
+                  boxSizing: "border-box",
+                  color: "var(--text-1)",
+                  background: "var(--surface-elevated)",
+                }}
+              />
+            </div>
+          );
+        })}
+      </div>
+
+      <button
+        type="button"
+        onClick={addDraftRow}
+        style={{
+          alignSelf: "flex-start",
+          background: "none",
+          border: "1px dashed var(--border)",
+          borderRadius: 8,
+          padding: "6px 12px",
+          fontSize: 13,
+          fontWeight: 600,
+          color: "var(--mp-blue)",
+          cursor: "pointer",
+        }}
+      >
+        + Add another milestone
+      </button>
+
+      {err && (
+        <p style={{ fontSize: 13, color: "var(--error)", margin: 0 }}>{err}</p>
+      )}
+
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          gap: 10,
+          marginTop: 4,
+        }}
+      >
+        <Button
+          type="button"
+          variant="secondary"
+          size="md"
+          onClick={onSkip}
+          disabled={busy}
+        >
+          Skip &amp; finish
+        </Button>
+        <Button
+          type="button"
+          variant="primary"
+          size="md"
+          onClick={onSave}
+          disabled={busy}
+        >
+          {busy ? "Saving…" : "Save milestones"}
+        </Button>
+      </div>
+    </div>
   );
 }
 

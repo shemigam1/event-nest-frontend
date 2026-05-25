@@ -201,6 +201,9 @@ function ContractCard({ contract: c }) {
 
     // Vendor can sign when the contract is awaiting one or both signatures.
     const canSign = c.status === 'DRAFT' || c.status === 'COUNTERSIGNED';
+    // …but if they've already signed (waiting on the organiser to countersign),
+    // we keep the button visible but disabled so the action is unambiguous.
+    const alreadySignedByMe = !!c.signedByVendorAt;
 
     async function handleSign() {
         setSignError(null);
@@ -294,9 +297,13 @@ function ContractCard({ contract: c }) {
                                     variant="primary"
                                     size="sm"
                                     onClick={handleSign}
-                                    disabled={signResult.isLoading}
+                                    disabled={alreadySignedByMe || signResult.isLoading}
                                 >
-                                    {signResult.isLoading ? 'Signing…' : 'Sign contract'}
+                                    {signResult.isLoading
+                                        ? 'Signing…'
+                                        : alreadySignedByMe
+                                            ? 'Signed · awaiting organiser'
+                                            : 'Sign contract'}
                                 </Button>
                             )}
                             <Button variant="secondary" size="sm" onClick={() => navigate('/messages')}>

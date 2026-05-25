@@ -125,7 +125,10 @@ export default function EscrowTab() {
                             key={c.id}
                             contract={c}
                             isLast={i === contracts.length - 1}
-                            onOpen={() => navigate('/organiser/contracts')}
+                            // Drill into the specific contract on the global list page.
+                            // OrganizerContractsPage reads ?focus= and auto-expands +
+                            // scrolls the matching card into view.
+                            onOpen={() => navigate(`/organiser/contracts?focus=${c.id}`)}
                         />
                     ))}
                 </div>

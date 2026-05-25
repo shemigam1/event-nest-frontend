@@ -1,26 +1,21 @@
 import { baseApi } from '@/services/baseApi';
 
 /**
- * Endpoints under /api/v1/events/{eventId}/check-in.
+ * Endpoints under /api/v1/events/{eventId}/checkin.
  *
  * `scanTicket` is the only call made by check-in staff at the gate; the rest
  * are organiser-side CRUD over staff invitations.
- *
- * Field names match the backend CheckInRequest / CheckInResponse exactly:
- *   - body field: `ticketCode`  (NOT `qrCode` — backend silently ignores unknown fields)
- *   - response:   `holderName`, `seatLabel`, `tierName`, `firstScan`, `eventDayLabel`
  */
 export const checkinApi = baseApi.injectEndpoints({
     endpoints: (builder) => ({
         scanTicket: builder.mutation({
-            query: ({ eventId, staffToken, ticketCode, eventDayId }) => ({
+            query: ({ eventId, staffToken, qrCode }) => ({
                 url: `/events/${eventId}/check-in/scan`,
                 method: 'POST',
-                body: {
-                    staffToken,
-                    ticketCode,          // backend field — NOT qrCode
-                    ...(eventDayId ? { eventDayId } : {}),
-                },
+                // Send the code as both fields — backend resolves whichever matches.
+                // This lets staff enter either the UUID (from a scanned QR) or the
+                // 8-char shortCode visible below the QR on the ticket.
+                body: { staffToken, qrCode, shortCode: qrCode },
             }),
             invalidatesTags: ['Ticket'],
             transformResponse: (response) => response.data ?? response,

@@ -23,7 +23,18 @@ import { Icons } from '@/components/ui/Icon';
      · KYC verified             → list + add/edit/delete actions
 
    Logo upload: same presign→PUT pattern as event cover images.
+
+   After every successful mutation (create / update / delete / logo upload)
+   we hard-reload the page. RTK Query tag invalidation refreshes this section
+   in isolation, but host-profile data is also consumed elsewhere (the create-
+   event flow's host dropdown, header user-menu, etc.) — reloading is the
+   simplest way to guarantee every consumer sees the change.
    ──────────────────────────────────────────────────────────────────────── */
+
+/** Reload after a small delay so the success state is visible briefly. */
+function reloadSoon() {
+    setTimeout(() => window.location.reload(), 350);
+}
 
 const EMPTY_FORM = {
     businessName: '',
@@ -93,8 +104,10 @@ function LogoPicker({ profileId, logoUrl, onUploaded }) {
             if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
             // The server pre-writes publicUrl onto the profile, so refetching
             // the profile list yields the new logoUrl. RTK Query tag
-            // invalidation handles that.
+            // invalidation handles that — and we reload to make sure every
+            // other consumer (e.g. create-event host dropdown) picks it up.
             onUploaded?.();
+            reloadSoon();
         } catch (err) {
             setError(err?.data?.message || err?.message || 'Upload failed.');
         } finally {
@@ -203,9 +216,14 @@ function HostProfileEditor({ profile, onClose, onSaved }) {
                 ? await updateProfile({ id: profile.id, ...body }).unwrap()
                 : await createProfile(body).unwrap();
             onSaved?.(saved);
-            // On create we keep the editor open so the user can upload a logo
-            // against the freshly-created profile.
-            if (isEdit) onClose?.();
+            if (isEdit) {
+                // Edit flow: close editor and reload so all consumers refresh.
+                onClose?.();
+                reloadSoon();
+            }
+            // Create flow: stay open so the user can upload a logo against the
+            // freshly-created profile. The reload happens after the (optional)
+            // logo upload, or when they hit "Close".
         } catch (err) {
             const fieldErrors = Array.isArray(err?.data?.errors) ? err.data.errors.join('; ') : '';
             setError(fieldErrors || err?.data?.message || 'Could not save host profile.');
@@ -365,6 +383,12 @@ export default function HostProfilesSection() {
 
     const [editing, setEditing] = useState(null); // null | 'new' | profile object
     const [pendingDelete, setPendingDelete] = useState(null);
+    // Tracks whether the editor has performed a successful create/upload in
+    // this session — if so, closing the editor should reload the page so
+    // every consumer (event create-page host dropdown, header avatar, etc.)
+    // picks up the new profile. For pure-edit flows the reload happens
+    // immediately on save and this flag stays false.
+    const [editorTouched, setEditorTouched] = useState(false);
 
     const verified = kyc?.status === 'VERIFIED';
 
@@ -377,6 +401,7 @@ export default function HostProfilesSection() {
         try {
             await deleteProfile(pendingDelete.id).unwrap();
             setPendingDelete(null);
+            reloadSoon();
         } catch (err) {
             // Surface inline; keep modal open.
             alert(err?.data?.message || 'Could not delete profile.');
@@ -404,15 +429,41 @@ export default function HostProfilesSection() {
             {editing === 'new' && (
                 <HostProfileEditor
                     profile={null}
-                    onClose={() => setEditing(null)}
-                    onSaved={(saved) => { if (saved) setEditing(saved); /* stay open for logo upload */ }}
+                    onClose={() => {
+                        // User bailed out before saving — no reload needed.
+                        setEditing(null);
+                        setEditorTouched(false);
+                    }}
+                    onSaved={(saved) => {
+                        if (saved) {
+                            // Create succeeded — transition to edit-like view so
+                            // the user can upload a logo. Mark touched so when
+                            // they close the editor we reload.
+                            setEditing(saved);
+                            setEditorTouched(true);
+                        }
+                    }}
                 />
             )}
             {editing && typeof editing === 'object' && (
                 <HostProfileEditor
                     profile={editing}
-                    onClose={() => setEditing(null)}
-                    onSaved={() => setEditing(null)}
+                    onClose={() => {
+                        setEditing(null);
+                        // If anything was created/uploaded in this session,
+                        // reload so all consumers see the new state.
+                        if (editorTouched) {
+                            setEditorTouched(false);
+                            reloadSoon();
+                        }
+                    }}
+                    onSaved={() => {
+                        setEditing(null);
+                        setEditorTouched(false);
+                        // updateProfile inside the editor already schedules a
+                        // reload, so we don't double it here. (LogoPicker also
+                        // reloads itself after a successful upload.)
+                    }}
                 />
             )}
 
