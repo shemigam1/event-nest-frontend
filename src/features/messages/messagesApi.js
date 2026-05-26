@@ -33,14 +33,17 @@ export const messagesApi = baseApi.injectEndpoints({
         }),
 
         /**
-         * Open (or fetch the existing) event-wide broadcast channel.
+         * Open (or fetch the existing) event-wide broadcast CHAT channel.
          * Idempotent — repeated calls for the same eventId return the same
          * conversation, so the UI can safely call this on every "Broadcast"
          * button click without worrying about creating duplicates.
+         *
+         * Path: /events/{id}/broadcast-channel (not /broadcast — that path is
+         * already in use for the one-way email/SSE attendee blast).
          */
         openEventBroadcast: builder.mutation({
             query: (eventId) => ({
-                url: `/events/${eventId}/broadcast`,
+                url: `/events/${eventId}/broadcast-channel`,
                 method: 'POST',
             }),
             transformResponse: (res) => res?.data ?? res,
