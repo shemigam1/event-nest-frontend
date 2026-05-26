@@ -14,6 +14,7 @@ import {
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import { Icons } from '@/components/ui/Icon';
+import { ContractModal } from './ContractsTab';
 
 const STATUS_STYLE = {
     PENDING:  { bg: '#FEF4E2', fg: '#B8770A', label: 'Pending' },
@@ -88,6 +89,7 @@ export default function VendorsTab({ eventId }) {
 
             {activeTab === 'applications' && <ApplicationsPane eventId={eventId} />}
             {activeTab === 'marketplace'  && <MarketplacePane eventId={eventId} />}
+            {/* MarketplacePane already accepts eventId — used by the direct contract drafting flow. */}
             {activeTab === 'invites'      && <InvitesPane eventId={eventId} />}
         </div>
     );
@@ -579,10 +581,14 @@ function ApplicationsPane({ eventId }) {
    no separate chat thread (the inquiry endpoints don't exist on the
    backend). When a chat module lands we'll surface a "Message vendor"
    action here. */
-function MarketplacePane() {
+function MarketplacePane({ eventId }) {
     const navigate = useNavigate();
     const [search, setSearch] = useState('');
     const [category, setCategory] = useState('all');
+    // Vendor whose card the organiser clicked "Draft contract" on. Stays null
+    // until the user explicitly opens the modal — then it's the full vendor
+    // object (so the modal can show businessName + category inline).
+    const [draftFor, setDraftFor] = useState(null);
 
     const CATS = [
         { key: 'all',       label: 'All',       keyword: null },
@@ -668,15 +674,31 @@ function MarketplacePane() {
                     gap: 14,
                 }}>
                     {vendors.map((v) => (
-                        <MiniVendorCard key={v.id} vendor={v} onView={() => viewVendor(v)} />
+                        <MiniVendorCard
+                            key={v.id}
+                            vendor={v}
+                            onView={() => viewVendor(v)}
+                            onDraftContract={eventId ? () => setDraftFor(v) : null}
+                        />
                     ))}
                 </div>
+            )}
+
+            {/* Direct-contract drafting modal — fires when the organiser
+                picks a vendor card without going through an application.
+                Closing the modal (success or cancel) clears the selection. */}
+            {draftFor && eventId && (
+                <ContractModal
+                    eventId={eventId}
+                    vendorProfile={draftFor}
+                    onDismiss={() => setDraftFor(null)}
+                />
             )}
         </div>
     );
 }
 
-function MiniVendorCard({ vendor, onView }) {
+function MiniVendorCard({ vendor, onView, onDraftContract }) {
     const name     = vendor.businessName || '';
     const verified = vendor.verifiedAt != null;
     const service  = vendor.category || '';
@@ -728,9 +750,24 @@ function MiniVendorCard({ vendor, onView }) {
                         : 'New vendor'
                 }
             </div>
-            <Button size="sm" variant="secondary" onClick={onView} style={{ marginTop: 'auto' }}>
-                View profile
-            </Button>
+            <div style={{ display: 'flex', gap: 8, marginTop: 'auto' }}>
+                <Button size="sm" variant="secondary" onClick={onView} style={{ flex: 1 }}>
+                    View profile
+                </Button>
+                {onDraftContract && (
+                    /* Direct-contract draft entry point — bypasses the
+                       application flow for private events where vendors can't see
+                       the event in the marketplace. */
+                    <Button
+                        size="sm"
+                        variant="primary"
+                        onClick={onDraftContract}
+                        style={{ flex: 1, whiteSpace: 'nowrap' }}
+                    >
+                        Draft contract
+                    </Button>
+                )}
+            </div>
         </div>
     );
 }
