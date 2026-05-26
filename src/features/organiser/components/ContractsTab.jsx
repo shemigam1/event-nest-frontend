@@ -787,13 +787,19 @@ function MilestoneRow({
 }
 
 /* ─── ContractModal (create / edit) ─────────────────── */
-
-function ContractModal({ eventId, contract, onDismiss }) {
+/* Exported so the marketplace pane in VendorsTab can use it in "direct" mode —
+   organiser picks a vendor card and drafts a contract without the vendor
+   needing to apply first (the workflow for private events). */
+export function ContractModal({ eventId, contract, vendorProfile, onDismiss }) {
   const isEdit = !!contract;
+  // "Direct" mode: caller passed a specific vendor profile. We skip the
+  // application picker entirely and contract straight against that vendor.
+  // This is the flow for private events where vendors can't apply.
+  const isDirect = !isEdit && !!vendorProfile;
 
   const appsQ = useGetEventVendorApplicationsQuery(
     { eventId, status: "ACCEPTED" },
-    { skip: isEdit },
+    { skip: isEdit || isDirect },
   );
   const acceptedApps = appsQ.data ?? [];
 
@@ -814,7 +820,9 @@ function ContractModal({ eventId, contract, onDismiss }) {
 
   const selectedApp = acceptedApps.find((a) => a.id === form.vendorAppId);
   const canSubmit =
-    form.title.trim() && Number(form.amount) >= 1 && (isEdit || selectedApp);
+    form.title.trim() &&
+    Number(form.amount) >= 1 &&
+    (isEdit || isDirect || selectedApp);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -828,13 +836,18 @@ function ContractModal({ eventId, contract, onDismiss }) {
         if (form.amount) body.totalValue = Number(form.amount);
         await updateContract({ contractId: contract.id, ...body }).unwrap();
       } else {
+        // Direct mode uses the vendor profile passed in by the caller;
+        // application mode uses the vendor associated with the selected application.
+        const vendorId = isDirect
+          ? vendorProfile.id
+          : selectedApp.vendorProfileId;
         await createContract({
           eventId,
           title: form.title.trim(),
           scope: form.description.trim() || undefined,
           terms: form.terms.trim() || undefined,
           totalValue: Number(form.amount),
-          vendorId: selectedApp.vendorProfileId,
+          vendorId,
         }).unwrap();
       }
       onDismiss();
@@ -877,7 +890,55 @@ function ContractModal({ eventId, contract, onDismiss }) {
               >
                 Vendor *
               </label>
-              {appsQ.isLoading ? (
+              {isDirect ? (
+                /* Direct mode — vendor was chosen on the marketplace card and
+                   is locked in. Show a read-only chip so the user knows who
+                   they're contracting without re-picking. */
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    padding: "9px 12px",
+                    border: "1px solid var(--border)",
+                    borderRadius: 8,
+                    background: "var(--surface-subtle)",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: 8,
+                      flexShrink: 0,
+                      background: "var(--mp-blue-50, #EAF1FE)",
+                      color: "var(--mp-blue)",
+                      display: "grid",
+                      placeItems: "center",
+                      fontSize: 12,
+                      fontWeight: 700,
+                    }}
+                  >
+                    {(vendorProfile.businessName || "?").charAt(0).toUpperCase()}
+                  </div>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <div
+                      style={{
+                        fontSize: 14,
+                        fontWeight: 600,
+                        color: "var(--text-1)",
+                      }}
+                    >
+                      {vendorProfile.businessName || "Selected vendor"}
+                    </div>
+                    {vendorProfile.category && (
+                      <div style={{ fontSize: 12, color: "var(--text-3)" }}>
+                        {vendorProfile.category}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : appsQ.isLoading ? (
                 <p style={{ fontSize: 13, color: "var(--text-2)", margin: 0 }}>
                   Loading vendors…
                 </p>
