@@ -164,6 +164,10 @@ export default function OrganizerEventPage() {
                     </>
                 )}
 
+                {tab === 'broadcast' && (
+                    <BroadcastTab eventId={eventId} eventTitle={event.title} />
+                )}
+
                 {tab === 'comments' && (
                     <CommentsTab eventId={eventId} isOrganiser />
                 )}
@@ -252,6 +256,7 @@ function Header({ event, totalSold, totalCapacity, checkedIn, checkInRate, tab, 
         { id: 'contracts',     label: 'Contracts' },
         { id: 'budget',        label: 'Budget' },
         { id: 'team',          label: 'Team' },
+        { id: 'broadcast',     label: 'Broadcast' },
         { id: 'comments',      label: 'Comments', badge: unseenComments > 0 ? unseenComments : null },
         { id: 'ratings',       label: 'Ratings' },
         { id: 'contributions', label: 'Contributions' },
@@ -381,6 +386,111 @@ function HeroNumber({ label, value, sub, accent }) {
             </div>
             {sub && (
                 <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>{sub}</div>
+            )}
+        </div>
+    );
+}
+
+/* ─────────────────────────── Broadcast tab ────────────────────── */
+/* The broadcast channel is a group conversation that lives in the chat layer.
+   This tab is the entry point: click "Open broadcast channel" → backend
+   creates/returns the conversation (idempotent on eventId), then we navigate
+   to /messages with that conversation pre-selected. */
+
+function BroadcastTab({ eventId, eventTitle }) {
+    const navigate = useNavigate();
+    const [openBroadcast, { isLoading, error }] = useOpenEventBroadcastMutation();
+
+    async function handleOpen() {
+        try {
+            const conv = await openBroadcast(eventId).unwrap();
+            const convId = conv?.id;
+            navigate(convId ? `/messages?c=${convId}` : '/messages');
+        } catch (err) {
+            // eslint-disable-next-line no-console
+            console.warn('[broadcast tab] open failed:', err);
+        }
+    }
+
+    return (
+        <div style={{
+            maxWidth: 680,
+            background: 'var(--surface-elevated)',
+            border: '1px solid var(--border)',
+            borderRadius: 16,
+            padding: 32,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 20,
+        }}>
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                <div style={{
+                    width: 48, height: 48, borderRadius: 12, flexShrink: 0,
+                    background: 'var(--mp-blue-50, #EAF1FE)',
+                    color: 'var(--mp-blue)',
+                    display: 'grid', placeItems: 'center',
+                }}>
+                    <Icons.message size={24} />
+                </div>
+                <div>
+                    <h2 className="mp-h2" style={{ margin: 0, color: 'var(--text-1)' }}>
+                        Broadcast channel
+                    </h2>
+                    <p style={{ margin: '4px 0 0', fontSize: 14, color: 'var(--text-2)' }}>
+                        One group chat for everyone working on {eventTitle ? `"${eventTitle}"` : 'this event'}.
+                    </p>
+                </div>
+            </div>
+
+            {/* Who's in the channel */}
+            <div style={{
+                padding: '14px 18px',
+                background: 'var(--surface-subtle)',
+                borderRadius: 10,
+                fontSize: 13,
+                color: 'var(--text-2)',
+                lineHeight: 1.6,
+            }}>
+                <strong style={{ color: 'var(--text-1)' }}>Who&apos;s in the channel</strong>
+                <ul style={{ margin: '6px 0 0', paddingLeft: 18 }}>
+                    <li>You (organiser)</li>
+                    <li>All active managers</li>
+                    <li>All confirmed vendors on this event</li>
+                </ul>
+                <p style={{ margin: '10px 0 0', fontSize: 12, color: 'var(--text-3)' }}>
+                    Anyone in the channel can post and reply. Use it for quick
+                    coordination — venue changes, schedule tweaks, last-minute asks.
+                </p>
+            </div>
+
+            {/* CTA */}
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+                <Button
+                    variant="primary"
+                    size="md"
+                    onClick={handleOpen}
+                    disabled={isLoading}
+                    iconRight={<Icons.arrowR size={14} />}
+                >
+                    {isLoading ? 'Opening…' : 'Open broadcast channel'}
+                </Button>
+                <span style={{ fontSize: 12, color: 'var(--text-3)' }}>
+                    Opens the conversation in the messages tab.
+                </span>
+            </div>
+
+            {error && (
+                <div style={{
+                    padding: '10px 14px',
+                    background: 'var(--error-bg)',
+                    border: '1px solid var(--error)',
+                    borderRadius: 8,
+                    fontSize: 13,
+                    color: 'var(--error)',
+                }}>
+                    Could not open the channel — {error?.data?.message ?? 'please try again.'}
+                </div>
             )}
         </div>
     );
