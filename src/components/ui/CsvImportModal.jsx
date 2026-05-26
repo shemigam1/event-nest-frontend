@@ -33,6 +33,7 @@ export default function CsvImportModal({
     description,
     fields,
     onSubmitRow,
+    onSubmitBatch,  // async (rows) => { failed: [{rowIndex, message}] } — used instead of onSubmitRow when provided
     onClose,
     onComplete,
     open,
@@ -109,39 +110,54 @@ export default function CsvImportModal({
         setStage('running');
         setProgress({ done: 0, total: rows.length });
         setAbortMessage('');
-        const errs = [];
-        let abortedAt = -1;
-        let abortMsg = '';
-        for (let i = 0; i < rows.length; i++) {
+
+        let errs = [];
+
+        if (onSubmitBatch) {
+            // Single round-trip: send all rows, get back per-row failures.
             try {
-                await onSubmitRow(rows[i]);
+                const result = await onSubmitBatch(rows);
+                errs = (result?.failed ?? []).map((f) => ({
+                    rowIndex: f.rowIndex,
+                    message: f.reason ?? f.message ?? 'Row failed',
+                }));
             } catch (err) {
                 const msg = Array.isArray(err?.data?.errors)
                     ? err.data.errors.join('; ')
-                    : (err?.data?.message || err?.message || 'Row failed');
-                errs.push({ rowIndex: i, message: msg });
-                // Bail out of the whole batch if this is a "config-level"
-                // problem — every subsequent row would just fail with the
-                // same message.
-                if (isFatalBatchError(msg)) {
-                    abortedAt = i;
-                    abortMsg = msg;
-                    break;
-                }
+                    : (err?.data?.message || err?.message || 'Import failed');
+                setAbortMessage(msg);
+                setErrors([]);
+                setStage('done');
+                onComplete?.({ added: 0, failed: rows.length, aborted: true });
+                return;
             }
-            setProgress({ done: i + 1, total: rows.length });
+            setProgress({ done: rows.length, total: rows.length });
+        } else {
+            // Row-by-row fallback (used when no bulk endpoint is available).
+            let abortedAt = -1;
+            let abortMsg = '';
+            for (let i = 0; i < rows.length; i++) {
+                try {
+                    await onSubmitRow(rows[i]);
+                } catch (err) {
+                    const msg = Array.isArray(err?.data?.errors)
+                        ? err.data.errors.join('; ')
+                        : (err?.data?.message || err?.message || 'Row failed');
+                    errs.push({ rowIndex: i, message: msg });
+                    if (isFatalBatchError(msg)) {
+                        abortedAt = i;
+                        abortMsg = msg;
+                        break;
+                    }
+                }
+                setProgress({ done: i + 1, total: rows.length });
+            }
+            if (abortedAt >= 0) setAbortMessage(abortMsg);
         }
+
         setErrors(errs);
-        if (abortedAt >= 0) {
-            setAbortMessage(abortMsg);
-        }
         setStage('done');
-        const added = rows.length - errs.length - (abortedAt >= 0 ? (rows.length - abortedAt - 1) : 0);
-        onComplete?.({
-            added,
-            failed: errs.length,
-            aborted: abortedAt >= 0,
-        });
+        onComplete?.({ added: rows.length - errs.length, failed: errs.length, aborted: false });
     }
 
     const orderHint = fields.map((f) => f.key).join(', ');

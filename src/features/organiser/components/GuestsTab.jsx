@@ -4,6 +4,7 @@ import {
     useAddGuestMutation,
     useUpdateGuestStatusMutation,
     useRemoveGuestMutation,
+    useBulkAddGuestsMutation,
 } from '../guestsApi';
 import { useUpdateEventConfigMutation } from '@/features/events/eventsApi';
 import Button from '@/components/ui/Button';
@@ -56,23 +57,21 @@ export default function GuestsTab({ eventId }) {
     const [pendingRemove, setPendingRemove] = useState(null);
     const [removeGuest, removeState] = useRemoveGuestMutation();
     const [addGuest] = useAddGuestMutation();
+    const [bulkAddGuests] = useBulkAddGuestsMutation();
     const [removeError, setRemoveError] = useState('');
 
-    // Per-row submit callback for the import modal. Wrapping the existing
-    // addGuest mutation gives us the same validation + invalidation as the
-    // single-add form, just in a loop. Errors are caught by CsvImportModal
-    // and surfaced in the summary.
-    //
-    // The backend's AddGuestRequest expects `guestName` (not `name`) and has
-    // no `phone` column at all — phone numbers in the CSV are silently
-    // dropped on the server, so we omit them client-side to stay honest.
-    async function importOneGuest(row) {
-        await addGuest({
-            eventId,
+    // Bulk import: one round-trip, one DB transaction, N Kafka messages fired
+    // after commit — Kafka fans out invitation emails to every guest at once.
+    async function importGuestsBatch(rows) {
+        const guests = rows.map((row) => ({
             email: row.email,
             guestName: row.name || undefined,
+            phone: row.phone || undefined,
             note: row.note || undefined,
-        }).unwrap();
+        }));
+        const result = await bulkAddGuests({ eventId, guests }).unwrap();
+        // Normalise backend RowError shape to what CsvImportModal expects.
+        return { failed: result?.errors ?? [] };
     }
 
     // Click handler for the Import button. Auto-enables the guest list if
@@ -105,11 +104,39 @@ export default function GuestsTab({ eventId }) {
         }
     }
 
-    function exportCsv() {
-        window.open(
-            `${import.meta.env.VITE_API_BASE_URL}/events/${eventId}/guests/export`,
-            '_blank',
-        );
+    // Download the CSV via fetch+Blob rather than window.open() — the export
+    // endpoint requires the JWT in the Authorization header, which a plain
+    // navigation request can't attach. We grab the file as a Blob, then trigger
+    // a synthetic anchor click to save it.
+    const [exportError, setExportError] = useState('');
+    async function exportCsv() {
+        setExportError('');
+        try {
+            const token = localStorage.getItem('accessToken');
+            const res = await fetch(
+                `${import.meta.env.VITE_API_BASE_URL}/events/${eventId}/guests/export`,
+                { headers: token ? { Authorization: `Bearer ${token}` } : {} },
+            );
+            if (!res.ok) {
+                let msg = `Export failed (${res.status})`;
+                try {
+                    const body = await res.json();
+                    msg = body?.message || body?.errors?.[0] || msg;
+                } catch { /* response wasn't JSON — keep the status-code fallback */ }
+                throw new Error(msg);
+            }
+            const blob = await res.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `guests-${eventId}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
+        } catch (err) {
+            setExportError(err?.message || 'Could not export guest list.');
+        }
     }
 
     if (isLoading) return <Skeleton />;
@@ -160,6 +187,11 @@ export default function GuestsTab({ eventId }) {
                             Export CSV
                         </Button>
                     )}
+                    {exportError && (
+                        <p role="alert" style={{ width: '100%', margin: 0, fontSize: 13, color: 'var(--error)' }}>
+                            {exportError}
+                        </p>
+                    )}
                     <Button variant="primary" size="md" icon={<Icons.plus size={14} />}
                         onClick={() => setShowForm(true)}>
                         Add guest
@@ -206,9 +238,9 @@ export default function GuestsTab({ eventId }) {
             <CsvImportModal
                 open={showImport}
                 title="Import guests"
-                description="Bulk-add guests from a CSV, TSV, or Excel file. Each row will be added to the guest list and (if the event has guest invites enabled) emailed an RSVP link."
+                description="Bulk-add guests from a CSV, TSV, or Excel file. All guests are added in one go and each receives an invitation email."
                 fields={GUEST_IMPORT_FIELDS}
-                onSubmitRow={importOneGuest}
+                onSubmitBatch={importGuestsBatch}
                 onClose={() => setShowImport(false)}
                 onComplete={() => refetch()}
             />
@@ -341,13 +373,11 @@ function AddGuestModal({ eventId, onDismiss }) {
         e.preventDefault();
         setErr('');
         try {
-            // Backend AddGuestRequest fields: email (required), guestName (optional),
-            // note (optional). Phone isn't stored server-side — kept in the form
-            // for now as a UX courtesy but not sent.
             await addGuest({
                 eventId,
                 email: form.email.trim(),
                 guestName: form.name.trim() || undefined,
+                phone: form.phone.trim() || undefined,
                 note: form.note.trim() || undefined,
             }).unwrap();
             onDismiss();

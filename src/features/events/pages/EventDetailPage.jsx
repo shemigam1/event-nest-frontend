@@ -20,6 +20,7 @@ import { formatEventDate } from '@/utils/dateFormat';
 import { formatNaira } from '@/utils/currency';
 import Button from '@/components/ui/Button';
 import CapacityBar from '@/components/ui/CapacityBar';
+import EventLocationMap from '@/components/ui/EventLocationMap';
 import TopNav from '@/components/ui/TopNav';
 import { StatusBadge } from '@/components/ui/Badge';
 import { Icons } from '@/components/ui/Icon';
@@ -187,6 +188,18 @@ export default function EventDetailPage() {
                             <InfoTile icon={<Icons.calendar size={18} />} label="When" value={formatEventDate(e.startTime)} />
                             <InfoTile icon={<Icons.pin size={18} />} label="Where" value={e.venueName || e.venue} />
                         </div>
+
+                        {/* Interactive map of the venue. Tap the "Open in Maps"
+                            pill to launch Google Maps (native app on mobile,
+                            web on desktop). Falls back to a link-only button
+                            when coords are missing or the Maps key isn't
+                            configured. */}
+                        <EventLocationMap
+                            lat={e.latitude}
+                            lng={e.longitude}
+                            venueName={e.venueName}
+                            address={e.venue}
+                        />
 
                         <div style={{ marginTop: 32, paddingTop: 24, borderTop: '1px solid var(--border)' }}>
                             <h3 className="mp-h4" style={{ margin: 0, color: 'var(--text-1)' }}>About this event</h3>

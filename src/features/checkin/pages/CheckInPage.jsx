@@ -1,10 +1,28 @@
 import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router';
-import { useScanTicketMutation } from '../checkinApi';       // lowercase 'i' — matches filename (Linux is case-sensitive)
+import { useScanTicketMutation, useLazyFetchManifestQuery, useBatchScanTicketsMutation } from '../checkinApi';
 import { useGetEventByIdQuery } from '@/features/events/eventsApi';
 import { Icons } from '@/components/ui/Icon';
 import Button from '@/components/ui/Button';
 import Brand from '@/components/ui/Brand';
+import { useOnlineStatus } from '../useOnlineStatus';
+import {
+    saveManifest, loadManifest, buildManifestIndex,
+    enqueueOfflineScan, loadQueue, clearQueue,
+    addToLocalScanned, loadLocalScanned,
+} from '../offlineStorage';
+
+/* ── Helpers ─────────────────────────────────────── */
+function formatRelativeTime(isoString) {
+    if (!isoString) return 'never';
+    const diffMs = Date.now() - new Date(isoString).getTime();
+    const mins = Math.floor(diffMs / 60_000);
+    if (mins < 1)  return 'just now';
+    if (mins < 60) return `${mins} minute${mins === 1 ? '' : 's'} ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24)  return `${hrs} hour${hrs === 1 ? '' : 's'} ago`;
+    return `${Math.floor(hrs / 24)} day${Math.floor(hrs / 24) === 1 ? '' : 's'} ago`;
+}
 
 /* ── Setup screen ────────────────────────────────── */
 function SetupScreen({ onStart, prefillEventId = '', prefillToken = '' }) {
@@ -145,8 +163,16 @@ function ResultCard({ result }) {
             <div style={{ flex: 1 }}>
                 {isSuccess ? (
                     <>
-                        <div style={{ fontWeight: 700, fontSize: 18, color: 'var(--success)', marginBottom: 4 }}>
+                        <div style={{ fontWeight: 700, fontSize: 18, color: 'var(--success)', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                             {d.firstScan ? 'Check-in successful' : 'Already checked in today'}
+                            {result.offline && (
+                                <span style={{
+                                    fontSize: 11, fontWeight: 600, padding: '2px 7px', borderRadius: 4,
+                                    background: '#EEF2FF', color: '#6366F1',
+                                }}>
+                                    offline
+                                </span>
+                            )}
                         </div>
                         <div style={{ fontWeight: 600, fontSize: 16, color: 'var(--text-1)' }}>
                             {d.holderName}
@@ -256,48 +282,135 @@ function DayBanner({ days, selectedDayId, onSelect }) {
 /* ── Active session ──────────────────────────────── */
 function ActiveSession({ credentials, eventDays, selectedDayId: initialDayId, onEnd }) {
     const [checkIn, { isLoading }] = useScanTicketMutation();
-    const [qrInput, setQrInput] = useState('');
-    const [result, setResult] = useState(null);
-    const [history, setHistory] = useState([]);
+    const [batchScan]              = useBatchScanTicketsMutation();
+    const isOnline                 = useOnlineStatus();
+
+    const [qrInput, setQrInput]           = useState('');
+    const [result, setResult]             = useState(null);
+    const [history, setHistory]           = useState([]);
     const [selectedDayId, setSelectedDayId] = useState(initialDayId);
     const inputRef = useRef(null);
 
+    // Offline state
+    const [manifestIndex, setManifestIndex] = useState(null);
+    const [localScanned, setLocalScanned]   = useState(new Set());
+    const [queueLen, setQueueLen]           = useState(() => loadQueue(credentials.eventId).length);
+    const [syncStatus, setSyncStatus]       = useState(null); // null | 'syncing' | 'synced' | 'error'
+
     const isMultiDay = eventDays && eventDays.length > 1;
 
+    // Re-focus input after each scan result
+    useEffect(() => { inputRef.current?.focus(); }, [result]);
+
+    // Build manifest index from localStorage on mount
     useEffect(() => {
-        inputRef.current?.focus();
-    }, [result]);
+        const manifest = loadManifest(credentials.eventId);
+        if (manifest?.tickets) setManifestIndex(buildManifestIndex(manifest.tickets));
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // Reload the per-day "already scanned" set whenever the selected day changes
+    useEffect(() => {
+        setLocalScanned(loadLocalScanned(credentials.eventId, selectedDayId));
+    }, [selectedDayId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // Auto-sync queued offline scans when connectivity is restored
+    useEffect(() => {
+        if (!isOnline) return;
+        const queue = loadQueue(credentials.eventId);
+        if (queue.length === 0) return;
+        setSyncStatus('syncing');
+        batchScan({ eventId: credentials.eventId, staffToken: credentials.staffToken, scans: queue })
+            .unwrap()
+            .then(() => {
+                clearQueue(credentials.eventId);
+                setQueueLen(0);
+                setSyncStatus('synced');
+                setTimeout(() => setSyncStatus(null), 3000);
+            })
+            .catch(() => setSyncStatus('error'));
+    }, [isOnline]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Only count first scans as successes — repeated scans of the same ticket
     // come back as success:true with firstScan:false and shouldn't double-count.
     const successCount = history.filter((h) => h.type === 'success' && h.data?.firstScan).length;
+
+    function resolveOfflineScan(code) {
+        if (!manifestIndex) {
+            return { type: 'error', message: 'No offline ticket list — use "Download for offline use" on the previous screen before going offline.' };
+        }
+        const ticket = manifestIndex.get(code);
+        if (!ticket) {
+            return { type: 'error', message: 'Ticket not found in offline cache — it may have been issued after your last download.' };
+        }
+        if (ticket.status === 'REFUNDED') {
+            return { type: 'error', message: 'Ticket has been refunded and is no longer valid.' };
+        }
+        if (ticket.transferred) {
+            return { type: 'error', message: 'Ticket has been transferred — the new holder must present their updated QR code.' };
+        }
+        if (ticket.status === 'USED' && ticket.accessScope === 'DAY_SPECIFIC') {
+            return { type: 'error', message: 'Ticket has already been used for this day.' };
+        }
+        const firstScan = !localScanned.has(code);
+        return {
+            type: 'success',
+            data: {
+                ticketCode: code,
+                holderName: ticket.holderName,
+                tierName:   ticket.tierName,
+                seatLabel:  ticket.seatLabel,
+                eventDayLabel: null,
+                firstScan,
+            },
+        };
+    }
 
     async function handleScan(e) {
         e.preventDefault();
         const ticketCode = qrInput.trim();
         if (!ticketCode) return;
 
-        // Guard: for multi-day events a day must be selected
         if (isMultiDay && !selectedDayId) {
             setResult({ type: 'error', message: 'Please select which day you are scanning for.' });
             return;
         }
 
         setQrInput('');
-        try {
-            const data = await checkIn({
-                eventId:     credentials.eventId,
-                staffToken:  credentials.staffToken,
-                ticketCode,
-                ...(selectedDayId ? { eventDayId: selectedDayId } : {}),
-            }).unwrap();
 
-            const entry = { type: 'success', data, checkedInAt: data.scannedAt ?? new Date().toISOString() };
-            setResult(entry);
-            setHistory((h) => [entry, ...h.slice(0, 49)]);
-        } catch (err) {
-            const message = err?.data?.message || err?.data?.errors?.[0] || 'Could not process this ticket. Please try again.';
-            const entry = { type: 'error', message, checkedInAt: new Date().toISOString() };
+        if (isOnline) {
+            try {
+                const data = await checkIn({
+                    eventId:    credentials.eventId,
+                    staffToken: credentials.staffToken,
+                    ticketCode,
+                    ...(selectedDayId ? { eventDayId: selectedDayId } : {}),
+                }).unwrap();
+                const entry = { type: 'success', data, checkedInAt: data.scannedAt ?? new Date().toISOString() };
+                setResult(entry);
+                setHistory((h) => [entry, ...h.slice(0, 49)]);
+            } catch (err) {
+                const message = err?.data?.message || err?.data?.errors?.[0] || 'Could not process this ticket. Please try again.';
+                const entry = { type: 'error', message, checkedInAt: new Date().toISOString() };
+                setResult(entry);
+                setHistory((h) => [entry, ...h.slice(0, 49)]);
+            }
+        } else {
+            const resolution = resolveOfflineScan(ticketCode);
+            const entry = { ...resolution, offline: true, checkedInAt: new Date().toISOString() };
+
+            if (resolution.type === 'success' && resolution.data.firstScan) {
+                // scannedAt must be LocalDateTime format (no Z, no ms)
+                const scannedAt = new Date().toISOString().slice(0, 19);
+                enqueueOfflineScan(credentials.eventId, {
+                    ticketCode,
+                    ...(selectedDayId ? { eventDayId: selectedDayId } : {}),
+                    scannedAt,
+                });
+                addToLocalScanned(credentials.eventId, selectedDayId, ticketCode);
+                setLocalScanned((prev) => new Set([...prev, ticketCode]));
+                setQueueLen((n) => n + 1);
+            }
+
             setResult(entry);
             setHistory((h) => [entry, ...h.slice(0, 49)]);
         }
@@ -344,6 +457,34 @@ function ActiveSession({ credentials, eventDays, selectedDayId: initialDayId, on
                         {successCount}
                     </span>
                 </div>
+
+                {/* Offline indicator */}
+                {!isOnline && (
+                    <div style={{
+                        display: 'flex', alignItems: 'center', gap: 6,
+                        background: '#FFF8E1', border: '1px solid #FDE68A',
+                        borderRadius: 99, padding: '4px 12px', flexShrink: 0,
+                    }}>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: '#92400E' }}>Offline</span>
+                        {queueLen > 0 && (
+                            <span style={{ fontSize: 12, color: '#92400E' }}>· {queueLen} queued</span>
+                        )}
+                    </div>
+                )}
+
+                {syncStatus === 'syncing' && (
+                    <span style={{ fontSize: 12, color: 'var(--text-3)', flexShrink: 0 }}>Syncing…</span>
+                )}
+                {syncStatus === 'synced' && (
+                    <span style={{ fontSize: 12, color: 'var(--success)', fontWeight: 600, flexShrink: 0 }}>
+                        Synced ✓
+                    </span>
+                )}
+                {syncStatus === 'error' && (
+                    <span style={{ fontSize: 12, color: 'var(--error)', flexShrink: 0 }}>
+                        Sync failed — scans still queued
+                    </span>
+                )}
             </div>
 
             {/* Day selector for multi-day events */}
@@ -499,6 +640,28 @@ function EventInfoScreen({ credentials, onProceed, onBack }) {
         return () => clearInterval(t);
     }, []);
 
+    const [triggerManifestFetch]                  = useLazyFetchManifestQuery();
+    const [cachedManifest, setCachedManifest]      = useState(() => loadManifest(credentials.eventId));
+    const [downloadError, setDownloadError]        = useState('');
+    const [isDownloading, setIsDownloading]        = useState(false);
+
+    async function handleDownloadManifest() {
+        setDownloadError('');
+        setIsDownloading(true);
+        try {
+            const data = await triggerManifestFetch(
+                { eventId: credentials.eventId, staffToken: credentials.staffToken }
+            ).unwrap();
+            const manifest = { ...data, downloadedAt: new Date().toISOString() };
+            saveManifest(credentials.eventId, manifest);
+            setCachedManifest(manifest);
+        } catch (err) {
+            setDownloadError(err?.data?.message ?? 'Download failed — check your connection and try again.');
+        } finally {
+            setIsDownloading(false);
+        }
+    }
+
     const days = event?.eventDays ?? [];
     const isMultiDay = days.length > 1;
 
@@ -513,12 +676,16 @@ function EventInfoScreen({ credentials, onProceed, onBack }) {
         }
     }, [days.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    // For the check-in window, use the selected day's times if set, else fall back to event-level
+    // For the check-in window, use the selected day's times if set, else fall back to event-level,
+    // then to 2 hours before the event start (matching the backend default).
     const selectedDay = days.find((d) => d.id === selectedDayId);
+    const eventStart  = event?.startTime ? new Date(event.startTime) : null;
+    const defaultOpen = eventStart ? new Date(eventStart.getTime() - 2 * 60 * 60 * 1000) : null;
     const checkInStart = selectedDay?.checkInStartTime
         ? new Date(selectedDay.checkInStartTime)
-        : event?.checkInStartTime ? new Date(event.checkInStartTime) : null;
-    const eventStart   = event?.startTime ? new Date(event.startTime) : null;
+        : event?.checkInStartTime
+            ? new Date(event.checkInStartTime)
+            : defaultOpen;
     const isOpen       = checkInStart ? now >= checkInStart : false;
     const canProceed   = isOpen && (!isMultiDay || !!selectedDayId);
 
@@ -639,6 +806,46 @@ function EventInfoScreen({ credentials, onProceed, onBack }) {
                                         : `Opens at ${fmtTime(checkInStart)} · ${fmtDate(checkInStart)}`
                                     : 'Check-in start time not set — contact the organiser.'}
                             </div>
+                        </div>
+
+                        {/* Offline support */}
+                        <div style={{ padding: '16px 28px', borderBottom: '1px solid var(--border)' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                                <Icons.shield size={15} style={{ color: 'var(--text-3)', flexShrink: 0 }} />
+                                <span style={{ fontWeight: 600, fontSize: 14, color: 'var(--text-1)' }}>
+                                    Offline support
+                                </span>
+                                {cachedManifest && (
+                                    <span style={{
+                                        fontSize: 11, fontWeight: 600, padding: '2px 8px',
+                                        borderRadius: 99, background: 'var(--success-bg)', color: 'var(--success)',
+                                    }}>
+                                        {cachedManifest.total} tickets cached
+                                    </span>
+                                )}
+                            </div>
+                            <p style={{ margin: '0 0 10px', fontSize: 13, color: 'var(--text-2)' }}>
+                                {cachedManifest
+                                    ? `Last downloaded ${formatRelativeTime(cachedManifest.downloadedAt)} — refresh before going offline.`
+                                    : 'Download all tickets so you can scan without an internet connection.'}
+                            </p>
+                            {downloadError && (
+                                <p style={{ margin: '0 0 8px', fontSize: 12, color: 'var(--error)' }}>
+                                    {downloadError}
+                                </p>
+                            )}
+                            <button
+                                onClick={handleDownloadManifest}
+                                disabled={isDownloading}
+                                style={{
+                                    padding: '7px 16px', borderRadius: 8, fontSize: 13, fontWeight: 600,
+                                    border: '1px solid var(--mp-blue)', background: 'transparent',
+                                    color: 'var(--mp-blue)', cursor: isDownloading ? 'not-allowed' : 'pointer',
+                                    opacity: isDownloading ? 0.6 : 1,
+                                }}
+                            >
+                                {isDownloading ? 'Downloading…' : cachedManifest ? 'Refresh' : 'Download for offline use'}
+                            </button>
                         </div>
 
                         {/* Actions */}

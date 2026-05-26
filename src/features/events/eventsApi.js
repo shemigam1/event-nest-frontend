@@ -83,6 +83,35 @@ export const eventsApi = baseApi.injectEndpoints({
             ],
             transformResponse: (response) => response?.data ?? response,
         }),
+
+        updateEventDay: builder.mutation({
+            query: ({ eventId, dayId, ...body }) => ({
+                url: `/events/${eventId}/days/${dayId}`,
+                method: 'PATCH',
+                body,
+            }),
+            invalidatesTags: (result, error, { eventId }) => [{ type: 'Event', id: eventId }],
+            transformResponse: (response) => response?.data ?? response,
+        }),
+
+        addEventDay: builder.mutation({
+            query: ({ eventId, ...body }) => ({
+                url: `/events/${eventId}/days`,
+                method: 'POST',
+                body,
+            }),
+            invalidatesTags: (result, error, { eventId }) => [{ type: 'Event', id: eventId }],
+            transformResponse: (response) => response?.data ?? response,
+        }),
+
+        removeEventDay: builder.mutation({
+            query: ({ dayId }) => ({
+                url: `/events/days/${dayId}`,
+                method: 'DELETE',
+            }),
+            invalidatesTags: (result, error, { eventId }) => [{ type: 'Event', id: eventId }],
+            transformResponse: (response) => response?.data ?? response,
+        }),
     }),
 });
 
@@ -98,4 +127,7 @@ export const {
     useGetEventConfigQuery,
     useUpdateEventConfigMutation,
     usePresignCoverImageMutation,
+    useUpdateEventDayMutation,
+    useAddEventDayMutation,
+    useRemoveEventDayMutation,
 } = eventsApi;
