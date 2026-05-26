@@ -55,6 +55,25 @@ export const checkinApi = baseApi.injectEndpoints({
                 { type: 'Event', id: `${eventId}-checkin-invites` },
             ],
         }),
+
+        // staffToken goes in a query param (GET — no body). Use HTTPS in production
+        // so the token is not visible in proxy access logs.
+        fetchManifest: builder.query({
+            query: ({ eventId, staffToken }) => ({
+                url: `/events/${eventId}/check-in/manifest`,
+                params: { staffToken },
+            }),
+            transformResponse: (response) => response?.data ?? response,
+        }),
+
+        batchScanTickets: builder.mutation({
+            query: ({ eventId, staffToken, scans }) => ({
+                url: `/events/${eventId}/check-in/scan/batch`,
+                method: 'POST',
+                body: { staffToken, scans },
+            }),
+            transformResponse: (response) => response?.data ?? response,
+        }),
     }),
 });
 
@@ -63,4 +82,6 @@ export const {
     useCreateCheckInInviteMutation,
     useListCheckInInvitesQuery,
     useRevokeCheckInInviteMutation,
+    useLazyFetchManifestQuery,
+    useBatchScanTicketsMutation,
 } = checkinApi;
