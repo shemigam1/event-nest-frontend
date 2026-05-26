@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useGetUnseenCommentCountQuery } from '@/features/comments/commentsApi';
+import { useOpenEventBroadcastMutation } from '@/features/messages/messagesApi';
 import { useNavigate, useParams, Link } from 'react-router';
 import {
     useGetEventTiersQuery,
@@ -222,7 +223,26 @@ function BackLink() {
 /* ───────────────────────────── header ──────────────────────────── */
 
 function Header({ event, totalSold, totalCapacity, checkedIn, checkInRate, tab, onTabChange, unseenComments = 0 }) {
+    const navigate = useNavigate();
+    const [openBroadcast, broadcastState] = useOpenEventBroadcastMutation();
     const isLive = event.status === 'PUBLISHED';
+
+    async function handleBroadcast() {
+        try {
+            const conv = await openBroadcast(event.id).unwrap();
+            const convId = conv?.id;
+            if (convId) {
+                navigate(`/messages?c=${convId}`);
+            } else {
+                navigate('/messages');
+            }
+        } catch (err) {
+            // Surface as a console warn — page already shows a generic error
+            // boundary for fatal errors, and this is non-critical.
+            // eslint-disable-next-line no-console
+            console.warn('[broadcast] open failed:', err);
+        }
+    }
     const tabs = [
         ...(isLive ? [{ id: 'dashboard', label: 'Live dashboard' }] : []),
         { id: 'attendees', label: 'Attendees' },
@@ -267,6 +287,28 @@ function Header({ event, totalSold, totalCapacity, checkedIn, checkInRate, tab, 
                         <div style={{ fontSize: 14, color: 'var(--text-2)', marginTop: 4 }}>
                             {formatEventDate(event.startTime)} · {event.venue}
                         </div>
+
+                        {/* Broadcast — opens the event-wide chat with organizer + managers + vendors */}
+                        <button
+                            type="button"
+                            onClick={handleBroadcast}
+                            disabled={broadcastState.isLoading}
+                            style={{
+                                marginTop: 12,
+                                display: 'inline-flex', alignItems: 'center', gap: 6,
+                                padding: '6px 12px',
+                                background: 'var(--mp-blue-50, #EAF1FE)',
+                                color: 'var(--mp-blue)',
+                                border: '1px solid var(--mp-blue-100, #C9DCF7)',
+                                borderRadius: 99,
+                                fontSize: 12, fontWeight: 600,
+                                cursor: broadcastState.isLoading ? 'wait' : 'pointer',
+                                opacity: broadcastState.isLoading ? 0.7 : 1,
+                            }}
+                        >
+                            <Icons.message size={12} />
+                            {broadcastState.isLoading ? 'Opening…' : 'Broadcast to team + vendors'}
+                        </button>
                     </div>
                     <div style={{ display: 'flex', gap: 32 }}>
                         <HeroNumber
