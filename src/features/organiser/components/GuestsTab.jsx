@@ -104,11 +104,39 @@ export default function GuestsTab({ eventId }) {
         }
     }
 
-    function exportCsv() {
-        window.open(
-            `${import.meta.env.VITE_API_BASE_URL}/events/${eventId}/guests/export`,
-            '_blank',
-        );
+    // Download the CSV via fetch+Blob rather than window.open() — the export
+    // endpoint requires the JWT in the Authorization header, which a plain
+    // navigation request can't attach. We grab the file as a Blob, then trigger
+    // a synthetic anchor click to save it.
+    const [exportError, setExportError] = useState('');
+    async function exportCsv() {
+        setExportError('');
+        try {
+            const token = localStorage.getItem('accessToken');
+            const res = await fetch(
+                `${import.meta.env.VITE_API_BASE_URL}/events/${eventId}/guests/export`,
+                { headers: token ? { Authorization: `Bearer ${token}` } : {} },
+            );
+            if (!res.ok) {
+                let msg = `Export failed (${res.status})`;
+                try {
+                    const body = await res.json();
+                    msg = body?.message || body?.errors?.[0] || msg;
+                } catch { /* response wasn't JSON — keep the status-code fallback */ }
+                throw new Error(msg);
+            }
+            const blob = await res.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `guests-${eventId}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
+        } catch (err) {
+            setExportError(err?.message || 'Could not export guest list.');
+        }
     }
 
     if (isLoading) return <Skeleton />;
@@ -158,6 +186,11 @@ export default function GuestsTab({ eventId }) {
                         <Button variant="secondary" size="md" icon={<Icons.list size={14} />} onClick={exportCsv}>
                             Export CSV
                         </Button>
+                    )}
+                    {exportError && (
+                        <p role="alert" style={{ width: '100%', margin: 0, fontSize: 13, color: 'var(--error)' }}>
+                            {exportError}
+                        </p>
                     )}
                     <Button variant="primary" size="md" icon={<Icons.plus size={14} />}
                         onClick={() => setShowForm(true)}>
