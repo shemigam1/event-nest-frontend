@@ -7,6 +7,10 @@ import {
     useDeleteEventMutation,
     useGetEventConfigQuery,
     useUpdateEventConfigMutation,
+    useUpdateEventMutation,
+    useUpdateEventDayMutation,
+    useAddEventDayMutation,
+    useRemoveEventDayMutation,
 } from '@/features/events/eventsApi';
 import {
     useUpdateTierMutation,
@@ -862,6 +866,10 @@ function SettingsTab({ event, eventId, navigate }) {
     const [submitEvent, submitState]   = useSubmitEventMutation();
     const [deleteEvent, deleteState]   = useDeleteEventMutation();
     const [updateConfig, configState]  = useUpdateEventConfigMutation();
+    const [updateEvent, updateEventState] = useUpdateEventMutation();
+    const [updateEventDay, updateDayState] = useUpdateEventDayMutation();
+    const [addEventDay, addDayState]    = useAddEventDayMutation();
+    const [removeEventDay]              = useRemoveEventDayMutation();
     const configQuery = useGetEventConfigQuery(eventId);
     const tiersQuery  = useGetEventTiersQuery(eventId);
 
@@ -887,6 +895,46 @@ function SettingsTab({ event, eventId, navigate }) {
 
     const [limitDraft, setLimitDraft] = useState(null); // null = not editing
 
+    // Event days management state
+    const eventDays = event.eventDays ?? [];
+    const [showAddDay, setShowAddDay]             = useState(false);
+    const [newDayDate, setNewDayDate]             = useState('');
+    const [newDayLabel, setNewDayLabel]           = useState('');
+    const [addDayError, setAddDayError]           = useState('');
+    const [dayError, setDayError]                 = useState('');
+    const [pendingRemoveDay, setPendingRemoveDay] = useState(null);
+
+    // Check-in timing draft state (one entry per day for multi-day, or event-level for single-day)
+    const isMultiDay = (event.eventDays ?? []).length > 1;
+    const [checkInDrafts, setCheckInDrafts] = useState({}); // { [dayId|'event']: localDateTimeString }
+    const [checkInSaveError, setCheckInSaveError] = useState('');
+
+    function toDatetimeLocal(iso) {
+        if (!iso) return '';
+        return iso.slice(0, 16); // "YYYY-MM-DDTHH:mm"
+    }
+
+    async function saveCheckInTiming(key, dayId) {
+        setCheckInSaveError('');
+        const raw = checkInDrafts[key];
+        try {
+            if (dayId) {
+                const body = raw
+                    ? { checkInStartTime: raw }
+                    : { clearCheckInStartTime: true };
+                await updateEventDay({ eventId, dayId, ...body }).unwrap();
+            } else {
+                const body = raw
+                    ? { checkInStartTime: raw }
+                    : { clearCheckInStartTime: true };
+                await updateEvent({ id: eventId, ...body }).unwrap();
+            }
+            setCheckInDrafts((prev) => { const n = { ...prev }; delete n[key]; return n; });
+        } catch (e) {
+            setCheckInSaveError(e?.data?.message ?? 'Failed to save check-in time');
+        }
+    }
+
     async function handleSubmit() {
         setActionError('');
         try { await submitEvent(eventId).unwrap(); }
@@ -911,6 +959,34 @@ function SettingsTab({ event, eventId, navigate }) {
         } catch (err) {
             setModuleError(err?.data?.message || 'Could not update setting.');
         }
+    }
+
+    async function handleAddDay(e) {
+        e.preventDefault();
+        setAddDayError('');
+        try {
+            await addEventDay({
+                eventId,
+                dayDate: newDayDate,
+                ...(newDayLabel.trim() ? { label: newDayLabel.trim() } : {}),
+            }).unwrap();
+            setShowAddDay(false);
+            setNewDayDate('');
+            setNewDayLabel('');
+        } catch (err) {
+            setAddDayError(err?.data?.message ?? 'Could not add day. Please try again.');
+        }
+    }
+
+    async function handleRemoveDay() {
+        if (!pendingRemoveDay) return;
+        setDayError('');
+        try {
+            await removeEventDay({ dayId: pendingRemoveDay.id, eventId }).unwrap();
+        } catch (err) {
+            setDayError(err?.data?.message ?? 'Could not remove day. Please try again.');
+        }
+        setPendingRemoveDay(null);
     }
 
     const modules = [
@@ -1159,6 +1235,246 @@ function SettingsTab({ event, eventId, navigate }) {
                 </div>
             </div>
 
+            {/* Event days */}
+            <div style={{
+                background: 'var(--surface-elevated)', border: '1px solid var(--border)',
+                borderRadius: 12, overflow: 'hidden',
+            }}>
+                <div style={{
+                    padding: '16px 20px',
+                    borderBottom: (eventDays.length > 0 || showAddDay) ? '1px solid var(--border)' : undefined,
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12,
+                }}>
+                    <div>
+                        <div style={{ fontWeight: 600, color: 'var(--text-1)', fontSize: 15 }}>Event days</div>
+                        <div style={{ fontSize: 13, color: 'var(--text-2)', marginTop: 2 }}>
+                            Check-in requires at least one event day. Add a day for each date your event runs.
+                        </div>
+                    </div>
+                    {!showAddDay && (
+                        <button
+                            onClick={() => setShowAddDay(true)}
+                            style={{
+                                padding: '6px 14px', borderRadius: 8, fontSize: 13, fontWeight: 600,
+                                border: '1px solid var(--mp-blue)', background: 'transparent',
+                                color: 'var(--mp-blue)', cursor: 'pointer', flexShrink: 0,
+                            }}
+                        >
+                            + Add day
+                        </button>
+                    )}
+                </div>
+
+                {eventDays.length === 0 && !showAddDay && (
+                    <div style={{ padding: '14px 20px', fontSize: 13, color: 'var(--text-3)' }}>
+                        No event days yet — check-in will fail until you add at least one.
+                    </div>
+                )}
+
+                {eventDays.map((day, i) => (
+                    <div key={day.id} style={{
+                        display: 'flex', alignItems: 'center', gap: 12, padding: '12px 20px',
+                        borderTop: i === 0 ? undefined : '1px solid var(--border)',
+                    }}>
+                        <div style={{ flex: 1 }}>
+                            <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--text-1)' }}>
+                                {day.label ?? `Day ${i + 1}`}
+                            </div>
+                            <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>
+                                {day.dayDate}
+                            </div>
+                        </div>
+                        <button
+                            onClick={() => setPendingRemoveDay(day)}
+                            style={{
+                                padding: '4px 10px', borderRadius: 6, fontSize: 12,
+                                border: '1px solid var(--border)', background: 'transparent',
+                                color: 'var(--error)', cursor: 'pointer',
+                            }}
+                        >
+                            Remove
+                        </button>
+                    </div>
+                ))}
+
+                {showAddDay && (
+                    <form onSubmit={handleAddDay} style={{
+                        padding: '14px 20px',
+                        borderTop: eventDays.length > 0 ? '1px solid var(--border)' : undefined,
+                        display: 'flex', flexDirection: 'column', gap: 10,
+                    }}>
+                        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                            <div style={{ flex: '1 1 150px' }}>
+                                <label style={{ fontSize: 12, color: 'var(--text-2)', display: 'block', marginBottom: 4 }}>
+                                    Date <span style={{ color: 'var(--error)' }}>*</span>
+                                </label>
+                                <input
+                                    type="date"
+                                    required
+                                    value={newDayDate}
+                                    onChange={(e) => setNewDayDate(e.target.value)}
+                                    style={{
+                                        width: '100%', padding: '7px 10px', borderRadius: 8,
+                                        border: '1px solid var(--border)', fontSize: 13,
+                                        background: 'var(--surface)', color: 'var(--text-1)',
+                                        boxSizing: 'border-box',
+                                    }}
+                                />
+                            </div>
+                            <div style={{ flex: '2 1 200px' }}>
+                                <label style={{ fontSize: 12, color: 'var(--text-2)', display: 'block', marginBottom: 4 }}>
+                                    Label <span style={{ color: 'var(--text-3)' }}>(optional)</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    placeholder="e.g. Day 1, Opening night…"
+                                    maxLength={100}
+                                    value={newDayLabel}
+                                    onChange={(e) => setNewDayLabel(e.target.value)}
+                                    style={{
+                                        width: '100%', padding: '7px 10px', borderRadius: 8,
+                                        border: '1px solid var(--border)', fontSize: 13,
+                                        background: 'var(--surface)', color: 'var(--text-1)',
+                                        boxSizing: 'border-box',
+                                    }}
+                                />
+                            </div>
+                        </div>
+                        {addDayError && (
+                            <div style={{ fontSize: 12, color: 'var(--error)' }}>{addDayError}</div>
+                        )}
+                        <div style={{ display: 'flex', gap: 8 }}>
+                            <button
+                                type="submit"
+                                disabled={addDayState.isLoading}
+                                style={{
+                                    padding: '6px 16px', borderRadius: 8, fontSize: 13, fontWeight: 600,
+                                    border: 0, background: 'var(--mp-blue)', color: 'white', cursor: 'pointer',
+                                }}
+                            >
+                                {addDayState.isLoading ? 'Adding…' : 'Add day'}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => { setShowAddDay(false); setNewDayDate(''); setNewDayLabel(''); setAddDayError(''); }}
+                                style={{
+                                    padding: '6px 14px', borderRadius: 8, fontSize: 13,
+                                    border: '1px solid var(--border)', background: 'transparent',
+                                    color: 'var(--text-2)', cursor: 'pointer',
+                                }}
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    </form>
+                )}
+
+                {dayError && (
+                    <div style={{ padding: '8px 20px', color: 'var(--error)', fontSize: 13, borderTop: '1px solid var(--border)' }}>
+                        {dayError}
+                    </div>
+                )}
+            </div>
+
+            {/* Check-in timing */}
+            <div style={{
+                background: 'var(--surface-elevated)', border: '1px solid var(--border)',
+                borderRadius: 12, overflow: 'hidden',
+            }}>
+                <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
+                    <div style={{ fontWeight: 600, color: 'var(--text-1)', fontSize: 15 }}>Check-in timing</div>
+                    <div style={{ fontSize: 13, color: 'var(--text-2)', marginTop: 2 }}>
+                        Set when the check-in window opens. Defaults to <strong>2 hours before the event starts</strong> when left blank.
+                    </div>
+                </div>
+
+                {!isMultiDay ? (
+                    /* Single-day — one row for the whole event */
+                    <div style={{ padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                        <div style={{ fontSize: 13, color: 'var(--text-2)', flex: '0 0 140px' }}>Check-in opens</div>
+                        <input
+                            type="datetime-local"
+                            value={checkInDrafts['event'] !== undefined ? checkInDrafts['event'] : toDatetimeLocal(event.checkInStartTime)}
+                            onChange={(e) => setCheckInDrafts((p) => ({ ...p, event: e.target.value }))}
+                            style={{
+                                flex: '1 1 200px', padding: '6px 10px', borderRadius: 8,
+                                border: '1px solid var(--border)', fontSize: 13,
+                                background: 'var(--surface)', color: 'var(--text-1)',
+                            }}
+                        />
+                        {checkInDrafts['event'] !== undefined && (
+                            <div style={{ display: 'flex', gap: 8 }}>
+                                {checkInDrafts['event'] !== '' && (
+                                    <button
+                                        onClick={() => setCheckInDrafts((p) => ({ ...p, event: '' }))}
+                                        style={{ fontSize: 12, padding: '4px 10px', borderRadius: 6, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-2)', cursor: 'pointer' }}
+                                    >
+                                        Reset to default
+                                    </button>
+                                )}
+                                <button
+                                    onClick={() => saveCheckInTiming('event', null)}
+                                    disabled={updateEventState.isLoading}
+                                    style={{ fontSize: 12, padding: '4px 12px', borderRadius: 6, border: 0, background: 'var(--mp-blue)', color: 'white', cursor: 'pointer', fontWeight: 600 }}
+                                >
+                                    Save
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                ) : (
+                    /* Multi-day — one row per day */
+                    (event.eventDays ?? []).map((day, i) => (
+                        <div
+                            key={day.id}
+                            style={{
+                                padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
+                                borderTop: i > 0 ? '1px solid var(--border)' : undefined,
+                            }}
+                        >
+                            <div style={{ fontSize: 13, color: 'var(--text-2)', flex: '0 0 140px' }}>
+                                {day.label ?? `Day ${i + 1}`}
+                            </div>
+                            <input
+                                type="datetime-local"
+                                value={checkInDrafts[day.id] !== undefined ? checkInDrafts[day.id] : toDatetimeLocal(day.checkInStartTime)}
+                                onChange={(e) => setCheckInDrafts((p) => ({ ...p, [day.id]: e.target.value }))}
+                                style={{
+                                    flex: '1 1 200px', padding: '6px 10px', borderRadius: 8,
+                                    border: '1px solid var(--border)', fontSize: 13,
+                                    background: 'var(--surface)', color: 'var(--text-1)',
+                                }}
+                            />
+                            {checkInDrafts[day.id] !== undefined && (
+                                <div style={{ display: 'flex', gap: 8 }}>
+                                    {checkInDrafts[day.id] !== '' && (
+                                        <button
+                                            onClick={() => setCheckInDrafts((p) => ({ ...p, [day.id]: '' }))}
+                                            style={{ fontSize: 12, padding: '4px 10px', borderRadius: 6, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-2)', cursor: 'pointer' }}
+                                        >
+                                            Reset to default
+                                        </button>
+                                    )}
+                                    <button
+                                        onClick={() => saveCheckInTiming(day.id, day.id)}
+                                        disabled={updateDayState.isLoading}
+                                        style={{ fontSize: 12, padding: '4px 12px', borderRadius: 6, border: 0, background: 'var(--mp-blue)', color: 'white', cursor: 'pointer', fontWeight: 600 }}
+                                    >
+                                        Save
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    ))
+                )}
+
+                {checkInSaveError && (
+                    <div style={{ padding: '8px 20px', color: 'var(--error)', fontSize: 13, borderTop: '1px solid var(--border)' }}>
+                        {checkInSaveError}
+                    </div>
+                )}
+            </div>
+
             {/* Ticket tiers — per-person limits */}
             {tiers.length > 0 && (
                 <div style={{
@@ -1280,6 +1596,43 @@ function SettingsTab({ event, eventId, navigate }) {
                     onDismiss={() => setShowDeleteDialog(false)}
                     loading={deleteState.isLoading}
                 />
+            )}
+
+            {pendingRemoveDay && (
+                <div
+                    role="dialog"
+                    aria-label="Remove event day"
+                    onClick={() => setPendingRemoveDay(null)}
+                    style={{
+                        position: 'fixed', inset: 0, zIndex: 1000,
+                        background: 'rgba(2,16,45,0.55)',
+                        display: 'grid', placeItems: 'center', padding: 20,
+                    }}
+                >
+                    <div
+                        onClick={(e) => e.stopPropagation()}
+                        style={{
+                            width: '100%', maxWidth: 380, background: 'var(--surface-elevated)',
+                            borderRadius: 16, padding: 28, boxShadow: 'var(--shadow-modal)',
+                        }}
+                    >
+                        <h2 className="mp-h3" style={{ margin: '0 0 8px', color: 'var(--text-1)' }}>
+                            Remove event day?
+                        </h2>
+                        <p className="body-sm" style={{ margin: '0 0 24px', color: 'var(--text-2)' }}>
+                            <strong>{pendingRemoveDay.label ?? pendingRemoveDay.dayDate}</strong> will be removed.
+                            Any check-in records for this day will also be deleted.
+                        </p>
+                        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+                            <Button variant="ghost" size="md" onClick={() => setPendingRemoveDay(null)}>
+                                Cancel
+                            </Button>
+                            <Button variant="destructive" size="md" onClick={handleRemoveDay}>
+                                Remove
+                            </Button>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );
@@ -1598,10 +1951,10 @@ function CheckInStaffSection({ eventId, isPublished = true }) {
                     >
                         <div>
                             <div style={{ fontWeight: 500, color: 'var(--text-1)', fontSize: 14 }}>
-                                {invite.name}
+                                {invite.label || invite.staffEmail || 'Unnamed staff'}
                             </div>
                             <div style={{ fontSize: 13, color: 'var(--text-2)', marginTop: 2 }}>
-                                {invite.email} · Added {created}
+                                {invite.staffEmail} · Added {created}
                             </div>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -1616,7 +1969,7 @@ function CheckInStaffSection({ eventId, isPublished = true }) {
                                 <button
                                     onClick={() => setPendingRevoke(invite)}
                                     disabled={revokeState.isLoading}
-                                    aria-label={`Revoke ${invite.name}`}
+                                    aria-label={`Revoke ${invite.label || invite.staffEmail || 'staff'}`}
                                     style={{
                                         background: 'none', border: '1px solid var(--border)',
                                         borderRadius: 6, padding: '4px 8px', cursor: 'pointer',
@@ -1652,7 +2005,7 @@ function CheckInStaffSection({ eventId, isPublished = true }) {
                             Revoke access?
                         </h2>
                         <p className="body-sm" style={{ margin: '0 0 6px', color: 'var(--text-2)' }}>
-                            <strong>{pendingRevoke.name}</strong> ({pendingRevoke.email}) will immediately lose the ability to scan tickets for this event.
+                            <strong>{pendingRevoke.label || pendingRevoke.staffEmail || 'This staff member'}</strong> ({pendingRevoke.staffEmail}) will immediately lose the ability to scan tickets for this event.
                         </p>
                         <p className="body-sm" style={{ margin: '0 0 24px', color: 'var(--text-3)' }}>
                             Their staff token will be invalidated. This cannot be undone — you can create a new invite if needed.

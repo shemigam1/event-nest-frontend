@@ -80,6 +80,7 @@ export default function ActivityFeed({ eventId, max = 10 }) {
 function ActivityIcon({ type }) {
     const map = {
         'booking.confirmed':  { icon: Icons.ticket, fg: 'var(--mp-blue)',  bg: 'var(--mp-blue-bg, #eef2ff)' },
+        'checkin.scanned':    { icon: Icons.scan,   fg: 'var(--success)',  bg: 'var(--success-bg, #ecfdf5)' },
         'ticket.checked-in':  { icon: Icons.scan,   fg: 'var(--success)',  bg: 'var(--success-bg, #ecfdf5)' },
         'event.approved':     { icon: Icons.check,  fg: 'var(--success)',  bg: 'var(--success-bg, #ecfdf5)' },
         'event.rejected':     { icon: Icons.alert,  fg: 'var(--error)',    bg: 'var(--error-bg, #fef2f2)' },
@@ -113,12 +114,23 @@ function ActivityText({ item }) {
                     )}
                 </div>
             );
+        case 'checkin.scanned':
         case 'ticket.checked-in':
             return (
                 <div style={{ fontSize: 13, color: 'var(--text-1)', lineHeight: 1.4 }}>
-                    Seat <strong>{p.seatNumber ?? '—'}</strong> checked in
-                    {p.checkedInByLabel && (
-                        <span style={{ color: 'var(--text-3)' }}> · by {p.checkedInByLabel}</span>
+                    {p.checkedInByLabel
+                        ? <><strong>{p.checkedInByLabel}</strong>{' checked in '}</>
+                        : 'Checked in '
+                    }
+                    <strong>{p.holderName ?? p.seatNumber ?? '—'}</strong>
+                    {p.tierName && (
+                        <span style={{ color: 'var(--text-3)' }}> · {p.tierName}</span>
+                    )}
+                    {p.seatLabel && (
+                        <span style={{ color: 'var(--text-3)' }}> · {p.seatLabel}</span>
+                    )}
+                    {p.firstScan === false && (
+                        <span style={{ color: 'var(--warning, #d97706)' }}> · duplicate scan</span>
                     )}
                 </div>
             );

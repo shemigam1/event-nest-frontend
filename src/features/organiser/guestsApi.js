@@ -32,6 +32,16 @@ export const guestsApi = baseApi.injectEndpoints({
             }),
             invalidatesTags: (result, error, { eventId }) => [{ type: 'Guest', id: eventId }],
         }),
+
+        bulkAddGuests: builder.mutation({
+            query: ({ eventId, guests }) => ({
+                url: `/events/${eventId}/guests/bulk`,
+                method: 'POST',
+                body: { guests },
+            }),
+            invalidatesTags: (result, error, { eventId }) => [{ type: 'Guest', id: eventId }],
+            transformResponse: (r) => r?.data ?? r,
+        }),
     }),
 });
 
@@ -40,4 +50,5 @@ export const {
     useAddGuestMutation,
     useUpdateGuestStatusMutation,
     useRemoveGuestMutation,
+    useBulkAddGuestsMutation,
 } = guestsApi;
